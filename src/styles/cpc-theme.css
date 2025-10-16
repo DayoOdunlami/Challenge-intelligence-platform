@@ -1,0 +1,102 @@
+/* CPC Theme Variables */
+:root {
+  --cpc-primary-teal: #006E51;
+  --cpc-secondary-mint: #CCE2DC;
+  --cpc-tertiary-charcoal: #2E2D2B;
+  --cpc-background-light: #F9F9F9;
+  --cpc-info-blue: #4A90E2;
+  --cpc-warning-amber: #F5A623;
+  --cpc-success-green: #50C878;
+}
+
+/* CPC Theme Applied */
+[data-theme="cpc"] {
+  /* Sector Colors for Charts */
+  --sector-rail: var(--cpc-primary-teal);
+  --sector-energy: var(--cpc-success-green);
+  --sector-local-gov: var(--cpc-warning-amber);
+  --sector-transport: var(--cpc-info-blue);
+  --sector-built-env: var(--cpc-tertiary-charcoal);
+  --sector-aviation: var(--cpc-secondary-mint);
+}
+
+/* CPC Button Styles */
+[data-theme="cpc"] button.bg-blue-600,
+[data-theme="cpc"] button.bg-indigo-600,
+[data-theme="cpc"] button.bg-purple-600,
+[data-theme="cpc"] button.bg-green-600,
+[data-theme="cpc"] button.bg-red-600 {
+  background-color: var(--cpc-primary-teal) !important;
+  border-color: var(--cpc-primary-teal) !important;
+}
+
+[data-theme="cpc"] button.bg-blue-600:hover,
+[data-theme="cpc"] button.bg-indigo-600:hover,
+[data-theme="cpc"] button.bg-purple-600:hover,
+[data-theme="cpc"] button.bg-green-600:hover,
+[data-theme="cpc"] button.bg-red-600:hover {
+  background-color: #005944 !important;
+  border-color: #005944 !important;
+}
+
+/* CPC Navigation Tabs */
+[data-theme="cpc"] .bg-blue-600,
+[data-theme="cpc"] .bg-green-600,
+[data-theme="cpc"] .bg-purple-600,
+[data-theme="cpc"] .bg-red-600,
+[data-theme="cpc"] .bg-indigo-600 {
+  background-color: var(--cpc-primary-teal) !important;
+}
+
+/* CPC Text Colors */
+[data-theme="cpc"] h1,
+[data-theme="cpc"] h2,
+[data-theme="cpc"] h3 {
+  color: var(--cpc-tertiary-charcoal) !important;
+}
+
+/* CPC Links */
+[data-theme="cpc"] a.text-blue-600,
+[data-theme="cpc"] a.text-indigo-600 {
+  color: var(--cpc-info-blue) !important;
+}
+
+/* CPC Cards */
+[data-theme="cpc"] .bg-white {
+  background-color: var(--cpc-background-light) !important;
+  border-color: var(--cpc-secondary-mint) !important;
+}
+
+/* CPC Sidebar */
+[data-theme="cpc"] .bg-gray-50 {
+  background-color: var(--cpc-secondary-mint) !important;
+}
+
+/* CPC Page Background */
+[data-theme="cpc"] body,
+[data-theme="cpc"] .min-h-screen {
+  background: linear-gradient(180deg, var(--cpc-secondary-mint) 0%, var(--cpc-background-light) 100%) !important;
+}
+
+/* CPC Chart Tooltips */
+[data-theme="cpc"] .tooltip {
+  background-color: #fff !important;
+  border: 1px solid var(--cpc-secondary-mint) !important;
+  color: var(--cpc-tertiary-charcoal) !important;
+}
+
+/* CPC Selected States */
+[data-theme="cpc"] .selected,
+[data-theme="cpc"] .active {
+  border-color: var(--cpc-primary-teal) !important;
+  border-width: 3px !important;
+}
+
+/* CPC Footer/Branding */
+[data-theme="cpc"] .cpc-footer {
+  background-color: var(--cpc-tertiary-charcoal);
+  color: var(--cpc-secondary-mint);
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+}
