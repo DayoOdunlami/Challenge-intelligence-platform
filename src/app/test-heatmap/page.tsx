@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { HeatmapChart } from '@/components/visualizations/HeatmapChart';
 import { ChallengeFilters } from '@/components/filters/ChallengeFilters';
@@ -132,7 +132,9 @@ export default function TestHeatmapPage() {
             <h1 className="text-3xl font-bold text-gray-900">
               Heatmap Test
             </h1>
-            <ProfileFilterButton />
+            <Suspense fallback={<div>Loading...</div>}>
+              <ProfileFilterButton />
+            </Suspense>
           </div>
           <div className="flex space-x-4 flex-wrap">
             <Link 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { ChordDiagram } from '@/components/visualizations/ChordDiagram';
 import { ChallengeFilters } from '@/components/filters/ChallengeFilters';
@@ -127,7 +127,9 @@ export default function TestChordPage() {
             <h1 className="text-3xl font-bold text-gray-900">
               Chord Diagram Test
             </h1>
-            <ProfileFilterButton />
+            <Suspense fallback={<div>Loading...</div>}>
+              <ProfileFilterButton />
+            </Suspense>
           </div>
           <div className="flex space-x-4">
             <Link 
