@@ -4,8 +4,17 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 
-const navigationItems = [
+interface NavigationItem {
+  href: string;
+  label: string;
+  icon: string;
+  badge?: string;
+}
+
+const navigationItems: NavigationItem[] = [
   { href: '/', label: 'Home', icon: '🏠' },
+  { href: '/for-reviewers', label: 'For Reviewers', icon: '📋', badge: 'V1' },
+  { href: '/for-reviewers-v2', label: 'For Reviewers V2', icon: '✨', badge: 'NEW' },
   { href: '/pitch', label: 'Pitch Deck', icon: '🎤' },
   { href: '/profile/buyer-example', label: 'Buyer Profile', icon: '🏢' },
   { href: '/profile/sme-profile', label: 'SME Profile', icon: '🚀' },
@@ -61,7 +70,12 @@ export default function QuickNavSidebar() {
                 >
                   <span className="text-base">{item.icon}</span>
                   <span className="font-medium">{item.label}</span>
-                  {isActive && (
+                  {item.badge && (
+                    <span className="ml-auto px-1.5 py-0.5 bg-cpc-green-600 text-white text-xs font-bold rounded-full">
+                      {item.badge}
+                    </span>
+                  )}
+                  {isActive && !item.badge && (
                     <div className="ml-auto w-2 h-2 bg-blue-500 rounded-full" />
                   )}
                 </Link>

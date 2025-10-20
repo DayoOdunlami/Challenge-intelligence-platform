@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useCallback, useRef, useEffect, useState } from 'react';
+import React, { useCallback, useRef, useEffect, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Challenge, NetworkNode, NetworkLink } from '@/lib/types';
 // Import types only
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Sector } from '@/lib/types';
+import { detectClusters, ClusterInfo, logUserInteraction } from '@/lib/cluster-analysis';
+import NetworkControlsPanel from '@/components/ui/NetworkControlsPanel';
 
 // Dynamically import ForceGraph2D to avoid SSR issues
 const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), {
@@ -112,6 +114,7 @@ interface NetworkGraphProps {
   challenges: Challenge[];
   selectedChallenge?: Challenge | null;
   onChallengeSelect?: (challenge: Challenge) => void;
+  onClustersDetected?: (clusters: ClusterInfo[]) => void;
   className?: string;
 }
 
@@ -119,6 +122,7 @@ export function NetworkGraph({
   challenges, 
   selectedChallenge, 
   onChallengeSelect,
+  onClustersDetected,
   className = '' 
 }: NetworkGraphProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -129,6 +133,10 @@ export function NetworkGraph({
   const [isClient, setIsClient] = useState(false);
   const [isOrbiting, setIsOrbiting] = useState(false);
   const [orbitAngle, setOrbitAngle] = useState(0);
+  const [similarityThreshold, setSimilarityThreshold] = useState(0.2);
+  const [clusters, setClusters] = useState<ClusterInfo[]>([]);
+  const [selectedCluster, setSelectedCluster] = useState<ClusterInfo | null>(null);
+  const [showClusters, setShowClusters] = useState(false);
 
   // Ensure component only renders on client
   useEffect(() => {
@@ -164,20 +172,54 @@ export function NetworkGraph({
     }
   }, [isOrbiting]);
 
-  // Transform challenges to graph data
-  useEffect(() => {
-    if (challenges.length > 0 && typeof window !== 'undefined') {
-      setIsLoading(true);
-      try {
-        const data = toNetworkGraphData(challenges);
-        setGraphData(data);
-      } catch (error) {
-        console.error('Error transforming challenge data:', error);
-      } finally {
-        setIsLoading(false);
-      }
+  // Transform challenges to graph data with similarity threshold
+  const graphDataWithClusters = useMemo(() => {
+    if (challenges.length === 0 || typeof window === 'undefined') {
+      return { nodes: [], links: [], clusters: [] };
     }
-  }, [challenges]);
+
+    try {
+      // Build similarity matrix with current threshold
+      const similarityEdges = buildSimilarityMatrix(challenges, similarityThreshold);
+      
+      const nodes: NetworkNode[] = challenges.map(ch => ({
+        id: ch.id,
+        label: ch.title,
+        sector: ch.sector.primary,
+        value: Math.max(2, Math.min(12, (ch.funding.amount_max || 100000) / 100000)),
+        color: getSectorColor(ch.sector.primary)
+      }));
+      
+      const links: NetworkLink[] = similarityEdges.map(edge => ({
+        source: edge.source,
+        target: edge.target,
+        similarity: edge.similarity,
+        width: edge.width
+      }));
+
+      // Detect clusters
+      const detectedClusters = detectClusters(challenges, links, 2);
+      
+      return { nodes, links, clusters: detectedClusters };
+    } catch (error) {
+      console.error('Error transforming challenge data:', error);
+      return { nodes: [], links: [], clusters: [] };
+    }
+  }, [challenges, similarityThreshold]);
+
+  // Update graph data and clusters when computed data changes
+  useEffect(() => {
+    setIsLoading(true);
+    setGraphData({ nodes: graphDataWithClusters.nodes, links: graphDataWithClusters.links });
+    setClusters(graphDataWithClusters.clusters);
+    
+    // Notify parent component about detected clusters
+    if (onClustersDetected) {
+      onClustersDetected(graphDataWithClusters.clusters);
+    }
+    
+    setIsLoading(false);
+  }, [graphDataWithClusters, onClustersDetected]);
 
   // Handle node click
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -186,8 +228,16 @@ export function NetworkGraph({
     const challenge = challenges.find(c => c.id === node.id);
     if (challenge && onChallengeSelect) {
       onChallengeSelect(challenge);
+      
+      // Log user interaction
+      logUserInteraction('node_click', {
+        challengeId: challenge.id,
+        challengeTitle: challenge.title,
+        sector: challenge.sector.primary,
+        similarityThreshold
+      });
     }
-  }, [challenges, onChallengeSelect, handleUserInteraction]);
+  }, [challenges, onChallengeSelect, handleUserInteraction, similarityThreshold]);
 
   // Handle node hover
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -195,7 +245,7 @@ export function NetworkGraph({
     setHoveredNode(node);
   }, []);
 
-  // Custom node rendering
+  // Custom node rendering with cluster highlighting
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const nodeCanvasObject = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const label = node.label;
@@ -206,10 +256,19 @@ export function NetworkGraph({
     const isSelected = selectedChallenge?.id === node.id;
     const isHovered = hoveredNode?.id === node.id;
     
+    // Check if node is in selected cluster
+    const isInSelectedCluster = selectedCluster?.challenges.some(c => c.id === node.id);
+    
     // Draw node circle
     ctx.beginPath();
     ctx.arc(node.x || 0, node.y || 0, nodeRadius, 0, 2 * Math.PI);
-    ctx.fillStyle = node.color;
+    
+    // Adjust opacity based on cluster selection
+    if (showClusters && selectedCluster && !isInSelectedCluster) {
+      ctx.fillStyle = node.color + '40'; // Add transparency
+    } else {
+      ctx.fillStyle = node.color;
+    }
     
     if (isSelected) {
       ctx.strokeStyle = '#000';
@@ -219,12 +278,16 @@ export function NetworkGraph({
       ctx.strokeStyle = '#666';
       ctx.lineWidth = 2 / globalScale;
       ctx.stroke();
+    } else if (isInSelectedCluster && showClusters) {
+      ctx.strokeStyle = '#ff6b35';
+      ctx.lineWidth = 2 / globalScale;
+      ctx.stroke();
     }
     
     ctx.fill();
 
     // Draw label if zoomed in enough or node is selected/hovered
-    if (globalScale > 1.5 || isSelected || isHovered) {
+    if (globalScale > 1.5 || isSelected || isHovered || isInSelectedCluster) {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = '#333';
@@ -236,7 +299,7 @@ export function NetworkGraph({
       
       ctx.fillText(displayLabel, node.x || 0, (node.y || 0) + nodeRadius + fontSize);
     }
-  }, [selectedChallenge, hoveredNode]);
+  }, [selectedChallenge, hoveredNode, selectedCluster, showClusters]);
 
   // Custom link rendering
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -292,6 +355,20 @@ export function NetworkGraph({
 
   return (
     <TooltipProvider>
+      {/* Sliding Controls Panel */}
+      <NetworkControlsPanel
+        similarityThreshold={similarityThreshold}
+        onSimilarityChange={setSimilarityThreshold}
+        showClusters={showClusters}
+        onShowClustersChange={setShowClusters}
+        isOrbiting={isOrbiting}
+        onOrbitingChange={setIsOrbiting}
+        clusters={clusters}
+        selectedCluster={selectedCluster}
+        onClusterSelect={setSelectedCluster}
+        onUserInteraction={logUserInteraction}
+      />
+
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
@@ -351,7 +428,7 @@ export function NetworkGraph({
               </div>
             )}
 
-            {/* Legend */}
+            {/* Legend - moved to top-right to avoid controls */}
             <div className="absolute top-4 right-4 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
               <div className="text-sm font-semibold mb-2">Sectors</div>
               <div className="space-y-1">
@@ -367,21 +444,12 @@ export function NetworkGraph({
               </div>
             </div>
 
-            {/* Controls hint */}
-            <div className="absolute bottom-4 left-4 bg-white border border-gray-200 rounded-lg p-2 shadow-sm">
-              <div className="text-xs text-gray-600 space-y-1">
-                <div>• Click nodes to select challenges</div>
-                <div>• Drag to pan, scroll to zoom</div>
-                <div>• Drag nodes to reposition</div>
-                <label className="flex items-center space-x-1 mt-2">
-                  <input
-                    type="checkbox"
-                    checked={isOrbiting}
-                    onChange={(e) => setIsOrbiting(e.target.checked)}
-                    className="w-3 h-3"
-                  />
-                  <span>Camera orbit</span>
-                </label>
+            {/* Simple instructions in bottom-right */}
+            <div className="absolute bottom-4 right-4 bg-white border border-gray-200 rounded-lg p-2 shadow-sm">
+              <div className="text-xs text-gray-600">
+                <div className="font-medium text-gray-800 mb-1">Quick Guide</div>
+                <div>• Click nodes to select</div>
+                <div>• Use controls panel (left) for options</div>
               </div>
             </div>
           </div>

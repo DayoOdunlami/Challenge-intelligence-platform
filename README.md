@@ -1,4 +1,18 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Challenge Intelligence Platform
+
+The UK Infrastructure Innovation Exchange - A visual intelligence system that maps the UK infrastructure innovation landscape, revealing cross-sector patterns and opportunities that traditionally remain hidden.
+
+## Overview
+
+The Challenge Intelligence Platform proves that infrastructure challenges cluster across sectors, enabling one innovation to serve multiple buyers and demonstrating why evidence transfer matters. The core thesis: Infrastructure challenges are siloed by sector, hiding cross-sector patterns that could accelerate innovation adoption.
+
+## Key Features
+
+- **Interactive Network Visualization**: Force-directed graph showing challenge relationships and cross-sector patterns
+- **Multiple Visualization Types**: Chord diagrams, sunburst charts, heatmaps, and Sankey flows
+- **Smart Filtering**: Filter by sector, problem type, budget, and deadline
+- **Challenge Intelligence**: AI-powered similarity detection revealing hidden connections
+- **Reviewer Response System**: Comprehensive response to stakeholder feedback with animations and evidence
 
 ## Getting Started
 
@@ -16,9 +30,21 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Navigation
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Home**: Main landing page with overview
+- **For Reviewers**: Comprehensive response to stakeholder feedback (NEW)
+- **Pitch Deck**: Executive presentation of the concept
+- **Buyer/SME Profiles**: User journey examples
+- **Visualizations**: Network graph, heatmap, chord diagram, sunburst chart, Sankey flow
+
+## Technology Stack
+
+- **Framework**: Next.js 15 with TypeScript and App Router
+- **Styling**: Tailwind CSS with CPC brand theme
+- **Visualizations**: D3.js, Nivo charts, React Force Graph
+- **Animations**: Framer Motion for scroll-triggered animations
+- **UI Components**: shadcn/ui component library
 
 ## Learn More
 

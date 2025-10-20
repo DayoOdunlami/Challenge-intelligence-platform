@@ -86,8 +86,8 @@ export default function ColorSchemeSelector() {
 
   return (
     <div className="fixed top-4 right-4 z-50">
-      {/* Demo indicator */}
-      <div className="absolute -top-2 -right-2 w-3 h-3 bg-green-500 rounded-full animate-pulse" title="Demo Feature" />
+      {/* WIP indicator */}
+      <div className="absolute -top-2 -right-2 w-3 h-3 bg-amber-500 rounded-full animate-pulse" title="Work in Progress" />
       <div className="relative">
         <button
           onClick={() => setIsOpen(!isOpen)}
@@ -161,7 +161,7 @@ export default function ColorSchemeSelector() {
             
             <div className="border-t border-gray-100 px-3 py-2">
               <div className="text-xs text-gray-400 text-center">
-                Perfect for demos & presentations
+                Theme switching - Coming soon
               </div>
             </div>
           </div>

@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Challenge, Sector } from '@/lib/types';
+import HeatmapControls, { SortOption } from '@/components/ui/HeatmapControls';
 
 interface HeatmapChartProps {
   challenges: Challenge[];
@@ -26,25 +27,37 @@ function getHeatmapColor(value: number, maxValue: number): string {
   return '#1565c0'; // Dark blue
 }
 
-// Transform challenges to heatmap format (Sector vs Problem Type intensity)
-function transformToHeatmapData(challenges: Challenge[]) {
+// Transform challenges to heatmap format with sorting capabilities
+function transformToHeatmapData(challenges: Challenge[], sortBy: SortOption = 'alphabetical') {
   // Get all unique sectors and problem types
-  const sectors = [...new Set(challenges.map(c => c.sector.primary))].sort();
-  const problemTypes = [...new Set(challenges.map(c => c.problem_type.primary))].sort();
+  const allSectors = [...new Set(challenges.map(c => c.sector.primary))];
+  const allProblemTypes = [...new Set(challenges.map(c => c.problem_type.primary))];
   
-  // Create matrix with counts and funding
+  // Create matrix with counts, funding, and cross-sector info
   const matrix: Array<{
     sector: string;
     problemType: string;
     count: number;
     funding: number;
     displaySector: string;
+    crossSectorCount: number;
   }> = [];
   
   let maxCount = 0;
   
-  sectors.forEach(sector => {
-    problemTypes.forEach(problemType => {
+  // Calculate cross-sector counts for each problem type
+  const crossSectorCounts = new Map<string, number>();
+  allProblemTypes.forEach(problemType => {
+    const sectorsForProblem = new Set(
+      challenges
+        .filter(c => c.problem_type.primary === problemType)
+        .map(c => c.sector.primary)
+    );
+    crossSectorCounts.set(problemType, sectorsForProblem.size);
+  });
+  
+  allSectors.forEach(sector => {
+    allProblemTypes.forEach(problemType => {
       const matchingChallenges = challenges.filter(c => 
         c.sector.primary === sector && c.problem_type.primary === problemType
       );
@@ -59,10 +72,70 @@ function transformToHeatmapData(challenges: Challenge[]) {
         problemType,
         count,
         funding,
-        displaySector: sector.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
+        displaySector: sector.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        crossSectorCount: crossSectorCounts.get(problemType) || 0
       });
     });
   });
+  
+  // Sort sectors based on sortBy option
+  const sectorTotals = new Map<string, { count: number; funding: number; crossSector: number }>();
+  allSectors.forEach(sector => {
+    const sectorChallenges = challenges.filter(c => c.sector.primary === sector);
+    const uniqueProblemTypes = new Set(sectorChallenges.map(c => c.problem_type.primary));
+    
+    sectorTotals.set(sector, {
+      count: sectorChallenges.length,
+      funding: sectorChallenges.reduce((sum, c) => sum + (c.funding.amount_max || 0), 0),
+      crossSector: uniqueProblemTypes.size
+    });
+  });
+  
+  let sectors: string[];
+  switch (sortBy) {
+    case 'count':
+      sectors = [...allSectors].sort((a, b) => (sectorTotals.get(b)?.count || 0) - (sectorTotals.get(a)?.count || 0));
+      break;
+    case 'funding':
+      sectors = [...allSectors].sort((a, b) => (sectorTotals.get(b)?.funding || 0) - (sectorTotals.get(a)?.funding || 0));
+      break;
+    case 'cross-sector':
+      sectors = [...allSectors].sort((a, b) => (sectorTotals.get(b)?.crossSector || 0) - (sectorTotals.get(a)?.crossSector || 0));
+      break;
+    case 'alphabetical':
+    default:
+      sectors = [...allSectors].sort();
+      break;
+  }
+  
+  // Sort problem types based on sortBy option
+  const problemTypeTotals = new Map<string, { count: number; funding: number; crossSector: number }>();
+  allProblemTypes.forEach(problemType => {
+    const problemChallenges = challenges.filter(c => c.problem_type.primary === problemType);
+    
+    problemTypeTotals.set(problemType, {
+      count: problemChallenges.length,
+      funding: problemChallenges.reduce((sum, c) => sum + (c.funding.amount_max || 0), 0),
+      crossSector: crossSectorCounts.get(problemType) || 0
+    });
+  });
+  
+  let problemTypes: string[];
+  switch (sortBy) {
+    case 'count':
+      problemTypes = [...allProblemTypes].sort((a, b) => (problemTypeTotals.get(b)?.count || 0) - (problemTypeTotals.get(a)?.count || 0));
+      break;
+    case 'funding':
+      problemTypes = [...allProblemTypes].sort((a, b) => (problemTypeTotals.get(b)?.funding || 0) - (problemTypeTotals.get(a)?.funding || 0));
+      break;
+    case 'cross-sector':
+      problemTypes = [...allProblemTypes].sort((a, b) => (problemTypeTotals.get(b)?.crossSector || 0) - (problemTypeTotals.get(a)?.crossSector || 0));
+      break;
+    case 'alphabetical':
+    default:
+      problemTypes = [...allProblemTypes].sort();
+      break;
+  }
   
   return { matrix, sectors, problemTypes, maxCount };
 }
@@ -72,11 +145,27 @@ export function HeatmapChart({
   onCellClick: _onCellClick,
   className = '' 
 }: HeatmapChartProps) {
+  const [sortBy, setSortBy] = useState<SortOption>('alphabetical');
+  const [containerWidth, setContainerWidth] = useState(1200);
+  
+  // Track container width for responsive design
+  useEffect(() => {
+    const updateWidth = () => {
+      const container = document.querySelector('.heatmap-container');
+      if (container) {
+        setContainerWidth(container.clientWidth);
+      }
+    };
+    
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
   
   const { matrix, sectors, problemTypes, maxCount } = useMemo(() => {
     if (challenges.length === 0) return { matrix: [], sectors: [], problemTypes: [], maxCount: 0 };
-    return transformToHeatmapData(challenges);
-  }, [challenges]);
+    return transformToHeatmapData(challenges, sortBy);
+  }, [challenges, sortBy]);
   
   if (challenges.length === 0 || matrix.length === 0) {
     return (
@@ -110,24 +199,33 @@ export function HeatmapChart({
   //   }
   // };
   
+  // Calculate responsive dimensions
+  const availableWidth = containerWidth - 200; // Account for margins and labels
+  const cellWidth = Math.max(60, Math.min(120, availableWidth / problemTypes.length));
+  const cellHeight = 50;
+  const labelHeight = 80;
+  
   return (
     <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           Sector vs Problem Type Heatmap
-          <div className="text-sm text-gray-600 font-normal">
-            Challenge distribution across sectors and problem types
+          <div className="flex items-center gap-4">
+            <HeatmapControls sortBy={sortBy} onSortChange={setSortBy} />
+            <div className="text-sm text-gray-600 font-normal">
+              Challenge distribution across sectors and problem types
+            </div>
           </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="relative" style={{ height: `${Math.max(400, sectors.length * 60 + 120)}px` }}>
-          <div className="p-4">
+        <div className="heatmap-container relative overflow-x-auto" style={{ height: `${Math.max(400, sectors.length * cellHeight + labelHeight + 120)}px` }}>
+          <div className="p-4" style={{ minWidth: `${Math.max(800, problemTypes.length * cellWidth + 200)}px` }}>
             {/* Y-axis labels (Sectors) */}
             <div className="flex">
-              <div className="w-32 flex flex-col justify-around" style={{ height: `${sectors.length * 60}px` }}>
+              <div className="w-40 flex flex-col justify-around" style={{ height: `${sectors.length * cellHeight}px` }}>
                 {sectors.map(sector => (
-                  <div key={sector} className="text-sm font-medium text-gray-700 text-right pr-3">
+                  <div key={sector} className="text-sm font-medium text-gray-700 text-right pr-3" style={{ height: `${cellHeight}px`, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                     {sector.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                   </div>
                 ))}
@@ -136,47 +234,58 @@ export function HeatmapChart({
               {/* Heatmap Grid */}
               <div className="flex-1">
                 {/* X-axis labels (Problem Types) */}
-                <div className="flex mb-2" style={{ height: '60px' }}>
+                <div className="flex mb-2" style={{ height: `${labelHeight}px` }}>
                   {problemTypes.map(problemType => (
                     <div 
                       key={problemType} 
-                      className="flex-1 text-xs font-medium text-gray-700 transform -rotate-45 origin-bottom-left"
+                      className="text-xs font-medium text-gray-700 transform -rotate-45 origin-bottom-left"
                       style={{ 
-                        minWidth: `${Math.max(120, 800 / problemTypes.length)}px`,
+                        width: `${cellWidth}px`,
                         display: 'flex',
                         alignItems: 'end',
                         justifyContent: 'start',
-                        paddingLeft: '8px'
+                        paddingLeft: '8px',
+                        height: `${labelHeight}px`
                       }}
                     >
-                      {problemType}
+                      <span className="truncate max-w-full">{problemType}</span>
                     </div>
                   ))}
                 </div>
                 
                 {/* Heatmap Cells */}
-                <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${problemTypes.length}, 1fr)` }}>
-                  {matrix.map(cell => (
-                    <div
-                      key={`${cell.sector}-${cell.problemType}`}
-                      className="relative border border-gray-200 cursor-pointer hover:border-gray-400 transition-all duration-200 hover:scale-105"
-                      style={{
-                        backgroundColor: getHeatmapColor(cell.count, maxCount),
-                        height: '50px',
-                        minWidth: `${Math.max(80, 800 / problemTypes.length)}px`
-                      }}
-                      onClick={() => handleCellClick(cell.sector, cell.problemType)}
-                      title={`${cell.displaySector} × ${cell.problemType}: ${cell.count} challenges, £${cell.funding.toLocaleString()}`}
-                    >
-                      {cell.count > 0 && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-xs font-bold text-gray-800">
-                            {cell.count}
-                          </span>
+                <div className="grid gap-1" style={{ 
+                  gridTemplateColumns: `repeat(${problemTypes.length}, ${cellWidth}px)`,
+                  gridTemplateRows: `repeat(${sectors.length}, ${cellHeight}px)`
+                }}>
+                  {sectors.map(sector => 
+                    problemTypes.map(problemType => {
+                      const cell = matrix.find(m => m.sector === sector && m.problemType === problemType);
+                      if (!cell) return null;
+                      
+                      return (
+                        <div
+                          key={`${cell.sector}-${cell.problemType}`}
+                          className="relative border border-gray-200 cursor-pointer hover:border-gray-400 transition-all duration-200 hover:scale-105 hover:z-10"
+                          style={{
+                            backgroundColor: getHeatmapColor(cell.count, maxCount),
+                            width: `${cellWidth}px`,
+                            height: `${cellHeight}px`
+                          }}
+                          onClick={() => handleCellClick(cell.sector, cell.problemType)}
+                          title={`${cell.displaySector} × ${cell.problemType}: ${cell.count} challenges, £${cell.funding.toLocaleString()}, Cross-sector: ${cell.crossSectorCount} sectors`}
+                        >
+                          {cell.count > 0 && (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="text-xs font-bold text-gray-800">
+                                {cell.count}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  ))}
+                      );
+                    })
+                  )}
                 </div>
               </div>
             </div>

@@ -7,6 +7,7 @@ import { ChallengeFilters } from '@/components/filters/ChallengeFilters';
 import ProfileFilterButton from '@/components/ui/ProfileFilterButton';
 import QuickNavSidebar from '@/components/ui/QuickNavSidebar';
 import ColorSchemeSelector from '@/components/ui/ColorSchemeSelector';
+import VisualizationControlsPanel from '@/components/ui/VisualizationControlsPanel';
 import challenges from '@/data/challenges';
 import { FilterState, Challenge } from '@/lib/types';
 
@@ -141,6 +142,21 @@ export default function TestSankeyPage() {
     <div className="min-h-screen bg-gray-50 p-8">
       <QuickNavSidebar />
       <ColorSchemeSelector />
+      
+      {/* Sankey-specific Controls Panel */}
+      <VisualizationControlsPanel title="Sankey Controls">
+        <div className="space-y-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <h3 className="font-medium text-yellow-900 mb-2">Coming Soon</h3>
+            <div className="text-sm text-yellow-800 space-y-1">
+              <div>• Flow pathway analysis</div>
+              <div>• Bottleneck identification</div>
+              <div>• Node grouping controls</div>
+              <div>• Success pathway highlighting</div>
+            </div>
+          </div>
+        </div>
+      </VisualizationControlsPanel>
       <div className="max-w-7xl mx-auto">
         {/* Navigation Header */}
         <div className="mb-8">

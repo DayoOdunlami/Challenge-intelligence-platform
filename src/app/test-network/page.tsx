@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { NetworkGraph } from '@/components/visualizations/NetworkGraph';
 import { ChallengeFilters } from '@/components/filters/ChallengeFilters';
@@ -9,8 +9,11 @@ import ProfileFilterButton from '@/components/ui/ProfileFilterButton';
 import QuickNavSidebar from '@/components/ui/QuickNavSidebar';
 import ColorSchemeSelector from '@/components/ui/ColorSchemeSelector';
 import CPCFooter from '@/components/ui/CPCFooter';
+import EnhancedChallengeDetails from '@/components/ui/EnhancedChallengeDetails';
+import ClusterInsightsPanel from '@/components/ui/ClusterInsightsPanel';
 import { Suspense } from 'react';
 import challenges from '@/data/challenges';
+import { ClusterInfo } from '@/lib/cluster-analysis';
 
 function TestNetworkContent() {
   const { 
@@ -21,6 +24,10 @@ function TestNetworkContent() {
     setSelectedChallenge,
     challenges: allChallenges
   } = useAppContext();
+  
+  const [detectedClusters, setDetectedClusters] = useState<ClusterInfo[]>([]);
+  const [selectedCluster, setSelectedCluster] = useState<ClusterInfo | null>(null);
+  const [viewMode, setViewMode] = useState<'network' | 'clusters'>('network');
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -68,6 +75,35 @@ function TestNetworkContent() {
           </div>
         </div>
         
+        {/* View Mode Toggle */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">View:</span>
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('network')}
+                className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                  viewMode === 'network'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Network Analysis
+              </button>
+              <button
+                onClick={() => setViewMode('clusters')}
+                className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                  viewMode === 'clusters'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Cluster Insights ({detectedClusters.length})
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Filters Sidebar */}
           <div className="lg:col-span-1">
@@ -79,111 +115,34 @@ function TestNetworkContent() {
             />
           </div>
 
-          {/* Network Graph */}
+          {/* Main Content Area */}
           <div className="lg:col-span-2">
-            <NetworkGraph
-              challenges={filteredChallenges}
-              selectedChallenge={selectedChallenge}
-              onChallengeSelect={setSelectedChallenge}
-            />
+            {viewMode === 'network' ? (
+              <NetworkGraph
+                challenges={filteredChallenges}
+                selectedChallenge={selectedChallenge}
+                onChallengeSelect={setSelectedChallenge}
+                onClustersDetected={setDetectedClusters}
+              />
+            ) : (
+              <ClusterInsightsPanel
+                clusters={detectedClusters}
+                selectedCluster={selectedCluster}
+                onClusterSelect={setSelectedCluster}
+                onChallengeSelect={setSelectedChallenge}
+              />
+            )}
           </div>
 
-          {/* Challenge Details Panel */}
+          {/* Enhanced Details Panel */}
           <div className="lg:col-span-1">
-            {selectedChallenge ? (
-              <div className="bg-white rounded-lg border border-gray-200 p-6">
-                <h2 className="text-xl font-semibold mb-4">Challenge Details</h2>
-                
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="font-medium text-gray-900">{selectedChallenge.title}</h3>
-                    <p className="text-sm text-gray-600 mt-1">{selectedChallenge.description}</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium">Sector:</span>
-                      <p className="capitalize">{selectedChallenge.sector.primary.replace('_', ' ')}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium">Urgency:</span>
-                      <p className="capitalize">{selectedChallenge.timeline.urgency}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium">Problem Type:</span>
-                      <p>{selectedChallenge.problem_type.primary}</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <span className="font-medium">Funding Range:</span>
-                    <p className="text-sm">
-                      £{selectedChallenge.funding.amount_min?.toLocaleString()} - 
-                      £{selectedChallenge.funding.amount_max?.toLocaleString()}
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="font-medium">Organization:</span>
-                    <p className="text-sm">{selectedChallenge.buyer.organization}</p>
-                  </div>
-
-                  <div>
-                    <span className="font-medium">Keywords:</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {selectedChallenge.keywords.slice(0, 5).map((keyword, index) => (
-                        <span 
-                          key={index}
-                          className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
-                        >
-                          {keyword}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {selectedChallenge.sector.cross_sector_signals.length > 0 && (
-                    <div>
-                      <span className="font-medium">Cross-Sector Signals:</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {selectedChallenge.sector.cross_sector_signals.map((signal, index) => (
-                          <span 
-                            key={index}
-                            className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded"
-                          >
-                            {signal}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <span className="font-medium">Deadline:</span>
-                    <p className="text-sm">
-                      {selectedChallenge.timeline.deadline?.toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white rounded-lg border border-gray-200 p-6">
-                <h2 className="text-xl font-semibold mb-4">Challenge Details</h2>
-                <p className="text-gray-600">Click on a node in the network graph to see challenge details.</p>
-                
-                <div className="mt-6">
-                  <h3 className="font-medium mb-2">Dataset Overview</h3>
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <p>• {allChallenges.length} total challenges</p>
-                    <p>• {filteredChallenges.length} currently visible</p>
-                    <p>• 6 infrastructure sectors</p>
-                    <p>• Cross-sector connections shown as links</p>
-                    <p>• Node size represents funding amount</p>
-                    <p>• Colors represent different sectors</p>
-                  </div>
-                </div>
-              </div>
-            )}
+            <EnhancedChallengeDetails
+              challenge={selectedChallenge}
+              allChallenges={filteredChallenges}
+              links={[]} // Will be populated by NetworkGraph
+              clusters={detectedClusters}
+              onChallengeSelect={setSelectedChallenge}
+            />
           </div>
         </div>
       </div>

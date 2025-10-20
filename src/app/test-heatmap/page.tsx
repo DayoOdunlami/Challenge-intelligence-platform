@@ -7,6 +7,8 @@ import { ChallengeFilters } from '@/components/filters/ChallengeFilters';
 import ProfileFilterButton from '@/components/ui/ProfileFilterButton';
 import QuickNavSidebar from '@/components/ui/QuickNavSidebar';
 import ColorSchemeSelector from '@/components/ui/ColorSchemeSelector';
+import VisualizationControlsPanel from '@/components/ui/VisualizationControlsPanel';
+import HeatmapInsightsPanel from '@/components/ui/HeatmapInsightsPanel';
 import challenges from '@/data/challenges';
 import { FilterState, Challenge, Sector } from '@/lib/types';
 
@@ -100,11 +102,18 @@ export default function TestHeatmapPage() {
     urgentOnly: false,
     keywords: ''
   });
+  
+  const [selectedSector, setSelectedSector] = useState<Sector | null>(null);
+  const [selectedProblemType, setSelectedProblemType] = useState<string | null>(null);
 
   const filteredChallenges = applyFilters(challenges, filters);
   const filterStats = getFilterStats(challenges, filters);
 
   const handleCellClick = (sector: Sector, problemType: string) => {
+    // Set selected items for insights
+    setSelectedSector(sector);
+    setSelectedProblemType(problemType);
+    
     // Add sector and problem type to filters
     const newSectors = filters.sectors.includes(sector) 
       ? filters.sectors 
@@ -125,6 +134,21 @@ export default function TestHeatmapPage() {
     <div className="min-h-screen bg-gray-50 p-8">
       <QuickNavSidebar />
       <ColorSchemeSelector />
+      
+      {/* Heatmap-specific Controls Panel */}
+      <VisualizationControlsPanel title="Heatmap Controls">
+        <div className="space-y-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <h3 className="font-medium text-yellow-900 mb-2">Coming Soon</h3>
+            <div className="text-sm text-yellow-800 space-y-1">
+              <div>• Cell drill-down controls</div>
+              <div>• Color scale adjustment</div>
+              <div>• Aggregation level (sector/problem)</div>
+              <div>• Trend analysis toggle</div>
+            </div>
+          </div>
+        </div>
+      </VisualizationControlsPanel>
       <div className="max-w-7xl mx-auto">
         {/* Navigation Header */}
         <div className="mb-8">
@@ -179,63 +203,71 @@ export default function TestHeatmapPage() {
           </div>
           
           {/* Main Content */}
-          <div className="lg:col-span-3">
-            <div className="space-y-8">
-              {/* Heatmap Chart */}
-              <HeatmapChart
-                challenges={filteredChallenges}
-                onCellClick={handleCellClick}
-                className="w-full"
-              />
-              
-              {/* Enhanced Stats */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-xl font-semibold mb-4">Filter Results</h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">
-                      {filterStats.filtered}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      of {filterStats.total} Challenges
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">
-                      {filterStats.sectors}
-                    </div>
-                    <div className="text-sm text-gray-600">Active Sectors</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">
-                      {filterStats.problemTypes}
-                    </div>
-                    <div className="text-sm text-gray-600">Problem Types</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-600">
-                      £{Math.round(filterStats.totalFunding / 1000000)}M
-                    </div>
-                    <div className="text-sm text-gray-600">Total Funding</div>
-                  </div>
-                </div>
-                {filterStats.urgentCount > 0 && (
-                  <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <div className="text-sm text-red-800">
-                      <strong>{filterStats.urgentCount}</strong> critical urgency challenges in current selection
-                    </div>
-                  </div>
-                )}
-                {filterStats.filtered === 0 && (
-                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <div className="text-sm text-yellow-800">
-                      No challenges match the current filters. Try adjusting your criteria.
-                    </div>
-                  </div>
-                )}
+          <div className="lg:col-span-2">
+            <HeatmapChart
+              challenges={filteredChallenges}
+              onCellClick={handleCellClick}
+              className="w-full"
+            />
+          </div>
+          
+          {/* Enhanced Insights Panel */}
+          <div className="lg:col-span-1">
+            <HeatmapInsightsPanel
+              challenges={filteredChallenges}
+              selectedSector={selectedSector}
+              selectedProblemType={selectedProblemType}
+              onSectorSelect={setSelectedSector}
+              onProblemTypeSelect={setSelectedProblemType}
+            />
+          </div>
+        </div>
+        
+        {/* Filter Results Summary */}
+        <div className="mt-8 bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold mb-4">Filter Results</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">
+                {filterStats.filtered}
+              </div>
+              <div className="text-sm text-gray-600">
+                of {filterStats.total} Challenges
               </div>
             </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">
+                {filterStats.sectors}
+              </div>
+              <div className="text-sm text-gray-600">Active Sectors</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">
+                {filterStats.problemTypes}
+              </div>
+              <div className="text-sm text-gray-600">Problem Types</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">
+                £{Math.round(filterStats.totalFunding / 1000000)}M
+              </div>
+              <div className="text-sm text-gray-600">Total Funding</div>
+            </div>
           </div>
+          {filterStats.urgentCount > 0 && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="text-sm text-red-800">
+                <strong>{filterStats.urgentCount}</strong> critical urgency challenges in current selection
+              </div>
+            </div>
+          )}
+          {filterStats.filtered === 0 && (
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="text-sm text-yellow-800">
+                No challenges match the current filters. Try adjusting your criteria.
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

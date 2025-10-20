@@ -7,7 +7,11 @@ import { ChallengeFilters } from '@/components/filters/ChallengeFilters';
 import ProfileFilterButton from '@/components/ui/ProfileFilterButton';
 import QuickNavSidebar from '@/components/ui/QuickNavSidebar';
 import ColorSchemeSelector from '@/components/ui/ColorSchemeSelector';
+import VisualizationControlsPanel from '@/components/ui/VisualizationControlsPanel';
+// import { ChordInsightsPanel } from '@/components/ui/ChordInsightsPanel';
+import EnhancedChallengeDetails from '@/components/ui/EnhancedChallengeDetails';
 import challenges from '@/data/challenges';
+import { Challenge, FilterState, Sector } from '@/lib/types';
 
 // Enhanced filter application logic
 function applyFilters(challenges: Challenge[], filters: FilterState): Challenge[] {
@@ -90,7 +94,6 @@ function getFilterStats(challenges: Challenge[], filters: FilterState) {
     urgentCount: filtered.filter(c => c.timeline.urgency === 'critical').length
   };
 }
-import { FilterState, Sector, Challenge } from '@/lib/types';
 
 export default function TestChordPage() {
   const [filters, setFilters] = useState<FilterState>({
@@ -100,12 +103,17 @@ export default function TestChordPage() {
     urgentOnly: false,
     keywords: ''
   });
+  
+  const [selectedSector, setSelectedSector] = useState<Sector | null>(null);
+  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
 
   const filteredChallenges = applyFilters(challenges, filters);
   const filterStats = getFilterStats(challenges, filters);
 
   const handleSectorSelect = (sector: Sector) => {
-    // Toggle sector in filters
+    setSelectedSector(selectedSector === sector ? null : sector);
+    
+    // Also toggle sector in filters
     const newSectors = filters.sectors.includes(sector)
       ? filters.sectors.filter(s => s !== sector)
       : [...filters.sectors, sector];
@@ -120,6 +128,22 @@ export default function TestChordPage() {
     <div className="min-h-screen bg-gray-50 p-8">
       <QuickNavSidebar />
       <ColorSchemeSelector />
+      
+      {/* Chord-specific Controls Panel */}
+      <VisualizationControlsPanel title="Chord Controls">
+        <div className="space-y-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <h3 className="font-medium text-yellow-900 mb-2">Coming Soon</h3>
+            <div className="text-sm text-yellow-800 space-y-1">
+              <div>• Sector filtering controls</div>
+              <div>• Connection strength threshold</div>
+              <div>• Problem type grouping</div>
+              <div>• Animation speed controls</div>
+            </div>
+          </div>
+        </div>
+      </VisualizationControlsPanel>
+      
       <div className="max-w-7xl mx-auto">
         {/* Navigation Header */}
         <div className="mb-8">
@@ -174,63 +198,185 @@ export default function TestChordPage() {
           </div>
           
           {/* Main Content */}
-          <div className="lg:col-span-3">
-            <div className="space-y-8">
-              {/* Chord Diagram */}
-              <ChordDiagram
-                challenges={filteredChallenges}
-                onSectorSelect={handleSectorSelect}
-                className="w-full"
-              />
-              
-              {/* Enhanced Stats */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-xl font-semibold mb-4">Filter Results</h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">
-                      {filterStats.filtered}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      of {filterStats.total} Challenges
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">
-                      {filterStats.sectors}
-                    </div>
-                    <div className="text-sm text-gray-600">Active Sectors</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">
-                      {filterStats.problemTypes}
-                    </div>
-                    <div className="text-sm text-gray-600">Problem Types</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-600">
-                      £{Math.round(filterStats.totalFunding / 1000000)}M
-                    </div>
-                    <div className="text-sm text-gray-600">Total Funding</div>
+          <div className="lg:col-span-2">
+            <ChordDiagram
+              challenges={filteredChallenges}
+              onSectorSelect={handleSectorSelect}
+              className="w-full"
+            />
+          </div>
+          
+          {/* Enhanced Insights Panel */}
+          <div className="lg:col-span-1">
+            <div className="space-y-6">
+              {/* Enhanced Chord Insights */}
+              <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <h3 className="font-medium text-gray-900 mb-4">Chord Insights</h3>
+                
+                {/* What Connections Mean */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                  <h4 className="font-medium text-blue-900 mb-2">Understanding Connections</h4>
+                  <div className="text-sm text-blue-800 space-y-1">
+                    <div>• <strong>Chord thickness</strong> = Shared problem types</div>
+                    <div>• <strong>Arc size</strong> = Total challenges in sector</div>
+                    <div>• <strong>Colors</strong> = Different infrastructure sectors</div>
                   </div>
                 </div>
-                {filterStats.urgentCount > 0 && (
-                  <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <div className="text-sm text-red-800">
-                      <strong>{filterStats.urgentCount}</strong> critical urgency challenges in current selection
+
+                {/* Sector Analysis */}
+                {selectedSector ? (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+                    <h4 className="font-medium text-orange-900 mb-3">
+                      {selectedSector.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} Analysis
+                    </h4>
+                    
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <span className="font-medium text-orange-800">Challenges:</span>
+                          <div className="text-lg font-bold text-orange-600">
+                            {filteredChallenges.filter(c => c.sector.primary === selectedSector).length}
+                          </div>
+                        </div>
+                        <div>
+                          <span className="font-medium text-orange-800">Funding:</span>
+                          <div className="text-lg font-bold text-green-600">
+                            £{Math.round(filteredChallenges
+                              .filter(c => c.sector.primary === selectedSector)
+                              .reduce((sum, c) => sum + (c.funding.amount_max || 0), 0) / 1000000)}M
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <span className="font-medium text-orange-800 text-sm">Problem Types:</span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {Array.from(new Set(filteredChallenges
+                            .filter(c => c.sector.primary === selectedSector)
+                            .map(c => c.problem_type.primary)
+                          )).slice(0, 3).map((problemType, index) => (
+                            <span key={index} className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded">
+                              {problemType}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <span className="font-medium text-orange-800 text-sm">Cross-Sector Signals:</span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {Array.from(new Set(filteredChallenges
+                            .filter(c => c.sector.primary === selectedSector)
+                            .flatMap(c => c.sector.cross_sector_signals)
+                          )).slice(0, 3).map((signal, index) => (
+                            <span key={index} className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+                              {signal}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                )}
-                {filterStats.filtered === 0 && (
-                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <div className="text-sm text-yellow-800">
-                      No challenges match the current filters. Try adjusting your criteria.
-                    </div>
+                ) : (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                    <h4 className="font-medium text-gray-700 mb-2">Select a Sector</h4>
+                    <p className="text-sm text-gray-600">Click on any sector in the chord diagram to see detailed analysis and collaboration opportunities.</p>
                   </div>
                 )}
+
+                {/* Network Overview */}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h4 className="font-medium text-green-900 mb-3">Network Overview</h4>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="font-medium text-green-800">Total Sectors:</span>
+                      <div className="text-lg font-bold text-green-600">
+                        {new Set(filteredChallenges.map(c => c.sector.primary)).size}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="font-medium text-green-800">Problem Types:</span>
+                      <div className="text-lg font-bold text-green-600">
+                        {new Set(filteredChallenges.map(c => c.problem_type.primary)).size}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-3">
+                    <span className="font-medium text-green-800 text-sm">Collaboration Opportunities:</span>
+                    <div className="text-sm text-green-700 mt-1 space-y-1">
+                      <div>• <strong>AI/ML:</strong> {filteredChallenges.filter(c => 
+                        c.keywords.some(k => k.toLowerCase().includes('ai') || k.toLowerCase().includes('machine learning'))
+                      ).length} challenges across sectors</div>
+                      <div>• <strong>Data Analytics:</strong> {filteredChallenges.filter(c => 
+                        c.keywords.some(k => k.toLowerCase().includes('data') || k.toLowerCase().includes('analytics'))
+                      ).length} challenges with data focus</div>
+                      <div>• <strong>Net Zero:</strong> {filteredChallenges.filter(c => 
+                        c.keywords.some(k => k.toLowerCase().includes('sustainability') || k.toLowerCase().includes('carbon'))
+                      ).length} sustainability-focused challenges</div>
+                    </div>
+                  </div>
+                </div>
               </div>
+              
+              {selectedChallenge && (
+                <EnhancedChallengeDetails
+                  challenge={selectedChallenge}
+                  allChallenges={filteredChallenges}
+                  links={[]}
+                  clusters={[]}
+                  onChallengeSelect={setSelectedChallenge}
+                />
+              )}
             </div>
           </div>
+        </div>
+        
+        {/* Filter Results Summary */}
+        <div className="mt-8 bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold mb-4">Filter Results</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">
+                {filterStats.filtered}
+              </div>
+              <div className="text-sm text-gray-600">
+                of {filterStats.total} Challenges
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">
+                {filterStats.sectors}
+              </div>
+              <div className="text-sm text-gray-600">Active Sectors</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">
+                {filterStats.problemTypes}
+              </div>
+              <div className="text-sm text-gray-600">Problem Types</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">
+                £{Math.round(filterStats.totalFunding / 1000000)}M
+              </div>
+              <div className="text-sm text-gray-600">Total Funding</div>
+            </div>
+          </div>
+          {filterStats.urgentCount > 0 && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="text-sm text-red-800">
+                <strong>{filterStats.urgentCount}</strong> critical urgency challenges in current selection
+              </div>
+            </div>
+          )}
+          {filterStats.filtered === 0 && (
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="text-sm text-yellow-800">
+                No challenges match the current filters. Try adjusting your criteria.
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

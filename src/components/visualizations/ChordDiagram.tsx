@@ -99,17 +99,17 @@ export function ChordDiagram({
     );
   }
   
-  // Event handlers for future implementation
-  // const handleArcClick = (arc: unknown) => {
-  //   if (onSectorSelect) {
-  //     const sector = chordData.keys[(arc as any).index] as Sector;
-  //     onSectorSelect(sector);
-  //   }
-  // };
+  // Event handlers
+  const handleArcClick = (arc: unknown) => {
+    if (_onSectorSelect) {
+      const sector = chordData.keys[(arc as any).index] as Sector;
+      _onSectorSelect(sector);
+    }
+  };
   
-  // const handleRibbonClick = (ribbon: unknown) => {
-  //   console.log('Ribbon clicked:', ribbon);
-  // };
+  const handleRibbonClick = (ribbon: unknown) => {
+    console.log('Ribbon clicked:', ribbon);
+  };
   
   return (
     <Card className={className}>
@@ -153,10 +153,10 @@ export function ChordDiagram({
             }}
             colors={sectorColors}
             isInteractive={true}
-            // Hover effects handled by CSS
+            onArcClick={handleArcClick}
+            onRibbonClick={handleRibbonClick}
             animate={true}
             motionConfig="wobbly"
-            // Interactive features will be added in future iteration
           />
           
           {/* Legend */}

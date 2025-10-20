@@ -44,7 +44,7 @@ function getProblemTypeColor(index: number, total: number): string {
 
 // Transform challenges to Sankey format (Sector → Problem Type → Urgency)
 function transformToSankeyData(challenges: Challenge[]) {
-  const nodes: Array<{ id: string; nodeColor: string }> = [];
+  const nodes: Array<{ id: string; color: string }> = [];
   const links: Array<{ source: string; target: string; value: number }> = [];
   
   // Get unique values for each level
@@ -56,21 +56,21 @@ function transformToSankeyData(challenges: Challenge[]) {
   sectors.forEach(sector => {
     nodes.push({
       id: `sector_${sector}`,
-      nodeColor: getSectorColor(sector as Sector)
+      color: getSectorColor(sector as Sector)
     });
   });
   
   problemTypes.forEach((problemType, index) => {
     nodes.push({
       id: `problem_${problemType}`,
-      nodeColor: getProblemTypeColor(index, problemTypes.length)
+      color: getProblemTypeColor(index, problemTypes.length)
     });
   });
   
   urgencyLevels.forEach(urgency => {
     nodes.push({
       id: `urgency_${urgency}`,
-      nodeColor: getUrgencyColor(urgency)
+      color: getUrgencyColor(urgency)
     });
   });
   
@@ -164,7 +164,7 @@ export function SankeyChart({
             data={sankeyData}
             margin={{ top: 40, right: 180, bottom: 40, left: 120 }}
             align="justify"
-            colors={{ datum: 'data.nodeColor' }}
+            colors={{ datum: 'data.color' }}
             nodeOpacity={0.9}
             nodeHoverOthersOpacity={0.2}
             nodeThickness={Math.max(15, Math.min(30, 400 / sankeyData.nodes.length))}

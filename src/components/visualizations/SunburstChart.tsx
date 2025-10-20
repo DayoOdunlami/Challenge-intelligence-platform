@@ -79,16 +79,19 @@ function transformToSunburstData(challenges: Challenge[]) {
     
     for (const [problemType, chs] of Object.entries(problems)) {
       const problemNode = {
-        name: problemType,
+        name: `${problemType}_${sector}`, // Make unique by combining with sector
         color: getSectorColor(sector as Sector),
-        children: chs.map(ch => ({
-          name: ch.title.length > 30 ? ch.title.substring(0, 30) + '...' : ch.title,
-          value: Math.max(100000, ch.funding.amount_max || 100000), // Minimum size for visibility
-          color: getSectorColor(sector as Sector),
-          challengeId: ch.id,
-          fullTitle: ch.title,
-          funding: ch.funding.amount_max || 0
-        }))
+        children: chs.map((ch, index) => {
+          const shortTitle = ch.title.length > 30 ? ch.title.substring(0, 30) + '...' : ch.title;
+          return {
+            name: `${shortTitle}_${ch.id}`, // Make unique with ID
+            value: Math.max(100000, ch.funding.amount_max || 100000), // Minimum size for visibility
+            color: getSectorColor(sector as Sector),
+            challengeId: ch.id,
+            fullTitle: ch.title,
+            funding: ch.funding.amount_max || 0
+          };
+        })
       };
       sectorNode.children.push(problemNode);
     }

@@ -7,6 +7,18 @@
   --cpc-info-blue: #4A90E2;
   --cpc-warning-amber: #F5A623;
   --cpc-success-green: #50C878;
+  
+  /* CPC Green Scale (from brand guidelines) */
+  --cpc-green-50: #E6F7F4;
+  --cpc-green-100: #CCE2DC;
+  --cpc-green-200: #9DCCC0;
+  --cpc-green-300: #6DB5A4;
+  --cpc-green-400: #4DCFA2;
+  --cpc-green-500: #007060;
+  --cpc-green-600: #006E51;
+  --cpc-green-700: #005944;
+  --cpc-green-800: #004437;
+  --cpc-green-900: #002F2A;
 }
 
 /* CPC Theme Applied */
@@ -99,4 +111,114 @@
   padding: 1rem;
   text-align: center;
   font-size: 0.875rem;
+}
+
+/* CPC Green Utility Classes */
+.bg-cpc-green-50 { background-color: var(--cpc-green-50); }
+.bg-cpc-green-100 { background-color: var(--cpc-green-100); }
+.bg-cpc-green-200 { background-color: var(--cpc-green-200); }
+.bg-cpc-green-300 { background-color: var(--cpc-green-300); }
+.bg-cpc-green-400 { background-color: var(--cpc-green-400); }
+.bg-cpc-green-500 { background-color: var(--cpc-green-500); }
+.bg-cpc-green-600 { background-color: var(--cpc-green-600); }
+.bg-cpc-green-700 { background-color: var(--cpc-green-700); }
+.bg-cpc-green-800 { background-color: var(--cpc-green-800); }
+.bg-cpc-green-900 { background-color: var(--cpc-green-900); }
+
+.text-cpc-green-50 { color: var(--cpc-green-50); }
+.text-cpc-green-100 { color: var(--cpc-green-100); }
+.text-cpc-green-200 { color: var(--cpc-green-200); }
+.text-cpc-green-300 { color: var(--cpc-green-300); }
+.text-cpc-green-400 { color: var(--cpc-green-400); }
+.text-cpc-green-500 { color: var(--cpc-green-500); }
+.text-cpc-green-600 { color: var(--cpc-green-600); }
+.text-cpc-green-700 { color: var(--cpc-green-700); }
+.text-cpc-green-800 { color: var(--cpc-green-800); }
+.text-cpc-green-900 { color: var(--cpc-green-900); }
+
+.border-cpc-green-50 { border-color: var(--cpc-green-50); }
+.border-cpc-green-100 { border-color: var(--cpc-green-100); }
+.border-cpc-green-200 { border-color: var(--cpc-green-200); }
+.border-cpc-green-300 { border-color: var(--cpc-green-300); }
+.border-cpc-green-400 { border-color: var(--cpc-green-400); }
+.border-cpc-green-500 { border-color: var(--cpc-green-500); }
+.border-cpc-green-600 { border-color: var(--cpc-green-600); }
+.border-cpc-green-700 { border-color: var(--cpc-green-700); }
+.border-cpc-green-800 { border-color: var(--cpc-green-800); }
+.border-cpc-green-900 { border-color: var(--cpc-green-900); }
+
+/* Hover states */
+.hover\:bg-cpc-green-700:hover { background-color: var(--cpc-green-700); }
+.hover\:bg-cpc-green-800:hover { background-color: var(--cpc-green-800); }
+.hover\:bg-cpc-green-900:hover { background-color: var(--cpc-green-900); }/* Scrol
+l-triggered animations for section headings */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.6s ease-out forwards;
+  opacity: 0;
+  transform-origin: center;
+}
+
+.animation-delay-200 {
+  animation-delay: 0.2s;
+}
+
+.animation-delay-400 {
+  animation-delay: 0.4s;
+}
+
+.animation-delay-600 {
+  animation-delay: 0.6s;
+}
+
+/* Intersection Observer triggered animations */
+@media (prefers-reduced-motion: no-preference) {
+  .animate-on-scroll {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  }
+  
+  .animate-on-scroll.in-view {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  .animate-underline-on-scroll {
+    opacity: 0;
+    transform: scaleX(0);
+    transition: opacity 0.6s ease-out 0.4s, transform 0.6s ease-out 0.4s;
+    transform-origin: center;
+  }
+  
+  .animate-underline-on-scroll.in-view {
+    opacity: 1;
+    transform: scaleX(1);
+  }
 }

@@ -7,6 +7,7 @@ import { ChallengeFilters } from '@/components/filters/ChallengeFilters';
 import ProfileFilterButton from '@/components/ui/ProfileFilterButton';
 import QuickNavSidebar from '@/components/ui/QuickNavSidebar';
 import ColorSchemeSelector from '@/components/ui/ColorSchemeSelector';
+import VisualizationControlsPanel from '@/components/ui/VisualizationControlsPanel';
 import challenges from '@/data/challenges';
 import { FilterState, Challenge } from '@/lib/types';
 
@@ -114,6 +115,21 @@ export default function TestSunburstPage() {
     <div className="min-h-screen bg-gray-50 p-8">
       <QuickNavSidebar />
       <ColorSchemeSelector />
+      
+      {/* Sunburst-specific Controls Panel */}
+      <VisualizationControlsPanel title="Sunburst Controls">
+        <div className="space-y-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <h3 className="font-medium text-yellow-900 mb-2">Coming Soon</h3>
+            <div className="text-sm text-yellow-800 space-y-1">
+              <div>• Hierarchical drill-down</div>
+              <div>• Funding distribution view</div>
+              <div>• Segment highlighting</div>
+              <div>• Zoom and focus controls</div>
+            </div>
+          </div>
+        </div>
+      </VisualizationControlsPanel>
       <div className="max-w-7xl mx-auto">
         {/* Navigation Header */}
         <div className="mb-8">
