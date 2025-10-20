@@ -81,7 +81,7 @@ export function CreativeHero({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [isVisible, setIsVisible] = useState(true) // Start visible
-  const animationRef = useRef<number>()
+  const animationRef = useRef<number>(0)
   const [detectedAreas, setDetectedAreas] = useState<ContentArea[]>([])
   const [mouseIntensity, setMouseIntensity] = useState(0)
 
