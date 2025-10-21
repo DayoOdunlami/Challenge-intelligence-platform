@@ -815,12 +815,38 @@ function VisualizationsContent() {
               <Button 
                 variant="ghost" 
                 size="sm"
-                onClick={() => setFocusMode(!focusMode)}
+                onClick={toggleFocusMode}
                 className={`${focusMode ? 'text-[#006E51] bg-[#006E51]/10' : 'text-gray-600'} hover:text-[#006E51]`}
               >
                 <Zap className="h-4 w-4 mr-2" />
                 {focusMode ? 'Exit Focus' : 'Focus Mode'}
               </Button>
+              
+              {/* Controls Toggle - only show when not in focus mode */}
+              {!focusMode && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowControls(!showControls)}
+                  className={`${showControls ? 'text-[#006E51] bg-[#006E51]/10' : 'text-gray-600'} hover:text-[#006E51]`}
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Controls
+                </Button>
+              )}
+              
+              {/* Insights Toggle - only show when not in focus mode */}
+              {!focusMode && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowInsights(!showInsights)}
+                  className={`${showInsights ? 'text-[#006E51] bg-[#006E51]/10' : 'text-gray-600'} hover:text-[#006E51]`}
+                >
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Insights
+                </Button>
+              )}
               
               <Button 
                 variant="ghost" 
@@ -887,57 +913,7 @@ function VisualizationsContent() {
 
       {/* Main Content */}
       <main className={`relative z-10 ${isFullscreen ? 'fixed inset-0 top-0 bg-white' : 'container mx-auto px-6 py-8'}`}>
-        {/* Floating View Controls */}
-        {!isFullscreen && (
-          <div className="fixed top-20 right-6 z-30 flex flex-col gap-2">
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="bg-white border border-gray-200 rounded-lg shadow-lg p-2"
-            >
-              <div className="flex flex-col gap-1">
-                {/* Focus Mode Toggle */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={toggleFocusMode}
-                  className={`justify-start ${focusMode ? 'bg-[#006E51]/10 text-[#006E51]' : 'text-gray-600'} hover:text-[#006E51] hover:bg-[#006E51]/10`}
-                  title={focusMode ? 'Exit Focus Mode' : 'Enter Focus Mode'}
-                >
-                  <Zap className="h-4 w-4 mr-2" />
-                  {focusMode ? 'Exit Focus' : 'Focus Mode'}
-                </Button>
-                
-                {/* Individual Panel Toggles (only show when not in focus mode) */}
-                {!focusMode && (
-                  <>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowControls(!showControls)}
-                      className={`justify-start ${showControls ? 'text-[#006E51]' : 'text-gray-400'} hover:text-[#006E51] hover:bg-[#006E51]/10`}
-                      title={showControls ? 'Hide Controls' : 'Show Controls'}
-                    >
-                      <Settings className="h-4 w-4 mr-2" />
-                      Controls
-                    </Button>
-                    
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowInsights(!showInsights)}
-                      className={`justify-start ${showInsights ? 'text-[#006E51]' : 'text-gray-400'} hover:text-[#006E51] hover:bg-[#006E51]/10`}
-                      title={showInsights ? 'Hide Insights' : 'Show Insights'}
-                    >
-                      <MessageCircle className="h-4 w-4 mr-2" />
-                      Insights
-                    </Button>
-                  </>
-                )}
-              </div>
-            </motion.div>
-          </div>
-        )}
+
 
         <div className={`grid gap-6 ${
           isFullscreen 
