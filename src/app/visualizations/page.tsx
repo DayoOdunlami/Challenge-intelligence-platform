@@ -78,9 +78,9 @@ function VisualizationsContent() {
   } = useAppContext()
   const [activeViz, setActiveViz] = useState<VisualizationType>('network')
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [showInsights, setShowInsights] = useState(false) // Start hidden for focus
-  const [showControls, setShowControls] = useState(false) // Start hidden for focus
-  const [focusMode, setFocusMode] = useState(true) // New focus mode
+  const [showInsights, setShowInsights] = useState(true) // Show by default
+  const [showControls, setShowControls] = useState(true) // Show by default
+  const [focusMode, setFocusMode] = useState(false) // Focus mode off by default
   
   // Network-specific state (like individual network page)
   const [detectedClusters, setDetectedClusters] = useState<ClusterInfo[]>([])
@@ -117,17 +117,19 @@ function VisualizationsContent() {
     setSelectedChallenge(challenge)
   }
 
-  // Handle focus mode exit from NetworkGraph
-  useEffect(() => {
-    const handleExitFocusMode = () => {
-      setFocusMode(false);
+  // Toggle focus mode
+  const toggleFocusMode = () => {
+    setFocusMode(!focusMode);
+    if (!focusMode) {
+      // Entering focus mode - hide panels
+      setShowControls(false);
+      setShowInsights(false);
+    } else {
+      // Exiting focus mode - show panels
       setShowControls(true);
       setShowInsights(true);
-    };
-
-    window.addEventListener('exitFocusMode', handleExitFocusMode);
-    return () => window.removeEventListener('exitFocusMode', handleExitFocusMode);
-  }, []);
+    }
+  };
 
   // Handle cluster detection from NetworkGraph
   const handleClustersDetected = (clusters: ClusterInfo[]) => {
@@ -885,47 +887,56 @@ function VisualizationsContent() {
 
       {/* Main Content */}
       <main className={`relative z-10 ${isFullscreen ? 'fixed inset-0 top-0 bg-white' : 'container mx-auto px-6 py-8'}`}>
-        {/* Focus Mode Banner */}
-        {focusMode && !isFullscreen && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 bg-gradient-to-r from-[#006E51]/10 to-blue-50 border border-[#006E51]/20 rounded-xl p-4"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Zap className="w-5 h-5 text-[#006E51]" />
-                <div>
-                  <h3 className="font-semibold text-[#006E51]">Focus Mode Active</h3>
-                  <p className="text-sm text-gray-600">Panels hidden for distraction-free exploration. Click elements to reveal insights.</p>
-                </div>
-              </div>
-              <div className="flex gap-2">
+        {/* Floating View Controls */}
+        {!isFullscreen && (
+          <div className="fixed top-20 right-6 z-30 flex flex-col gap-2">
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="bg-white border border-gray-200 rounded-lg shadow-lg p-2"
+            >
+              <div className="flex flex-col gap-1">
+                {/* Focus Mode Toggle */}
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
-                  onClick={() => {
-                    setShowInsights(true)
-                    setFocusMode(false)
-                  }}
-                  className="border-[#006E51]/30 text-[#006E51] hover:bg-[#006E51]/10"
+                  onClick={toggleFocusMode}
+                  className={`justify-start ${focusMode ? 'bg-[#006E51]/10 text-[#006E51]' : 'text-gray-600'} hover:text-[#006E51] hover:bg-[#006E51]/10`}
+                  title={focusMode ? 'Exit Focus Mode' : 'Enter Focus Mode'}
                 >
-                  Show Insights
+                  <Zap className="h-4 w-4 mr-2" />
+                  {focusMode ? 'Exit Focus' : 'Focus Mode'}
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setShowControls(true)
-                    setFocusMode(false)
-                  }}
-                  className="border-[#006E51]/30 text-[#006E51] hover:bg-[#006E51]/10"
-                >
-                  Show Controls
-                </Button>
+                
+                {/* Individual Panel Toggles (only show when not in focus mode) */}
+                {!focusMode && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowControls(!showControls)}
+                      className={`justify-start ${showControls ? 'text-[#006E51]' : 'text-gray-400'} hover:text-[#006E51] hover:bg-[#006E51]/10`}
+                      title={showControls ? 'Hide Controls' : 'Show Controls'}
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      Controls
+                    </Button>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowInsights(!showInsights)}
+                      className={`justify-start ${showInsights ? 'text-[#006E51]' : 'text-gray-400'} hover:text-[#006E51] hover:bg-[#006E51]/10`}
+                      title={showInsights ? 'Hide Insights' : 'Show Insights'}
+                    >
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Insights
+                    </Button>
+                  </>
+                )}
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
         )}
 
         <div className={`grid gap-6 ${

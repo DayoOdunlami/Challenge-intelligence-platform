@@ -475,24 +475,7 @@ export function NetworkGraph({
               </div>
             )}
 
-            {/* Focus Mode Exit Button */}
-            {!showControls && (
-              <div className="absolute top-4 left-4 z-20">
-                <button
-                  onClick={() => {
-                    // This will be handled by parent component
-                    window.dispatchEvent(new CustomEvent('exitFocusMode'));
-                  }}
-                  className="bg-[#006E51] hover:bg-[#005A42] text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm font-medium transition-colors"
-                  title="Exit Focus Mode"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                  Exit Focus
-                </button>
-              </div>
-            )}
+
 
             {/* Legend - moved to top-right to avoid controls */}
             <div className="absolute top-4 right-4 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
