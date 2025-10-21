@@ -184,7 +184,11 @@ Innovation Atlas — mapping connections that move the UK forward.
                 </button>
               </div>
               <div className="flex items-center space-x-4">
-                <select className="bg-gray-700 text-white text-sm rounded px-2 py-1 border border-gray-600">
+                <select 
+                  className="bg-gray-700 text-white text-sm rounded px-2 py-1 border border-gray-600"
+                  value={playbackRate}
+                  onChange={(e) => handlePlaybackRateChange(parseFloat(e.target.value))}
+                >
                   <option value="1">1x</option>
                   <option value="1.25">1.25x</option>
                   <option value="1.5">1.5x</option>

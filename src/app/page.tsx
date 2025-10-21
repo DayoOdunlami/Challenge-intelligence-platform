@@ -346,7 +346,9 @@ export default function HomePage() {
             { x: 0.5, y: 0.5, width: 600, height: 400, shape: 'rectangle', fadeStart: 0.9 }
           ]}
         />
-        <AudioExplainerSection />
+        <div className="relative z-10">
+          <AudioExplainerSection />
+        </div>
       </section>
 
       {/* Future Features Section */}
