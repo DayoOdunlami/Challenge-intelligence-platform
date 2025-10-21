@@ -57,7 +57,7 @@ const visualizations = [
 ]
 
 export default function VisualizationsPage() {
-  const [activeViz, setActiveViz] = useState<VisualizationType>('network')
+  const [activeViz, setActiveViz] = useState<VisualizationType>('sankey')
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showInsights, setShowInsights] = useState(true)
   const [showControls, setShowControls] = useState(true)
@@ -71,27 +71,69 @@ export default function VisualizationsPage() {
     keywords: ''
   })
   
+  // Interactive state for insights
+  const [selectedElement, setSelectedElement] = useState<any>(null)
+  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null)
+  
   // Apply filters to challenges data
   const filteredChallenges = challenges // For now, use all challenges
+  
+  // Handle element selection for insights
+  const handleElementSelect = (elementId: string, elementData?: any) => {
+    console.log('Element selected:', elementId, elementData)
+    setSelectedElement({ id: elementId, data: elementData })
+    
+    // If it's a challenge, find the full challenge data
+    if (elementId.startsWith('challenge_')) {
+      const challengeId = elementId.replace('challenge_', '')
+      const challenge = challenges.find(c => c.id === challengeId)
+      setSelectedChallenge(challenge || null)
+    } else {
+      setSelectedChallenge(null)
+    }
+  }
 
   const activeVisualization = visualizations.find(v => v.id === activeViz)
 
   const renderVisualization = () => {
+    // Dynamic height based on visualization type
+    const getVisualizationHeight = () => {
+      switch (activeViz) {
+        case 'sankey':
+          return 'min-h-[800px]' // Sankey needs more vertical space
+        case 'heatmap':
+          return 'min-h-[600px]' // Heatmap is more compact
+        case 'sunburst':
+          return 'h-[600px]' // Sunburst is circular, fixed aspect
+        case 'chord':
+          return 'h-[600px]' // Chord is also circular
+        default:
+          return 'h-[600px]'
+      }
+    }
+
+    const containerClass = `w-full ${getVisualizationHeight()} overflow-auto`
+
     switch (activeViz) {
       case 'sankey':
         return (
-          <SankeyChart 
-            challenges={filteredChallenges}
-            onNodeClick={(nodeId) => console.log('Node clicked:', nodeId)}
-            className="w-full h-full"
-          />
+          <div className={containerClass}>
+            <SankeyChart 
+              challenges={filteredChallenges}
+              onNodeClick={handleElementSelect}
+              className="w-full min-h-full"
+            />
+          </div>
         )
       case 'heatmap':
         return (
-          <HeatmapChart 
-            challenges={filteredChallenges}
-            className="w-full h-full"
-          />
+          <div className={containerClass}>
+            <HeatmapChart 
+              challenges={filteredChallenges}
+              onCellClick={handleElementSelect}
+              className="w-full min-h-full"
+            />
+          </div>
         )
       case 'network':
         return (
@@ -110,17 +152,23 @@ export default function VisualizationsPage() {
         )
       case 'sunburst':
         return (
-          <SunburstChart 
-            challenges={filteredChallenges}
-            className="w-full h-full"
-          />
+          <div className={containerClass}>
+            <SunburstChart 
+              challenges={filteredChallenges}
+              onArcClick={handleElementSelect}
+              className="w-full h-full"
+            />
+          </div>
         )
       case 'chord':
         return (
-          <ChordDiagram 
-            challenges={filteredChallenges}
-            className="w-full h-full"
-          />
+          <div className={containerClass}>
+            <ChordDiagram 
+              challenges={filteredChallenges}
+              onArcClick={handleElementSelect}
+              className="w-full h-full"
+            />
+          </div>
         )
       default:
         return (
@@ -138,71 +186,172 @@ export default function VisualizationsPage() {
   }
 
   const renderInsightsPanel = () => {
-    switch (activeViz) {
-      case 'heatmap':
-        return (
-          <div className="p-6 bg-white/80 backdrop-blur-sm rounded-xl border border-[#CCE2DC]/50">
-            <h3 className="text-lg font-semibold text-[#006E51] mb-4">Heatmap Insights</h3>
+    return (
+      <div className="space-y-4">
+        {/* Dynamic Insights based on selection */}
+        <div className="p-6 bg-white/80 backdrop-blur-sm rounded-xl border border-[#CCE2DC]/50">
+          <h3 className="text-lg font-semibold text-[#006E51] mb-4">
+            {selectedElement ? 'Selection Details' : `${activeVisualization?.name} Insights`}
+          </h3>
+          
+          {selectedElement ? (
             <div className="space-y-4">
-              <div className="p-4 bg-[#CCE2DC]/20 rounded-lg">
-                <h4 className="font-medium text-[#006E51] mb-2">Key Patterns</h4>
-                <p className="text-sm text-gray-600">
-                  High-intensity clusters detected in healthcare and sustainability sectors.
-                </p>
+              {selectedChallenge ? (
+                // Challenge-specific insights
+                <div>
+                  <div className="p-4 bg-[#006E51]/5 rounded-lg border border-[#006E51]/20">
+                    <h4 className="font-semibold text-[#006E51] mb-2">{selectedChallenge.title}</h4>
+                    <p className="text-sm text-gray-600 mb-3">{selectedChallenge.description}</p>
+                    
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="font-medium text-gray-700">Sector:</span>
+                        <div className="text-[#006E51] capitalize">{selectedChallenge.sector.primary}</div>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700">Urgency:</span>
+                        <div className={`capitalize ${
+                          selectedChallenge.timeline.urgency === 'critical' ? 'text-red-600' :
+                          selectedChallenge.timeline.urgency === 'high' ? 'text-orange-600' :
+                          'text-green-600'
+                        }`}>
+                          {selectedChallenge.timeline.urgency}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700">Budget:</span>
+                        <div className="text-[#006E51]">
+                          £{(selectedChallenge.funding.amount_max / 1000000).toFixed(1)}M
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700">Duration:</span>
+                        <div className="text-[#006E51]">{selectedChallenge.timeline.duration_months}mo</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <h5 className="font-medium text-blue-700 mb-2">Keywords</h5>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedChallenge.keywords.slice(0, 6).map((keyword, idx) => (
+                        <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
+                          {keyword}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                // General element insights
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium text-gray-700 mb-2">Element Selected</h4>
+                  <p className="text-sm text-gray-600">ID: {selectedElement.id}</p>
+                  {selectedElement.data && (
+                    <pre className="text-xs text-gray-500 mt-2 overflow-auto">
+                      {JSON.stringify(selectedElement.data, null, 2)}
+                    </pre>
+                  )}
+                </div>
+              )}
+              
+              <button
+                onClick={() => {
+                  setSelectedElement(null)
+                  setSelectedChallenge(null)
+                }}
+                className="w-full px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+              >
+                Clear Selection
+              </button>
+            </div>
+          ) : (
+            // Default insights for each visualization type
+            <div className="space-y-4">
+              {activeViz === 'sankey' && (
+                <>
+                  <div className="p-4 bg-[#CCE2DC]/20 rounded-lg">
+                    <h4 className="font-medium text-[#006E51] mb-2">Flow Patterns</h4>
+                    <p className="text-sm text-gray-600">
+                      {filteredChallenges.length} challenges flowing through {new Set(filteredChallenges.map(c => c.sector.primary)).size} sectors
+                    </p>
+                  </div>
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <h4 className="font-medium text-blue-700 mb-2">Click to Explore</h4>
+                    <p className="text-sm text-gray-600">
+                      Click on any node in the flow diagram to see detailed challenge information
+                    </p>
+                  </div>
+                </>
+              )}
+              
+              {activeViz === 'heatmap' && (
+                <>
+                  <div className="p-4 bg-[#CCE2DC]/20 rounded-lg">
+                    <h4 className="font-medium text-[#006E51] mb-2">Intensity Patterns</h4>
+                    <p className="text-sm text-gray-600">
+                      Hotspots indicate high challenge concentration areas
+                    </p>
+                  </div>
+                  <div className="p-4 bg-orange-50 rounded-lg">
+                    <h4 className="font-medium text-orange-700 mb-2">Interactive</h4>
+                    <p className="text-sm text-gray-600">
+                      Click on cells to explore specific sector-problem combinations
+                    </p>
+                  </div>
+                </>
+              )}
+              
+              {(activeViz === 'sunburst' || activeViz === 'chord') && (
+                <>
+                  <div className="p-4 bg-[#CCE2DC]/20 rounded-lg">
+                    <h4 className="font-medium text-[#006E51] mb-2">Hierarchical Structure</h4>
+                    <p className="text-sm text-gray-600">
+                      Explore nested relationships between sectors and problem types
+                    </p>
+                  </div>
+                  <div className="p-4 bg-purple-50 rounded-lg">
+                    <h4 className="font-medium text-purple-700 mb-2">Navigation</h4>
+                    <p className="text-sm text-gray-600">
+                      Click on segments to drill down into specific categories
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+        
+        {/* Quick Stats */}
+        <div className="p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-[#CCE2DC]/30">
+          <h4 className="font-medium text-[#006E51] mb-3">Dataset Overview</h4>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <div className="text-2xl font-bold text-[#006E51]">{filteredChallenges.length}</div>
+              <div className="text-gray-600">Challenges</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-blue-600">
+                {new Set(filteredChallenges.map(c => c.sector.primary)).size}
               </div>
-              <div className="p-4 bg-blue-50 rounded-lg">
-                <h4 className="font-medium text-blue-700 mb-2">Recommendations</h4>
-                <p className="text-sm text-gray-600">
-                  Focus resources on identified hotspots for maximum impact.
-                </p>
+              <div className="text-gray-600">Sectors</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-green-600">
+                £{Math.round(filteredChallenges.reduce((sum, c) => sum + (c.funding.amount_max || 0), 0) / 1000000)}M
               </div>
+              <div className="text-gray-600">Total Funding</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-red-600">
+                {filteredChallenges.filter(c => c.timeline.urgency === 'critical').length}
+              </div>
+              <div className="text-gray-600">Critical</div>
             </div>
           </div>
-        )
-      case 'chord':
-        return (
-          <div className="p-6 bg-white/80 backdrop-blur-sm rounded-xl border border-[#CCE2DC]/50">
-            <h3 className="text-lg font-semibold text-[#006E51] mb-4">Relationship Insights</h3>
-            <div className="space-y-4">
-              <div className="p-4 bg-[#CCE2DC]/20 rounded-lg">
-                <h4 className="font-medium text-[#006E51] mb-2">Strong Connections</h4>
-                <p className="text-sm text-gray-600">
-                  Technology and healthcare sectors show highest interdependency.
-                </p>
-              </div>
-            </div>
-          </div>
-        )
-      case 'network':
-        return (
-          <div className="p-6 bg-white/80 backdrop-blur-sm rounded-xl border border-[#CCE2DC]/50">
-            <h3 className="text-lg font-semibold text-[#006E51] mb-4">Network Insights</h3>
-            <div className="space-y-4">
-              <div className="p-4 bg-[#CCE2DC]/20 rounded-lg">
-                <h4 className="font-medium text-[#006E51] mb-2">Cluster Analysis</h4>
-                <p className="text-sm text-gray-600">
-                  3 major clusters identified with strong internal connections.
-                </p>
-              </div>
-              <div className="p-4 bg-green-50 rounded-lg">
-                <h4 className="font-medium text-green-700 mb-2">Central Nodes</h4>
-                <p className="text-sm text-gray-600">
-                  Key challenges acting as bridges between sectors.
-                </p>
-              </div>
-            </div>
-          </div>
-        )
-      default:
-        return (
-          <div className="p-6 bg-white/80 backdrop-blur-sm rounded-xl border border-[#CCE2DC]/50">
-            <h3 className="text-lg font-semibold text-[#006E51] mb-4">Insights</h3>
-            <p className="text-gray-600">
-              Insights panel for {activeVisualization?.name} coming soon...
-            </p>
-          </div>
-        )
-    }
+        </div>
+      </div>
+    )
   }
 
   const renderControlsPanel = () => {
@@ -411,10 +560,29 @@ export default function VisualizationsPage() {
                     {activeVisualization?.name}
                   </h2>
                   <p className="text-gray-600">{activeVisualization?.description}</p>
+                  {selectedElement && (
+                    <div className="mt-2 px-3 py-1 bg-[#006E51]/10 text-[#006E51] text-sm rounded-full inline-block">
+                      Element selected - see insights panel →
+                    </div>
+                  )}
                 </div>
                 
                 {!isFullscreen && (
                   <div className="flex gap-2">
+                    {/* Visualization Controls */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedElement(null)
+                        setSelectedChallenge(null)
+                      }}
+                      className="text-gray-600 hover:text-[#006E51]"
+                      disabled={!selectedElement}
+                    >
+                      Clear Selection
+                    </Button>
+                    
                     {!showControls && (
                       <Button
                         variant="ghost"
