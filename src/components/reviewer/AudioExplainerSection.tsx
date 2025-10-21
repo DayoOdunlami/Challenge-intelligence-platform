@@ -10,6 +10,7 @@ export function AudioExplainerSection() {
   const [duration, setDuration] = useState(0); // Will be set when audio loads
   const [showTranscript, setShowTranscript] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [playbackRate, setPlaybackRate] = useState(1);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const togglePlay = () => {
@@ -26,10 +27,10 @@ export function AudioExplainerSection() {
   };
 
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (audioRef.current) {
+    if (audioRef.current && duration > 0) {
       const rect = e.currentTarget.getBoundingClientRect();
       const clickX = e.clientX - rect.left;
-      const clickRatio = clickX / rect.width;
+      const clickRatio = Math.max(0, Math.min(1, clickX / rect.width));
       const newTime = clickRatio * duration;
       audioRef.current.currentTime = newTime;
       setCurrentTime(newTime);
@@ -50,6 +51,20 @@ export function AudioExplainerSection() {
     { time: 225, label: "Impact & Future", duration: 45 },
     { time: 270, label: "Call to Action", duration: 30 }
   ];
+
+  const jumpToChapter = (time: number) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = time;
+      setCurrentTime(time);
+    }
+  };
+
+  const handlePlaybackRateChange = (rate: number) => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = rate;
+      setPlaybackRate(rate);
+    }
+  };
 
   const transcript = `
 Across the UK, thousands of innovators are tackling the same challenges — often without ever realising it.
@@ -91,7 +106,7 @@ Innovation Atlas — mapping connections that move the UK forward.
 
         {/* Audio Player */}
         <StaggeredItem>
-          <div className="bg-gray-800 rounded-lg p-8 mb-8 border border-gray-600 shadow-xl">
+          <div className="bg-gray-800 rounded-lg p-8 mb-8 border-2 border-[#006E51] shadow-xl">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-4">
                 <button
@@ -142,9 +157,15 @@ Innovation Atlas — mapping connections that move the UK forward.
               {/* Chapter labels */}
               <div className="flex justify-between mt-2 text-xs text-gray-400">
                 {chapters.map((chapter, idx) => (
-                  <span key={idx} className="text-center" style={{ width: `${(chapter.duration / duration) * 100}%` }}>
+                  <button
+                    key={idx}
+                    onClick={() => jumpToChapter(chapter.time)}
+                    className="text-center hover:text-[#006E51] transition-colors duration-200 cursor-pointer"
+                    style={{ width: `${(chapter.duration / duration) * 100}%` }}
+                    title={`Jump to ${chapter.label}`}
+                  >
                     {chapter.label}
-                  </span>
+                  </button>
                 ))}
               </div>
             </div>
@@ -185,19 +206,36 @@ Innovation Atlas — mapping connections that move the UK forward.
               ref={audioRef}
               onTimeUpdate={(e) => {
                 const audio = e.target as HTMLAudioElement;
-                setCurrentTime(audio.currentTime);
+                if (!isNaN(audio.currentTime)) {
+                  setCurrentTime(audio.currentTime);
+                }
               }}
               onLoadedMetadata={(e) => {
                 const audio = e.target as HTMLAudioElement;
-                setDuration(audio.duration);
-                setIsLoading(false);
+                if (!isNaN(audio.duration)) {
+                  setDuration(audio.duration);
+                  setIsLoading(false);
+                }
+              }}
+              onLoadedData={(e) => {
+                const audio = e.target as HTMLAudioElement;
+                if (!isNaN(audio.duration)) {
+                  setDuration(audio.duration);
+                  setIsLoading(false);
+                }
               }}
               onLoadStart={() => setIsLoading(true)}
               onCanPlay={() => setIsLoading(false)}
-              onEnded={() => setIsPlaying(false)}
+              onEnded={() => {
+                setIsPlaying(false);
+                setCurrentTime(0);
+              }}
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
-              onError={(e) => console.error('Audio error:', e)}
+              onError={(e) => {
+                console.error('Audio error:', e);
+                setIsLoading(false);
+              }}
               preload="metadata"
             >
               <source src="/Audio/ElevenLabs_Across_the_UK,_thousands_of_innovators....mp3" type="audio/mpeg" />

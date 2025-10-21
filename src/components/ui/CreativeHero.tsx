@@ -47,10 +47,10 @@ interface CreativeHeroProps {
   className?: string
   contentAreas?: ContentArea[]
   autoDetectContent?: boolean
-  sectionTheme?: 'default' | 'fragmented-vs-organized' | 'convergence' | 'pulsing' | 'timeline-flow'
+  sectionTheme?: 'default' | 'fragmented-vs-organized' | 'convergence' | 'pulsing' | 'timeline-flow' | 'rippling'
 }
 
-// Default configuration using CPC colors - optimized for performance
+// Default configuration using CPC colors - optimized for performance with stronger effects
 export const DEFAULT_PARTICLE_CONFIG: ParticleConfig = {
   minSize: 2,
   maxSize: 5,
@@ -60,15 +60,15 @@ export const DEFAULT_PARTICLE_CONFIG: ParticleConfig = {
     saturation: 70,
     lightness: 40,
   },
-  gridSize: 50, // Balanced grid size
-  maxDistance: 120,
-  forceFactor: 1.2,
-  returnSpeed: 15,
-  connectionDistance: 40,
-  connectionOpacity: 0.15,
-  connectionWidth: 0.5,
+  gridSize: 35, // Much denser for clearer shape formation
+  maxDistance: 180, // Larger interaction area
+  forceFactor: 2.0, // Stronger base force
+  returnSpeed: 8, // Much faster return to base
+  connectionDistance: 60, // More connections
+  connectionOpacity: 0.25, // More visible connections
+  connectionWidth: 1.0, // Thicker connections
   connectionColor: "rgba(0, 110, 81, {opacity})",
-  mouseEasing: 0.08,
+  mouseEasing: 0.15, // More responsive mouse following
 }
 
 export function CreativeHero({
@@ -217,22 +217,50 @@ export function CreativeHero({
     let targetX = 0
     let targetY = 0
 
+    let isMouseInCanvas = true
+    
     const handleMouseMove = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect()
       targetX = e.clientX - rect.left
       targetY = e.clientY - rect.top
       
-      // Calculate mouse intensity for section themes
-      const centerX = rect.width / 2
-      const centerY = rect.height / 2
-      const maxDistance = Math.sqrt(centerX * centerX + centerY * centerY)
-      const currentDistance = Math.sqrt(
-        Math.pow(targetX - centerX, 2) + Math.pow(targetY - centerY, 2)
+      // Check if mouse is actually over the canvas
+      isMouseInCanvas = (
+        e.clientX >= rect.left && 
+        e.clientX <= rect.right && 
+        e.clientY >= rect.top && 
+        e.clientY <= rect.bottom
       )
-      setMouseIntensity(Math.max(0, 1 - currentDistance / maxDistance))
+      
+      if (isMouseInCanvas) {
+        // Calculate mouse intensity for section themes
+        const centerX = rect.width / 2
+        const centerY = rect.height / 2
+        const maxDistance = Math.sqrt(centerX * centerX + centerY * centerY)
+        const currentDistance = Math.sqrt(
+          Math.pow(targetX - centerX, 2) + Math.pow(targetY - centerY, 2)
+        )
+        
+        // Check if hovering over special elements
+        const hoveredElement = document.elementFromPoint(e.clientX, e.clientY)
+        const isHoveringInteractive = hoveredElement?.closest('[data-particle-zone]')
+        
+        // Enhanced intensity for interactive elements
+        const baseIntensity = Math.max(0.1, 1 - currentDistance / maxDistance) // Reduced minimum
+        setMouseIntensity(isHoveringInteractive ? 1.0 : baseIntensity * 1.2)
+      } else {
+        // Mouse is off canvas - reduce intensity quickly
+        setMouseIntensity(prev => Math.max(0, prev * 0.8)) // Rapid decay
+      }
+    }
+    
+    const handleMouseLeave = () => {
+      isMouseInCanvas = false
+      setMouseIntensity(0) // Immediate return to default when mouse leaves
     }
 
     window.addEventListener("mousemove", handleMouseMove)
+    canvas.addEventListener("mouseleave", handleMouseLeave)
 
     // Particle class
     class Particle {
@@ -276,8 +304,134 @@ export function CreativeHero({
         const maxDist = config.maxDistance!
         let force = ((maxDist - this.distance) / maxDist) * config.forceFactor!
 
-        // Apply section-specific effects
-        if (sectionTheme === 'fragmented-vs-organized') {
+        // Apply section-specific effects with MUCH stronger forces
+        if (sectionTheme === 'convergence') {
+          // Hero section: Strong network formation - particles snap into network patterns
+          if (this.distance < maxDist * 1.5) { // Larger interaction area
+            const attractionForce = 0.8 * mouseIntensity // Much stronger force
+            const networkRadius = 120 // Larger network
+            
+            // Create distinct network nodes - 8 points around mouse
+            const networkPoints = 8
+            const angle = Math.atan2(this.baseY - mouseY, this.baseX - mouseX)
+            const snapAngle = Math.round(angle / (Math.PI * 2 / networkPoints)) * (Math.PI * 2 / networkPoints)
+            
+            // Add some variation for inner/outer rings - MUCH CLOSER to cursor
+            const ringVariation = Math.floor(this.density / 10) % 3
+            const actualRadius = (networkRadius * 0.4) + (ringVariation * 25) // Start at 48px instead of 120px
+            
+            const targetX = mouseX + Math.cos(snapAngle) * actualRadius
+            const targetY = mouseY + Math.sin(snapAngle) * actualRadius
+            
+            // STRONG movement toward network position
+            this.x += (targetX - this.x) * attractionForce
+            this.y += (targetY - this.y) * attractionForce
+            
+            // Override normal repulsion completely
+            force = 0
+          }
+        } else if (sectionTheme === 'pulsing') {
+          // Future features: Simple circle formation with pulsing
+          if (this.distance < maxDist * 1.2) {
+            const pulseIntensity = Math.sin(Date.now() * 0.004) * 0.3 + 0.7
+            const formationForce = 0.6 * pulseIntensity * mouseIntensity
+            
+            // Create a simple pulsing circle - much clearer than question mark
+            const circleRadius = 60 + (pulseIntensity * 20) // Pulsing radius
+            const angle = Math.atan2(this.baseY - mouseY, this.baseX - mouseX)
+            
+            // Only move particles that should be on the circle perimeter
+            const distanceFromMouse = Math.sqrt(
+              Math.pow(this.baseX - mouseX, 2) + Math.pow(this.baseY - mouseY, 2)
+            )
+            
+            // Only affect particles near where the circle should be
+            if (Math.abs(distanceFromMouse - circleRadius) < 15) {
+              const targetX = mouseX + Math.cos(angle) * circleRadius
+              const targetY = mouseY + Math.sin(angle) * circleRadius
+              
+              this.x += (targetX - this.x) * formationForce
+              this.y += (targetY - this.y) * formationForce
+              force = 0
+            }
+            // Let other particles behave normally
+          }
+        } else if (sectionTheme === 'timeline-flow') {
+          // How it works: Simple but clear arrow - only move particles that should be IN the arrow
+          if (this.distance < maxDist * 1.2) {
+            const flowForce = 0.7 * mouseIntensity
+            
+            // Create a simple arrow pointing right (→)
+            const arrowSize = 80
+            const relativeX = this.baseX - mouseX
+            const relativeY = this.baseY - mouseY
+            
+            // Only affect particles that should form the arrow shape
+            let shouldMoveToArrow = false
+            let targetX = this.x
+            let targetY = this.y
+            
+            // Arrow shaft (horizontal line)
+            if (Math.abs(relativeX) <= arrowSize * 0.4 && Math.abs(relativeY) <= arrowSize * 0.06) {
+              targetX = mouseX + (relativeX > 0 ? arrowSize * 0.4 : -arrowSize * 0.4) * Math.sign(relativeX || 1)
+              targetY = mouseY
+              shouldMoveToArrow = true
+            }
+            // Arrow head - upper diagonal
+            else if (relativeX >= arrowSize * 0.3 && relativeX <= arrowSize * 0.5 &&
+                     relativeY >= -arrowSize * 0.25 && relativeY <= 0) {
+              targetX = mouseX + arrowSize * 0.5
+              targetY = mouseY - arrowSize * 0.25
+              shouldMoveToArrow = true
+            }
+            // Arrow head - lower diagonal  
+            else if (relativeX >= arrowSize * 0.3 && relativeX <= arrowSize * 0.5 &&
+                     relativeY >= 0 && relativeY <= arrowSize * 0.25) {
+              targetX = mouseX + arrowSize * 0.5
+              targetY = mouseY + arrowSize * 0.25
+              shouldMoveToArrow = true
+            }
+            
+            if (shouldMoveToArrow) {
+              this.x += (targetX - this.x) * flowForce
+              this.y += (targetY - this.y) * flowForce
+              force = 0 // Don't apply normal repulsion
+            }
+            // Let other particles behave normally (they'll get repelled as usual)
+          }
+        } else if (sectionTheme === 'rippling') {
+          // Audio section: DRAMATIC rippling waves emanating from mouse
+          if (this.distance < maxDist * 2.0) {
+            const rippleForce = 1.2 * mouseIntensity // Much stronger
+            
+            // Create concentric ripple waves
+            const waveSpeed = Date.now() * 0.005 // Faster waves
+            const distanceFromMouse = Math.sqrt(
+              Math.pow(this.baseX - mouseX, 2) + Math.pow(this.baseY - mouseY, 2)
+            )
+            
+            // Multiple wave frequencies for richer effect - MUCH STRONGER
+            const wave1 = Math.sin(distanceFromMouse * 0.015 - waveSpeed) * 40 // Much bigger waves
+            const wave2 = Math.sin(distanceFromMouse * 0.01 - waveSpeed * 1.3) * 30
+            const wave3 = Math.sin(distanceFromMouse * 0.02 - waveSpeed * 0.7) * 25
+            
+            const totalWave = (wave1 + wave2 + wave3) * rippleForce
+            
+            // Apply wave displacement perpendicular to radius - STRONGER
+            const angle = Math.atan2(this.baseY - mouseY, this.baseX - mouseX)
+            const perpAngle = angle + Math.PI / 2
+            
+            this.x += Math.cos(perpAngle) * totalWave * 0.8 // Much stronger perpendicular movement
+            this.y += Math.sin(perpAngle) * totalWave * 0.8
+            
+            // Strong radial movement for dramatic effect
+            const radialWave = Math.sin(distanceFromMouse * 0.008 - waveSpeed) * 20 * rippleForce
+            this.x += Math.cos(angle) * radialWave * 0.6
+            this.y += Math.sin(angle) * radialWave * 0.6
+            
+            force = 0
+          }
+        } else if (sectionTheme === 'fragmented-vs-organized') {
           const canvasWidth = (canvas?.width || 0) / devicePixelRatio
           const isLeftSide = this.baseX < canvasWidth / 2
           
@@ -294,50 +448,37 @@ export function CreativeHero({
             this.x += (Math.random() - 0.5) * totalIntensity * 2
             this.y += (Math.random() - 0.5) * totalIntensity * 2
           } else {
-            // Right side: Continuous orbiting (connected approach)
-            // Override normal repulsion behavior completely
+            // Right side: Perfect circular orbits (organized approach)
             if (this.distance < maxDist) {
-              // Instead of scattering, create orbital motion
               const centerX = mouseX
               const centerY = mouseY
               const angle = Math.atan2(this.y - centerY, this.x - centerX)
-              const distanceFromMouse = Math.sqrt((this.x - centerX) ** 2 + (this.y - centerY) ** 2)
               
-              // Enhanced multi-ring orbital system
-              const baseOrbitalSpeed = totalIntensity * 5 // Even faster
+              // Create 4 perfect, distinct orbital rings
+              const particleId = Math.floor(this.baseX + this.baseY)
+              const ringIndex = particleId % 4 // 4 rings for cleaner look
               
-              // Assign each particle to a specific ring based on its ID/position
-              const particleId = Math.floor(this.baseX + this.baseY) // Unique ID per particle
-              const ringIndex = particleId % 3 // 3 rings: 0, 1, 2
+              // Perfect circular orbits with clear separation
+              const ringDistances = [40, 70, 100, 130] // Well-spaced rings
+              const ringSpeeds = [2.5, -2.0, 1.5, -1.0] // Alternating directions, clear speeds
+              const targetDistance = ringDistances[ringIndex]
+              const orbitalSpeed = ringSpeeds[ringIndex] * totalIntensity * 4
               
-              // Much more distinct ring distances and speeds
-              const ringDistances = [50, 90, 130] // Closer, more distinct rings
-              const ringSpeeds = [1.0, 1.5, 2.0] // Different speeds per ring
-              const ringDirections = [1, -1, 1] // Alternate directions
+              // Calculate perfect circular position
+              const currentDistance = Math.sqrt((this.x - centerX) ** 2 + (this.y - centerY) ** 2)
               
-              const ringSpeed = baseOrbitalSpeed * ringSpeeds[ringIndex]
-              const ringDirection = ringDirections[ringIndex]
-              
-              // Strong orbital motion
-              const tangentX = -Math.sin(angle) * ringSpeed * ringDirection
-              const tangentY = Math.cos(angle) * ringSpeed * ringDirection
-              
-              // Force particles into their assigned ring
-              const targetDistance = ringDistances[ringIndex] + totalIntensity * 15
-              const distanceError = distanceFromMouse - targetDistance
-              
-              // Very strong radial force to maintain distinct rings
-              const radialForce = distanceError * totalIntensity * 1.5 // Much stronger
+              // Strong force to maintain exact ring distance
+              const radialForce = (targetDistance - currentDistance) * 0.4
               const radialX = Math.cos(angle) * radialForce
               const radialY = Math.sin(angle) * radialForce
               
-              // Less variation so rings stay distinct
-              const variation = Math.sin(Date.now() * 0.002 + particleId) * totalIntensity * 0.2
+              // Smooth orbital motion
+              const tangentX = -Math.sin(angle) * orbitalSpeed
+              const tangentY = Math.cos(angle) * orbitalSpeed
               
-              this.x += tangentX - radialX + variation
-              this.y += tangentY - radialY + variation
+              this.x += tangentX + radialX
+              this.y += tangentY + radialY
               
-              // Prevent normal repulsion
               force = 0
             }
             
@@ -609,6 +750,7 @@ export function CreativeHero({
     return () => {
       window.removeEventListener("resize", handleResize)
       window.removeEventListener("mousemove", handleMouseMove)
+      canvas.removeEventListener("mouseleave", handleMouseLeave)
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current)
       }

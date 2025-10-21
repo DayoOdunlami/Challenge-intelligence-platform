@@ -23,12 +23,12 @@ export const PhaseTimeline = () => {
       const windowHeight = window.innerHeight;
       
       // Show floating selector when:
-      // 1. Initial selector has scrolled out of view (appears earlier)
-      // 2. We're still within the timeline section bounds (disappears earlier)
+      // 1. Initial selector has scrolled out of view (appears much later)
+      // 2. We're still within the timeline section bounds
       // 3. Timeline section hasn't completely scrolled past
       
-      const initialSelectorOutOfView = selectorRect.bottom < windowHeight * 0.7; // Appear earlier - when 70% of selector is out of view
-      const timelineStillVisible = timelineRect.bottom > windowHeight * 0.4; // Disappear earlier - more buffer
+      const initialSelectorOutOfView = selectorRect.bottom < windowHeight * 0.3; // Appear much later - when 70% of selector is out of view
+      const timelineStillVisible = timelineRect.bottom > windowHeight * 0.2; // Disappear earlier - more buffer
       const timelineInBounds = timelineRect.top < windowHeight;
       
       const shouldShow = initialSelectorOutOfView && timelineStillVisible && timelineInBounds;

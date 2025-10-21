@@ -16,6 +16,9 @@ import { NetworkGraph } from "@/components/visualizations/NetworkGraph"
 import challenges from "@/data/challenges"
 import { Challenge } from "@/lib/types"
 import { AppProvider, useAppContext } from "@/contexts/AppContext"
+import { InsightsSummary } from "@/components/ui/InsightsSummary"
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs"
+import { UnifiedFloatingNav } from "@/components/ui/UnifiedFloatingNav"
 
 // Import cluster analysis types
 import { ClusterInfo } from "@/lib/cluster-analysis"
@@ -62,136 +65,8 @@ const visualizations = [
   }
 ]
 
-// Navigation component for visualizations page
-function VisualizationNav() {
-  const [isOpen, setIsOpen] = useState(false)
-  const [dropdownOpen, setDropdownOpen] = useState(false)
 
-  const pageItems = [
-    { name: "Home", href: "/", icon: Home, description: "Platform overview" },
-    { name: "Pitch Deck", href: "/pitch", icon: Target, description: "Project presentation" },
-    { name: "For Reviewers", href: "/for-reviewers", icon: FileText, description: "Reviewer response V1" },
-    { name: "For Reviewers V2", href: "/for-reviewers-v2", icon: FileText, description: "Enhanced reviewer response" },
-    { name: "SME Profile", href: "/profile/sme-profile", icon: Users, description: "Subject matter expert" },
-    { name: "Buyer Profile", href: "/profile/buyer-example", icon: User, description: "Buyer persona example" },
-    { name: "Test Pages", href: "#", icon: TestTube, description: "Individual visualization tests", isDropdown: true, items: [
-      { name: "Network Graph", href: "/test-network", icon: Network },
-      { name: "Heatmap", href: "/test-heatmap", icon: BarChart3 },
-      { name: "Chord Diagram", href: "/test-chord", icon: Zap },
-      { name: "Sunburst Chart", href: "/test-sunburst", icon: Sun },
-      { name: "Sankey Flow", href: "/test-sankey", icon: GitBranch },
-    ]},
-  ]
 
-  return (
-    <div className="fixed top-6 right-6 z-50">
-      {/* Toggle Button */}
-      <Button
-        onClick={() => setIsOpen(!isOpen)}
-        className="bg-[#006E51]/90 hover:bg-[#005A42] text-white backdrop-blur-md border border-[#CCE2DC]/30 shadow-lg"
-        size="sm"
-      >
-        {isOpen ? <X className="h-4 w-4 mr-2" /> : <Menu className="h-4 w-4 mr-2" />}
-        {isOpen ? 'Close' : 'Navigate'}
-      </Button>
-
-      {/* Navigation Panel */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: -10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className="absolute top-full right-0 mt-2 w-80 bg-white/95 backdrop-blur-md border border-[#CCE2DC]/50 rounded-xl shadow-xl"
-          >
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-[#006E51]">Platform Navigation</h3>
-                <div className="w-2 h-2 bg-[#006E51] rounded-full animate-pulse"></div>
-              </div>
-              
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {pageItems.map((item) => {
-                  const Icon = item.icon
-                  
-                  if (item.isDropdown) {
-                    return (
-                      <div key={item.name}>
-                        <button
-                          className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-700 hover:text-[#006E51] hover:bg-[#CCE2DC]/20 rounded-lg transition-colors"
-                          onClick={() => setDropdownOpen(!dropdownOpen)}
-                        >
-                          <div className="flex items-center">
-                            <Icon className="h-4 w-4 mr-3 text-[#006E51]" />
-                            <div className="text-left">
-                              <div className="font-medium">{item.name}</div>
-                              <div className="text-xs text-gray-500">{item.description}</div>
-                            </div>
-                          </div>
-                          <ChevronDown className={`h-3 w-3 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
-                        </button>
-                        
-                        {dropdownOpen && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="ml-6 mt-1 space-y-1"
-                          >
-                            {item.items?.map((subItem) => {
-                              const SubIcon = subItem.icon
-                              return (
-                                <Link
-                                  key={subItem.name}
-                                  href={subItem.href}
-                                  className="flex items-center px-3 py-2 text-sm text-gray-600 hover:text-[#006E51] hover:bg-[#CCE2DC]/10 rounded-lg transition-colors"
-                                  onClick={() => setIsOpen(false)}
-                                >
-                                  <SubIcon className="h-3 w-3 mr-2" />
-                                  {subItem.name}
-                                </Link>
-                              )
-                            })}
-                          </motion.div>
-                        )}
-                      </div>
-                    )
-                  }
-                  
-                  return (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      className="flex items-center px-3 py-2 text-sm text-gray-700 hover:text-[#006E51] hover:bg-[#CCE2DC]/20 rounded-lg transition-colors group"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <Icon className="h-4 w-4 mr-3 text-[#006E51] group-hover:scale-110 transition-transform" />
-                      <div>
-                        <div className="font-medium">{item.name}</div>
-                        <div className="text-xs text-gray-500">{item.description}</div>
-                      </div>
-                    </Link>
-                  )
-                })}
-              </div>
-              
-              {/* Footer */}
-              <div className="border-t border-[#CCE2DC]/30 mt-4 pt-3">
-                <div className="text-xs text-gray-500 text-center">
-                  Innovation Atlas Platform
-                </div>
-                <div className="text-xs text-[#006E51] text-center font-medium">
-                  Interactive Data Visualizations
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
-}
 
 // Inner component that uses AppContext
 function VisualizationsContent() {
@@ -203,8 +78,9 @@ function VisualizationsContent() {
   } = useAppContext()
   const [activeViz, setActiveViz] = useState<VisualizationType>('network')
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [showInsights, setShowInsights] = useState(true)
-  const [showControls, setShowControls] = useState(true)
+  const [showInsights, setShowInsights] = useState(false) // Start hidden for focus
+  const [showControls, setShowControls] = useState(false) // Start hidden for focus
+  const [focusMode, setFocusMode] = useState(true) // New focus mode
   
   // Network-specific state (like individual network page)
   const [detectedClusters, setDetectedClusters] = useState<ClusterInfo[]>([])
@@ -353,6 +229,13 @@ function VisualizationsContent() {
   const renderInsightsPanel = () => {
     return (
       <div className="space-y-4">
+        {/* Key Insights Summary - Always show first */}
+        <InsightsSummary 
+          challenges={filteredChallenges}
+          activeVisualization={activeViz}
+          selectedElement={selectedElement}
+          selectedChallenge={selectedChallenge}
+        />
         {/* Rich Insights using existing panels */}
         {selectedChallenge && (
           <div className="p-6 bg-white/80 backdrop-blur-sm rounded-xl border border-[#CCE2DC]/50">
@@ -869,29 +752,60 @@ function VisualizationsContent() {
         </div>
       </div>
 
-      {/* Navigation Component */}
-      <VisualizationNav />
+      {/* Unified Navigation */}
+      <UnifiedFloatingNav 
+        currentPage="visualizations"
+        visualizations={visualizations.map(viz => ({
+          id: viz.id,
+          name: viz.name,
+          icon: viz.icon,
+          current: activeViz === viz.id,
+          onClick: () => setActiveViz(viz.id as VisualizationType)
+        }))}
+      />
 
       {/* Header */}
       <header className="relative z-10 border-b border-[#CCE2DC]/30 bg-white/80 backdrop-blur-md">
         <div className="container mx-auto px-6 py-4">
+          {/* Breadcrumbs */}
+          <Breadcrumbs 
+            items={[
+              { label: "Innovation Atlas", href: "/" },
+              { label: "Data Visualizations", current: true }
+            ]}
+            className="mb-4"
+          />
+          
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-[#006E51]">Innovation Atlas</h1>
-              <p className="text-sm text-gray-600">Interactive Data Visualizations</p>
+              <h1 className="text-2xl font-bold text-[#006E51]">Data Visualizations</h1>
+              <p className="text-sm text-gray-600">Explore challenge patterns and cross-sector opportunities</p>
             </div>
             
             <div className="flex items-center gap-4">
-              {/* Future: AI Chat Toggle */}
+              {/* AI Chat Toggle - Coming Soon */}
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="text-gray-400 hover:text-[#006E51]"
-                disabled
+                className="text-gray-400 hover:text-blue-500 transition-colors"
+                onClick={() => {
+                  // Show coming soon modal or tooltip
+                  alert('AI Assistant coming in Phase 2! Ask questions about patterns, get personalized insights, and explore data with natural language queries.');
+                }}
               >
                 <MessageCircle className="h-4 w-4 mr-2" />
                 AI Assistant
-                <span className="ml-2 text-xs bg-gray-100 px-2 py-1 rounded">Soon</span>
+                <span className="ml-2 text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded font-medium">Phase 2</span>
+              </Button>
+              
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setFocusMode(!focusMode)}
+                className={`${focusMode ? 'text-[#006E51] bg-[#006E51]/10' : 'text-gray-600'} hover:text-[#006E51]`}
+              >
+                <Zap className="h-4 w-4 mr-2" />
+                {focusMode ? 'Exit Focus' : 'Focus Mode'}
               </Button>
               
               <Button 
@@ -959,9 +873,54 @@ function VisualizationsContent() {
 
       {/* Main Content */}
       <main className={`relative z-10 ${isFullscreen ? 'fixed inset-0 top-0 bg-white' : 'container mx-auto px-6 py-8'}`}>
+        {/* Focus Mode Banner */}
+        {focusMode && !isFullscreen && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 bg-gradient-to-r from-[#006E51]/10 to-blue-50 border border-[#006E51]/20 rounded-xl p-4"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Zap className="w-5 h-5 text-[#006E51]" />
+                <div>
+                  <h3 className="font-semibold text-[#006E51]">Focus Mode Active</h3>
+                  <p className="text-sm text-gray-600">Panels hidden for distraction-free exploration. Click elements to reveal insights.</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowInsights(true)
+                    setFocusMode(false)
+                  }}
+                  className="border-[#006E51]/30 text-[#006E51] hover:bg-[#006E51]/10"
+                >
+                  Show Insights
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowControls(true)
+                    setFocusMode(false)
+                  }}
+                  className="border-[#006E51]/30 text-[#006E51] hover:bg-[#006E51]/10"
+                >
+                  Show Controls
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         <div className={`grid gap-6 ${
           isFullscreen 
             ? 'grid-cols-1 h-screen' 
+            : focusMode
+              ? 'grid-cols-1'
             : showControls && showInsights 
               ? 'grid-cols-1 lg:grid-cols-4' 
               : showControls || showInsights 
@@ -970,7 +929,7 @@ function VisualizationsContent() {
         }`}>
           
           {/* Controls Panel */}
-          {showControls && !isFullscreen && (
+          {showControls && !isFullscreen && !focusMode && (
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -995,6 +954,8 @@ function VisualizationsContent() {
           <div className={`${
             isFullscreen 
               ? 'col-span-1' 
+              : focusMode
+                ? 'col-span-1'
               : showControls && showInsights 
                 ? 'lg:col-span-2' 
                 : showControls || showInsights 
@@ -1086,7 +1047,7 @@ function VisualizationsContent() {
           </div>
 
           {/* Insights Panel */}
-          {showInsights && !isFullscreen && (
+          {showInsights && !isFullscreen && !focusMode && (
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -1109,7 +1070,7 @@ function VisualizationsContent() {
         </div>
 
         {/* Floating Panel Toggles (when panels are hidden) */}
-        {(!showControls || !showInsights) && !isFullscreen && (
+        {(!showControls || !showInsights) && !isFullscreen && !focusMode && (
           <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-20">
             {!showControls && (
               <Button

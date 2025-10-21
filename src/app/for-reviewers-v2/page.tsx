@@ -13,13 +13,33 @@ import { InteractivePlatformComparison } from "@/components/reviewer-v2/Interact
 import { InteractiveCPCAdvantages } from "@/components/reviewer-v2/InteractiveCPCAdvantages"
 import { CreativeHero } from "@/components/ui/CreativeHero"
 import { AudioExplainerSection } from "@/components/reviewer/AudioExplainerSection"
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs"
+import { UnifiedFloatingNav } from "@/components/ui/UnifiedFloatingNav"
+import { useActiveSection } from "@/hooks/useActiveSection"
 import { reviewerFeedbackData, platformComparisonData, riskAnalysisData, cpcAdvantagesData, phase1DeliverablesData } from "@/data/reviewerData"
 
 export default function ReviewerResponseV2() {
+  const sectionIds = [
+    "hero", "feedback-overview", "platform-comparison", 
+    "risk-mitigation", "why-cpc", "phase-1-feasibility", "audio-explainer"
+  ];
+  const activeSection = useActiveSection(sectionIds);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#CCE2DC]/20 via-white to-[#CCE2DC]/10 text-[#2E2D2B] overflow-hidden">
       <ReviewerScrollProgress />
-      <ReviewerFloatingNav />
+      <UnifiedFloatingNav 
+        currentPage="reviewer"
+        sections={[
+          { id: "hero", label: "Overview", current: activeSection === "hero" },
+          { id: "feedback-overview", label: "Feedback Response", current: activeSection === "feedback-overview" },
+          { id: "platform-comparison", label: "Platform Analysis", current: activeSection === "platform-comparison" },
+          { id: "risk-mitigation", label: "Risk Assessment", current: activeSection === "risk-mitigation" },
+          { id: "why-cpc", label: "Why CPC", current: activeSection === "why-cpc" },
+          { id: "phase-1-feasibility", label: "Phase 1 Plan", current: activeSection === "phase-1-feasibility" },
+          { id: "audio-explainer", label: "Vision", current: activeSection === "audio-explainer" },
+        ]}
+      />
 
       {/* Hero Section */}
       <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden">
@@ -37,6 +57,16 @@ export default function ReviewerResponseV2() {
           <div className="space-y-6 relative">
             <div className="absolute inset-0 bg-gradient-to-r from-white via-white/95 to-white/80 rounded-2xl -m-4 p-4"></div>
             <div className="relative z-10">
+              {/* Breadcrumbs */}
+              <Breadcrumbs 
+                items={[
+                  { label: "Innovation Atlas", href: "/" },
+                  { label: "For Reviewers", href: "/for-reviewers" },
+                  { label: "Enhanced Response", current: true }
+                ]}
+                className="mb-6"
+              />
+              
               <div className="inline-block">
                 <div className="relative px-4 py-2 text-sm font-medium rounded-full bg-[#CCE2DC]/50 backdrop-blur-sm border border-[#006E51]/20 mb-4">
                   <span className="relative z-10 text-[#006E51]">Comprehensive response to your feedback</span>
@@ -111,6 +141,9 @@ export default function ReviewerResponseV2() {
         </div>
       </section>
 
+      {/* Section Divider */}
+      <div className="h-px bg-gradient-to-r from-transparent via-[#CCE2DC] to-transparent"></div>
+
       {/* Feedback Overview Section */}
       <section id="feedback-overview" className="py-32 relative">
         <CreativeHero className="absolute inset-0 z-0" />
@@ -142,6 +175,9 @@ export default function ReviewerResponseV2() {
         </div>
       </section>
 
+      {/* Section Divider */}
+      <div className="h-px bg-gradient-to-r from-transparent via-[#006E51]/30 to-transparent"></div>
+
       {/* Platform Comparison Section */}
       <section id="platform-comparison" className="py-32 relative bg-[#CCE2DC]/10">
         <CreativeHero 
@@ -168,6 +204,9 @@ export default function ReviewerResponseV2() {
           <InteractivePlatformComparison />
         </div>
       </section>
+
+      {/* Section Divider */}
+      <div className="h-px bg-gradient-to-r from-transparent via-[#CCE2DC] to-transparent"></div>
 
       {/* Risk Assessment Section */}
       <section id="risk-mitigation" className="py-32 relative">
@@ -227,6 +266,9 @@ export default function ReviewerResponseV2() {
         </div>
       </section>
 
+      {/* Section Divider */}
+      <div className="h-px bg-gradient-to-r from-transparent via-[#006E51]/30 to-transparent"></div>
+
       {/* Why CPC Section */}
       <section id="why-cpc" className="py-32 relative bg-[#CCE2DC]/10">
         <CreativeHero className="absolute inset-0 z-0" />
@@ -251,6 +293,9 @@ export default function ReviewerResponseV2() {
         </div>
       </section>
 
+      {/* Section Divider */}
+      <div className="h-px bg-gradient-to-r from-transparent via-[#CCE2DC] to-transparent"></div>
+
       {/* Phase 1 Feasibility Section */}
       <section id="phase-1-feasibility" className="py-32 relative">
         <CreativeHero className="absolute inset-0 z-0" />
@@ -274,6 +319,9 @@ export default function ReviewerResponseV2() {
           <PhaseTimeline />
         </div>
       </section>
+
+      {/* Section Divider */}
+      <div className="h-px bg-gradient-to-r from-transparent via-[#006E51]/30 to-transparent"></div>
 
       {/* Audio Explainer Section */}
       <section id="audio-explainer" className="py-32 relative bg-gradient-to-br from-gray-900 to-gray-800 text-white">
