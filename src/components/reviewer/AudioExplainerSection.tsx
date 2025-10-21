@@ -7,8 +7,9 @@ import { StaggeredItem } from "../animations/ReviewerAnimations";
 export function AudioExplainerSection() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(300); // 5 minutes
+  const [duration, setDuration] = useState(0); // Will be set when audio loads
   const [showTranscript, setShowTranscript] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const togglePlay = () => {
@@ -16,9 +17,22 @@ export function AudioExplainerSection() {
       if (isPlaying) {
         audioRef.current.pause();
       } else {
-        audioRef.current.play();
+        audioRef.current.play().catch(error => {
+          console.error('Audio play failed:', error);
+        });
       }
       setIsPlaying(!isPlaying);
+    }
+  };
+
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (audioRef.current) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickRatio = clickX / rect.width;
+      const newTime = clickRatio * duration;
+      audioRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
     }
   };
 
@@ -98,16 +112,22 @@ Innovation Atlas — mapping connections that move the UK forward.
               </div>
               <div className="flex items-center space-x-2">
                 <Volume2 className="w-5 h-5 text-gray-400" />
-                <span className="text-gray-400 text-sm">{formatTime(currentTime)} / {formatTime(duration)}</span>
+                <span className="text-gray-400 text-sm">
+                  {isLoading ? 'Loading...' : `${formatTime(currentTime)} / ${formatTime(duration)}`}
+                </span>
               </div>
             </div>
 
             {/* Progress Bar */}
             <div className="mb-6">
-              <div className="relative h-2 bg-gray-700 rounded-full">
+              <div 
+                className="relative h-2 bg-gray-700 rounded-full cursor-pointer hover:h-3 transition-all duration-200"
+                onClick={handleProgressClick}
+                title="Click to seek"
+              >
                 <div 
-                  className="absolute top-0 left-0 h-full bg-cpc-green-600 rounded-full transition-all duration-300"
-                  style={{ width: `${(currentTime / duration) * 100}%` }}
+                  className="absolute top-0 left-0 h-full bg-[#006E51] rounded-full transition-all duration-100"
+                  style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
                 />
                 {/* Chapter markers */}
                 {chapters.map((chapter, idx) => (
@@ -163,9 +183,21 @@ Innovation Atlas — mapping connections that move the UK forward.
             {/* Audio element with your actual MP3 file */}
             <audio
               ref={audioRef}
-              onTimeUpdate={(e) => setCurrentTime((e.target as HTMLAudioElement).currentTime)}
-              onLoadedMetadata={(e) => setDuration((e.target as HTMLAudioElement).duration)}
+              onTimeUpdate={(e) => {
+                const audio = e.target as HTMLAudioElement;
+                setCurrentTime(audio.currentTime);
+              }}
+              onLoadedMetadata={(e) => {
+                const audio = e.target as HTMLAudioElement;
+                setDuration(audio.duration);
+                setIsLoading(false);
+              }}
+              onLoadStart={() => setIsLoading(true)}
+              onCanPlay={() => setIsLoading(false)}
               onEnded={() => setIsPlaying(false)}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onError={(e) => console.error('Audio error:', e)}
               preload="metadata"
             >
               <source src="/Audio/ElevenLabs_Across_the_UK,_thousands_of_innovators....mp3" type="audio/mpeg" />
