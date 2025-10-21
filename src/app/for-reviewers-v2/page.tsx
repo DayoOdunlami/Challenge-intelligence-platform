@@ -12,6 +12,7 @@ import { PhaseTimeline } from "@/components/reviewer-v2/PhaseTimeline"
 import { InteractivePlatformComparison } from "@/components/reviewer-v2/InteractivePlatformComparison"
 import { InteractiveCPCAdvantages } from "@/components/reviewer-v2/InteractiveCPCAdvantages"
 import { CreativeHero } from "@/components/ui/CreativeHero"
+import { AudioExplainerSection } from "@/components/reviewer/AudioExplainerSection"
 import { reviewerFeedbackData, platformComparisonData, riskAnalysisData, cpcAdvantagesData, phase1DeliverablesData } from "@/data/reviewerData"
 
 export default function ReviewerResponseV2() {
@@ -275,37 +276,8 @@ export default function ReviewerResponseV2() {
       </section>
 
       {/* Audio Explainer Section */}
-      <section id="audio-explainer" className="py-32 relative bg-[#2E2D2B] text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center mb-12">
-            <div className="inline-block">
-              <div className="relative px-4 py-2 text-sm font-medium rounded-full bg-white/10 backdrop-blur-sm border border-white/20 mb-4">
-                <span className="relative z-10">5-minute overview</span>
-              </div>
-            </div>
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">Hear the Vision</h2>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Sometimes the best way to understand a vision is to hear it. This 5-minute audio explainer walks through the entire concept.
-            </p>
-          </div>
-
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-gray-800 rounded-lg p-8">
-              <div className="text-center">
-                <MessageCircle className="w-16 h-16 text-[#CCE2DC] mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-4">Audio Explainer Coming Soon</h3>
-                <p className="text-gray-400 mb-6">
-                  We're preparing a comprehensive 5-minute audio walkthrough of our approach, 
-                  including the problem, solution, and why CPC is uniquely positioned to deliver this.
-                </p>
-                <Button className="bg-[#006E51] hover:bg-[#005A42] text-white">
-                  <MessageCircle className="mr-2 h-4 w-4" />
-                  Request Audio Preview
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
+      <section id="audio-explainer" className="py-32 relative bg-gradient-to-br from-gray-900 to-gray-800 text-white">
+        <AudioExplainerSection />
       </section>
 
       {/* Summary Section */}
