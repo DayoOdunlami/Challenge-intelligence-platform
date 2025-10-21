@@ -149,6 +149,8 @@ export function NetworkGraph({
   const [clusters, setClusters] = useState<ClusterInfo[]>([]);
   const [internalSelectedCluster, setInternalSelectedCluster] = useState<ClusterInfo | null>(null);
   const [internalShowClusters, setInternalShowClusters] = useState(false);
+  const [dimensions, setDimensions] = useState({ width: 600, height: 500 });
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Use external values when showControls is false, otherwise use internal state
   const isOrbiting = showControls ? internalIsOrbiting : (externalIsOrbiting ?? false);
@@ -159,6 +161,24 @@ export function NetworkGraph({
   // Ensure component only renders on client
   useEffect(() => {
     setIsClient(true);
+  }, []);
+
+  // Responsive dimensions
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const resizeObserver = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        setDimensions({ 
+          width: Math.max(400, width), 
+          height: Math.max(300, height) 
+        });
+      }
+    });
+
+    resizeObserver.observe(containerRef.current);
+    return () => resizeObserver.disconnect();
   }, []);
 
   // Camera orbit effect - using zoom and pan for 2D graph
@@ -399,7 +419,14 @@ export function NetworkGraph({
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="relative">
+          <div 
+            ref={containerRef}
+            className={`relative w-full overflow-hidden ${
+              !showControls 
+                ? 'h-[70vh] min-h-[600px]' // Focus mode - much taller
+                : 'h-[500px] min-h-[400px]' // Normal mode
+            }`}
+          >
             <ForceGraph2D
               ref={fgRef}
               graphData={graphData}
@@ -417,8 +444,8 @@ export function NetworkGraph({
               onBackgroundClick={handleUserInteraction}
               nodeCanvasObject={nodeCanvasObject}
               linkCanvasObject={linkCanvasObject}
-              width={600}
-              height={500}
+              width={dimensions.width}
+              height={dimensions.height}
               backgroundColor="#fafafa"
               enableNodeDrag={true}
               enableZoomInteraction={true}
@@ -445,6 +472,25 @@ export function NetworkGraph({
                 <div className="text-xs text-gray-600">
                   Funding: £{(challenges.find(c => c.id === hoveredNode.id)?.funding.amount_max || 0).toLocaleString()}
                 </div>
+              </div>
+            )}
+
+            {/* Focus Mode Exit Button */}
+            {!showControls && (
+              <div className="absolute top-4 left-4 z-20">
+                <button
+                  onClick={() => {
+                    // This will be handled by parent component
+                    window.dispatchEvent(new CustomEvent('exitFocusMode'));
+                  }}
+                  className="bg-[#006E51] hover:bg-[#005A42] text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm font-medium transition-colors"
+                  title="Exit Focus Mode"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Exit Focus
+                </button>
               </div>
             )}
 

@@ -117,6 +117,18 @@ function VisualizationsContent() {
     setSelectedChallenge(challenge)
   }
 
+  // Handle focus mode exit from NetworkGraph
+  useEffect(() => {
+    const handleExitFocusMode = () => {
+      setFocusMode(false);
+      setShowControls(true);
+      setShowInsights(true);
+    };
+
+    window.addEventListener('exitFocusMode', handleExitFocusMode);
+    return () => window.removeEventListener('exitFocusMode', handleExitFocusMode);
+  }, []);
+
   // Handle cluster detection from NetworkGraph
   const handleClustersDetected = (clusters: ClusterInfo[]) => {
     setDetectedClusters(clusters)
