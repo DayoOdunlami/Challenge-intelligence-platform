@@ -6,11 +6,13 @@ import { BarChart3, Network, Zap, Sun, GitBranch, Download, Settings, MessageCir
 import { Button } from "@/components/ui/button"
 import { CreativeHero } from "@/components/ui/CreativeHero"
 
-// Import existing visualization components (excluding problematic ones for now)
+// Import existing visualization components and data
 import { SankeyChart } from "@/components/visualizations/SankeyChart"
 import { HeatmapChart } from "@/components/visualizations/HeatmapChart"
 import { SunburstChart } from "@/components/visualizations/SunburstChart"
 import { ChordDiagram } from "@/components/visualizations/ChordDiagram"
+import challenges from "@/data/challenges"
+import { Challenge, FilterState } from "@/lib/types"
 
 // Note: Using custom panels instead of importing existing ones to avoid prop dependencies
 
@@ -59,15 +61,38 @@ export default function VisualizationsPage() {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showInsights, setShowInsights] = useState(true)
   const [showControls, setShowControls] = useState(true)
+  
+  // Data state for visualizations
+  const [filters, setFilters] = useState<FilterState>({
+    sectors: [],
+    problemTypes: [],
+    budgetRange: [0, 50000000],
+    urgentOnly: false,
+    keywords: ''
+  })
+  
+  // Apply filters to challenges data
+  const filteredChallenges = challenges // For now, use all challenges
 
   const activeVisualization = visualizations.find(v => v.id === activeViz)
 
   const renderVisualization = () => {
     switch (activeViz) {
       case 'sankey':
-        return <SankeyChart />
+        return (
+          <SankeyChart 
+            challenges={filteredChallenges}
+            onNodeClick={(nodeId) => console.log('Node clicked:', nodeId)}
+            className="w-full h-full"
+          />
+        )
       case 'heatmap':
-        return <HeatmapChart />
+        return (
+          <HeatmapChart 
+            challenges={filteredChallenges}
+            className="w-full h-full"
+          />
+        )
       case 'network':
         return (
           <div className="flex items-center justify-center h-full bg-gradient-to-br from-[#CCE2DC]/10 to-[#006E51]/5 rounded-xl">
@@ -84,9 +109,19 @@ export default function VisualizationsPage() {
           </div>
         )
       case 'sunburst':
-        return <SunburstChart />
+        return (
+          <SunburstChart 
+            challenges={filteredChallenges}
+            className="w-full h-full"
+          />
+        )
       case 'chord':
-        return <ChordDiagram />
+        return (
+          <ChordDiagram 
+            challenges={filteredChallenges}
+            className="w-full h-full"
+          />
+        )
       default:
         return (
           <div className="flex items-center justify-center h-full bg-gradient-to-br from-[#CCE2DC]/10 to-[#006E51]/5 rounded-xl">
