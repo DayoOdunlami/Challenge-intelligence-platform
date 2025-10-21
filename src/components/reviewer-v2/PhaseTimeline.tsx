@@ -23,12 +23,12 @@ export const PhaseTimeline = () => {
       const windowHeight = window.innerHeight;
       
       // Show floating selector when:
-      // 1. Initial selector has scrolled out of view (top is above viewport)
-      // 2. We're still within the timeline section bounds
+      // 1. Initial selector has scrolled out of view (appears earlier)
+      // 2. We're still within the timeline section bounds (disappears earlier)
       // 3. Timeline section hasn't completely scrolled past
       
-      const initialSelectorOutOfView = selectorRect.bottom < 100; // 100px buffer
-      const timelineStillVisible = timelineRect.bottom > windowHeight * 0.2; // Keep some buffer
+      const initialSelectorOutOfView = selectorRect.bottom < windowHeight * 0.7; // Appear earlier - when 70% of selector is out of view
+      const timelineStillVisible = timelineRect.bottom > windowHeight * 0.4; // Disappear earlier - more buffer
       const timelineInBounds = timelineRect.top < windowHeight;
       
       const shouldShow = initialSelectorOutOfView && timelineStillVisible && timelineInBounds;
@@ -184,16 +184,20 @@ export const PhaseTimeline = () => {
         <div className="mb-16">
           <div className="text-center mb-8">
             <motion.div
-              className="inline-flex items-center gap-3 px-6 py-3 bg-green-50 border-2 border-green-200 rounded-xl"
+              className="inline-flex items-center gap-3 px-6 py-3 bg-green-50 border-2 border-green-200 rounded-xl relative z-20"
               initial={{ opacity: 0, y: -20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
               viewport={{ once: true }}
             >
-              <CheckCircle className="w-6 h-6 text-green-600" />
-              <div>
-                <h3 className="text-xl font-bold text-green-800">Proof of Concept</h3>
-                <p className="text-sm text-green-600">Technical Proof (Completed)</p>
+              {/* Background that covers timeline line */}
+              <div className="absolute inset-0 bg-green-50 rounded-xl"></div>
+              <div className="relative z-10 flex items-center gap-3">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+                <div>
+                  <h3 className="text-xl font-bold text-green-800">Proof of Concept</h3>
+                  <p className="text-sm text-green-600">Technical Proof (Completed)</p>
+                </div>
               </div>
             </motion.div>
           </div>
@@ -212,6 +216,8 @@ export const PhaseTimeline = () => {
                   viewport={{ once: true }}
                 >
                   <div className="relative overflow-hidden rounded-xl border-2 bg-green-50 border-green-200 p-6 transition-all duration-300 hover:shadow-lg shadow-sm">
+                    {/* Background that covers timeline line */}
+                    <div className="absolute inset-0 bg-green-50 rounded-xl"></div>
                     <div className="absolute -inset-1 bg-gradient-to-r from-green-500/10 to-green-300/10 rounded-xl blur opacity-0 hover:opacity-100 transition duration-300"></div>
                     
                     <div className="relative z-10">
@@ -255,18 +261,22 @@ export const PhaseTimeline = () => {
         <div className="mb-16">
           <div className="text-center mb-8">
             <motion.div
-              className="inline-flex items-center gap-3 px-6 py-3 bg-[#006E51]/10 border-2 border-[#006E51]/30 rounded-xl"
+              className="inline-flex items-center gap-3 px-6 py-3 bg-[#006E51]/10 border-2 border-[#006E51]/30 rounded-xl relative z-20"
               initial={{ opacity: 0, y: -20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
               viewport={{ once: true }}
             >
-              <div className={`p-2 rounded-lg bg-gradient-to-r ${getOptionColor(currentPhase1Option.id)} text-white`}>
-                {getOptionIcon(currentPhase1Option.id)}
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-[#006E51]">Phase 1: {currentPhase1Option.name}</h3>
-                <p className="text-sm text-gray-600">{currentPhase1Option.goal}</p>
+              {/* Background that covers timeline line */}
+              <div className="absolute inset-0 bg-[#006E51]/10 rounded-xl"></div>
+              <div className="relative z-10 flex items-center gap-3">
+                <div className={`p-2 rounded-lg bg-gradient-to-r ${getOptionColor(currentPhase1Option.id)} text-white`}>
+                  {getOptionIcon(currentPhase1Option.id)}
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-[#006E51]">Phase 1: {currentPhase1Option.name}</h3>
+                  <p className="text-sm text-gray-600">{currentPhase1Option.goal}</p>
+                </div>
               </div>
             </motion.div>
           </div>
@@ -292,6 +302,8 @@ export const PhaseTimeline = () => {
                     transition={{ duration: 0.5, delay: index * 0.1 }}
                   >
                     <div className="relative overflow-hidden rounded-xl border-2 bg-[#006E51]/5 border-[#006E51]/20 p-6 transition-all duration-300 hover:shadow-lg shadow-sm">
+                      {/* Background that covers timeline line */}
+                      <div className="absolute inset-0 bg-[#006E51]/5 rounded-xl"></div>
                       <div className="absolute -inset-1 bg-gradient-to-r from-[#006E51]/10 to-[#CCE2DC]/10 rounded-xl blur opacity-0 hover:opacity-100 transition duration-300"></div>
                       
                       <div className="relative z-10">
@@ -341,6 +353,8 @@ export const PhaseTimeline = () => {
             viewport={{ once: true }}
           >
             <div className="relative overflow-hidden rounded-xl border-2 border-purple-200 bg-purple-50 p-6 transition-all duration-300 hover:shadow-lg shadow-sm">
+              {/* Background that covers timeline line */}
+              <div className="absolute inset-0 bg-purple-50 rounded-xl"></div>
               <div className="absolute -inset-1 bg-gradient-to-r from-purple-500/10 to-purple-300/10 rounded-xl blur opacity-0 hover:opacity-100 transition duration-300"></div>
               
               <div className="relative z-10">
@@ -401,6 +415,8 @@ export const PhaseTimeline = () => {
             viewport={{ once: true }}
           >
             <div className="relative overflow-hidden rounded-xl border-2 border-indigo-200 bg-indigo-50 p-6 transition-all duration-300 hover:shadow-lg shadow-sm">
+              {/* Background that covers timeline line */}
+              <div className="absolute inset-0 bg-indigo-50 rounded-xl"></div>
               <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/10 to-indigo-300/10 rounded-xl blur opacity-0 hover:opacity-100 transition duration-300"></div>
               
               <div className="relative z-10">

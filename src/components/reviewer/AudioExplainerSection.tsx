@@ -38,47 +38,29 @@ export function AudioExplainerSection() {
   ];
 
   const transcript = `
-[0:00 - 0:45] Vision Hook
-Imagine if every infrastructure challenge in the UK was visible on one map. Not just the tenders and grants you already know about, but the patterns hiding in plain sight. The energy sector solving the same predictive maintenance problem as rail. Local authorities each reinventing net-zero retrofits. Innovations proven in one sector, invisible to another that desperately needs them.
+Across the UK, thousands of innovators are tackling the same challenges — often without ever realising it.
 
-This isn't a fantasy. The data exists. The patterns are real. What's missing is the intelligence layer to make them visible.
+A local authority tests a new digital twin for flood resilience. A transport agency pilots predictive maintenance. An energy company trials the same idea under a different name.
 
-[0:45 - 1:45] The Problem
-Right now, UK innovation procurement is fragmented across dozens of portals. Contracts Finder shows you legal notices. Innovate UK connects grant recipients. SBRI runs sector-specific challenges. Each serves its purpose, but none reveal the bigger picture.
+The ambition is there. The progress is real. But the visibility isn't.
 
-The result? Buyers pay for the same innovation multiple times. SMEs miss adjacent opportunities. Policymakers can't see where innovation adoption is efficient or wasteful. Evidence proven in one sector stays trapped there, even when other sectors face identical challenges.
+That's where Innovation Atlas comes in.
 
-We're not just missing opportunities—we're systematically duplicating effort while leaving gaps unfilled.
+Innovation Atlas maps the landscape of public challenges and private innovation — showing where efforts overlap, where evidence already exists, and where collaboration could accelerate progress.
 
-[1:45 - 2:45] Our Solution
-The Innovation Exchange Platform is the intelligence layer the UK has never had. We don't replace existing portals—we make sense of them.
+It isn't another portal or listing site. It's an intelligence layer — turning data into patterns, and patterns into opportunities.
 
-Using AI-powered similarity detection, we map challenges across sectors, revealing patterns invisible to keyword search. Our interactive visualizations show buyers which sectors share their problems and which innovations could serve multiple markets.
+Each challenge becomes a node on the map. Lines reveal shared needs across sectors — connecting rail with energy, housing with local government, and data with delivery. In seconds, invisible relationships become visible.
 
-For SMEs, it's like having a research team that spots every adjacent opportunity. For buyers, it's market intelligence that prevents reinventing the wheel. For policymakers, it's the first comprehensive view of how innovation flows—or fails to flow—across the UK economy.
+At its core, Innovation Atlas is about clarity and connection. It helps buyers see who's already solved similar problems. It helps innovators discover new markets for their proven ideas. And it helps policymakers see how the nation's innovation ecosystem fits together.
 
-[2:45 - 3:45] Why CPC
-This isn't just a technical challenge—it's a trust challenge. Buyers need to believe cross-sector evidence is credible. SMEs need neutral ground where they're not competing with the platform owner.
+This is just the beginning. From today's pilot map, we're building toward a living system — one that learns, updates, and grows as new challenges and solutions appear.
 
-Connected Places Catapult is uniquely positioned because we're the only organization with deep relationships across rail, energy, transport, local government, and built environment. We're trusted by both buyers and SMEs because we have no commercial agenda—our mission is accelerating innovation adoption.
+A smarter way to navigate innovation. A faster route from evidence to adoption. A clearer view of how our collective efforts connect.
 
-Private companies lack neutrality. Government departments lack agility. Industry bodies lack technical capability. CPC has the unique combination of trust, reach, and expertise this requires.
+Because when innovation becomes visible… progress becomes inevitable.
 
-[3:45 - 4:30] Impact & Future
-Phase 1 proves the thesis with challenge intelligence. Phase 2 adds innovation matching. Phase 3 enables evidence transfer—the holy grail where validation in one sector reduces risk in another.
-
-The long-term vision? A UK where innovation adoption is efficient, where good solutions spread quickly across sectors, where we stop solving the same problems in isolation.
-
-This isn't just about better procurement. It's about accelerating the innovations we need for net-zero, leveling up, and economic growth.
-
-[4:30 - 5:00] Call to Action
-We've built the prototype. We've stress-tested the risks. We've defined clear success criteria for Phase 1.
-
-The question isn't whether this is technically possible—we've proven that. The question is whether the UK is ready to make innovation adoption more intelligent.
-
-We believe it is. The data is waiting. The patterns are there. All we need is the mandate to make them visible.
-
-Thank you for considering our proposal. The future of UK innovation intelligence starts here.
+Innovation Atlas — mapping connections that move the UK forward.
   `;
 
   return (
@@ -86,10 +68,10 @@ Thank you for considering our proposal. The future of UK innovation intelligence
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-white mb-4">
-            Hear the Vision in 5 Minutes
+            Hear the Vision
           </h2>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Sometimes the best way to understand a vision is to hear it. This 5-minute audio explainer walks through the entire concept, from problem to solution to impact.
+            Sometimes the best way to understand a vision is to hear it. This audio explainer walks through the Innovation Atlas concept, from invisible connections to inevitable progress.
           </p>
         </div>
 
@@ -109,8 +91,8 @@ Thank you for considering our proposal. The future of UK innovation intelligence
                   )}
                 </button>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">Innovation Exchange Platform</h3>
-                  <p className="text-gray-400">The Google Maps for UK Innovation</p>
+                  <h3 className="text-lg font-semibold text-white">Innovation Atlas Vision</h3>
+                  <p className="text-gray-400">Mapping connections that move the UK forward</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -166,22 +148,27 @@ Thank you for considering our proposal. The future of UK innovation intelligence
                   <option value="1.5">1.5x</option>
                   <option value="2">2x</option>
                 </select>
-                <button className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors duration-200">
+                <a 
+                  href="/Audio/ElevenLabs_Across_the_UK,_thousands_of_innovators....mp3"
+                  download="Innovation-Atlas-Vision.mp3"
+                  className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors duration-200"
+                >
                   <Download className="w-4 h-4" />
                   <span className="text-sm">Download MP3</span>
-                </button>
+                </a>
               </div>
             </div>
 
-            {/* Hidden audio element - in production this would have the actual audio file */}
+            {/* Audio element with your actual MP3 file */}
             <audio
               ref={audioRef}
               onTimeUpdate={(e) => setCurrentTime((e.target as HTMLAudioElement).currentTime)}
               onLoadedMetadata={(e) => setDuration((e.target as HTMLAudioElement).duration)}
               onEnded={() => setIsPlaying(false)}
+              preload="metadata"
             >
-              {/* In production, add actual audio source */}
-              {/* <source src="/audio/innovation-exchange-explainer.mp3" type="audio/mpeg" /> */}
+              <source src="/Audio/ElevenLabs_Across_the_UK,_thousands_of_innovators....mp3" type="audio/mpeg" />
+              Your browser does not support the audio element.
             </audio>
           </div>
         </StaggeredItem>

@@ -179,7 +179,7 @@ function VisualizationNav() {
               {/* Footer */}
               <div className="border-t border-[#CCE2DC]/30 mt-4 pt-3">
                 <div className="text-xs text-gray-500 text-center">
-                  Challenge Intelligence Platform
+                  Innovation Atlas Platform
                 </div>
                 <div className="text-xs text-[#006E51] text-center font-medium">
                   Interactive Data Visualizations
@@ -877,7 +877,7 @@ function VisualizationsContent() {
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-[#006E51]">Challenge Intelligence</h1>
+              <h1 className="text-2xl font-bold text-[#006E51]">Innovation Atlas</h1>
               <p className="text-sm text-gray-600">Interactive Data Visualizations</p>
             </div>
             

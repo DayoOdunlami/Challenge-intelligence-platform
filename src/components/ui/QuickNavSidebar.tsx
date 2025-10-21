@@ -88,7 +88,7 @@ export default function QuickNavSidebar() {
         {/* Subtle branding */}
         <div className="border-t border-gray-100 px-4 py-2">
           <div className="text-xs text-gray-400 text-center">
-            Challenge Intelligence Platform
+            Innovation Atlas Platform
           </div>
         </div>
       </div>
