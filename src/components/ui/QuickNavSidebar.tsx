@@ -13,6 +13,7 @@ interface NavigationItem {
 
 const navigationItems: NavigationItem[] = [
   { href: '/', label: 'Home', icon: '🏠' },
+  { href: '/visualizations', label: 'Visualizations', icon: '📊', badge: 'NEW' },
   { href: '/for-reviewers', label: 'For Reviewers', icon: '📋', badge: 'V1' },
   { href: '/for-reviewers-v2', label: 'For Reviewers V2', icon: '✨', badge: 'NEW' },
   { href: '/pitch', label: 'Pitch Deck', icon: '🎤' },

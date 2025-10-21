@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Menu, X, Download, ChevronDown, Home, Target, Users } from "lucide-react"
+import { Menu, X, Download, ChevronDown, Home, Target, Users, BarChart3 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
@@ -43,6 +43,7 @@ export function ReviewerFloatingNav() {
 
   const pageItems = [
     { name: "Home", href: "/", icon: Home },
+    { name: "Visualizations", href: "/visualizations", icon: BarChart3 },
     { name: "Pitch Deck", href: "/pitch", icon: Target },
     { name: "SME Profiles", href: "/profile/sme-profile", icon: Users },
   ]
