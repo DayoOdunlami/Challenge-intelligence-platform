@@ -68,31 +68,36 @@ Innovation Atlas — mapping connections that move the UK forward.
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-white mb-4">
-            Hear the Vision
+            🎵 Hear the Vision
           </h2>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
             Sometimes the best way to understand a vision is to hear it. This audio explainer walks through the Innovation Atlas concept, from invisible connections to inevitable progress.
           </p>
+          <div className="mt-4 p-2 bg-green-600 text-white rounded">
+            Audio Player Ready - Click Play Below
+          </div>
         </div>
 
         {/* Audio Player */}
         <StaggeredItem>
-          <div className="bg-gray-800 rounded-lg p-8 mb-8">
+          <div className="bg-gray-800 rounded-lg p-8 mb-8 border-4 border-green-500">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-4">
                 <button
                   onClick={togglePlay}
-                  className="w-16 h-16 bg-cpc-green-600 hover:bg-cpc-green-700 rounded-full flex items-center justify-center transition-colors duration-200"
+                  className="w-20 h-20 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center transition-colors duration-200 shadow-lg border-4 border-white"
+                  title="Click to play Innovation Atlas audio"
                 >
                   {isPlaying ? (
-                    <Pause className="w-8 h-8 text-white" />
+                    <Pause className="w-10 h-10 text-white" />
                   ) : (
-                    <Play className="w-8 h-8 text-white ml-1" />
+                    <Play className="w-10 h-10 text-white ml-1" />
                   )}
                 </button>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">Innovation Atlas Vision</h3>
-                  <p className="text-gray-400">Mapping connections that move the UK forward</p>
+                  <h3 className="text-xl font-bold text-white">🎵 CLICK PLAY → Innovation Atlas Vision</h3>
+                  <p className="text-green-300 font-medium">Your MP3 audio is ready to play!</p>
+                  <p className="text-gray-400 text-sm">Mapping connections that move the UK forward</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
