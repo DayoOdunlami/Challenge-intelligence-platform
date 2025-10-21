@@ -116,6 +116,12 @@ interface NetworkGraphProps {
   onChallengeSelect?: (challenge: Challenge) => void;
   onClustersDetected?: (clusters: ClusterInfo[]) => void;
   className?: string;
+  showControls?: boolean; // New prop to control whether to show the sliding controls panel
+  // External control props (when showControls is false)
+  similarityThreshold?: number;
+  showClusters?: boolean;
+  isOrbiting?: boolean;
+  selectedCluster?: ClusterInfo | null;
 }
 
 export function NetworkGraph({ 
@@ -123,7 +129,13 @@ export function NetworkGraph({
   selectedChallenge, 
   onChallengeSelect,
   onClustersDetected,
-  className = '' 
+  className = '',
+  showControls = true, // Default to true for backward compatibility
+  // External control props
+  similarityThreshold: externalSimilarityThreshold,
+  showClusters: externalShowClusters,
+  isOrbiting: externalIsOrbiting,
+  selectedCluster: externalSelectedCluster
 }: NetworkGraphProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fgRef = useRef<any>(null);
@@ -131,12 +143,18 @@ export function NetworkGraph({
   const [hoveredNode, setHoveredNode] = useState<NetworkNode | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
-  const [isOrbiting, setIsOrbiting] = useState(false);
+  const [internalIsOrbiting, setInternalIsOrbiting] = useState(false);
   const [orbitAngle, setOrbitAngle] = useState(0);
-  const [similarityThreshold, setSimilarityThreshold] = useState(0.2);
+  const [internalSimilarityThreshold, setInternalSimilarityThreshold] = useState(0.2);
   const [clusters, setClusters] = useState<ClusterInfo[]>([]);
-  const [selectedCluster, setSelectedCluster] = useState<ClusterInfo | null>(null);
-  const [showClusters, setShowClusters] = useState(false);
+  const [internalSelectedCluster, setInternalSelectedCluster] = useState<ClusterInfo | null>(null);
+  const [internalShowClusters, setInternalShowClusters] = useState(false);
+
+  // Use external values when showControls is false, otherwise use internal state
+  const isOrbiting = showControls ? internalIsOrbiting : (externalIsOrbiting ?? false);
+  const similarityThreshold = showControls ? internalSimilarityThreshold : (externalSimilarityThreshold ?? 0.2);
+  const selectedCluster = showControls ? internalSelectedCluster : (externalSelectedCluster ?? null);
+  const showClusters = showControls ? internalShowClusters : (externalShowClusters ?? false);
 
   // Ensure component only renders on client
   useEffect(() => {
@@ -167,10 +185,10 @@ export function NetworkGraph({
 
   // Stop orbit on user interaction
   const handleUserInteraction = useCallback(() => {
-    if (isOrbiting) {
-      setIsOrbiting(false);
+    if (isOrbiting && showControls) {
+      setInternalIsOrbiting(false);
     }
-  }, [isOrbiting]);
+  }, [isOrbiting, showControls]);
 
   // Transform challenges to graph data with similarity threshold
   const graphDataWithClusters = useMemo(() => {
@@ -355,19 +373,21 @@ export function NetworkGraph({
 
   return (
     <TooltipProvider>
-      {/* Sliding Controls Panel */}
-      <NetworkControlsPanel
-        similarityThreshold={similarityThreshold}
-        onSimilarityChange={setSimilarityThreshold}
-        showClusters={showClusters}
-        onShowClustersChange={setShowClusters}
-        isOrbiting={isOrbiting}
-        onOrbitingChange={setIsOrbiting}
-        clusters={clusters}
-        selectedCluster={selectedCluster}
-        onClusterSelect={setSelectedCluster}
-        onUserInteraction={logUserInteraction}
-      />
+      {/* Sliding Controls Panel - only show if showControls is true */}
+      {showControls && (
+        <NetworkControlsPanel
+          similarityThreshold={internalSimilarityThreshold}
+          onSimilarityChange={setInternalSimilarityThreshold}
+          showClusters={internalShowClusters}
+          onShowClustersChange={setInternalShowClusters}
+          isOrbiting={internalIsOrbiting}
+          onOrbitingChange={setInternalIsOrbiting}
+          clusters={clusters}
+          selectedCluster={internalSelectedCluster}
+          onClusterSelect={setInternalSelectedCluster}
+          onUserInteraction={logUserInteraction}
+        />
+      )}
 
       <Card className={className}>
         <CardHeader>

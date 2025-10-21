@@ -272,57 +272,168 @@ export const phase1ResourcesData = {
   }
 };
 
-export const phase1DeliverablesData = [
+// ============================================
+// REFINED PHASE STRUCTURE - SEPARATING POC FROM PHASE 1 OPTIONS
+// ============================================
+
+export const pocDeliverablesData = [
   {
-    deliverable: "Challenge Repository",
-    description: "50 curated challenges from UK procurement sources",
+    deliverable: "50 Curated Challenges",
+    description: "Cross-sector challenge dataset from Contracts Finder, Innovate UK, SBRI",
     status: "complete",
-    evidence: "PoC prototype - Contracts Finder, Innovate UK, SBRI data sources",
-    type: "individual"
+    evidence: "Technical proof validated - data model and ingestion pipeline working",
+    type: "poc"
   },
   {
-    deliverable: "Interactive Network Visualization",
-    description: "Force-directed graph showing challenge relationships",
+    deliverable: "Force-Directed Network Visualization",
+    description: "Interactive graph showing challenge relationships and clusters",
+    status: "complete", 
+    evidence: "Prototype demonstrates visual intelligence layer - users can explore patterns",
+    type: "poc"
+  },
+  {
+    deliverable: "Keyword-Based Similarity Engine",
+    description: "V1 algorithm identifying related challenges across sectors",
     status: "complete",
-    evidence: "Prototype validation - users can explore clusters and connections",
-    type: "individual"
+    evidence: "Basic semantic matching powers network connections - technical feasibility proven",
+    type: "poc"
   },
   {
-    deliverable: "Similarity Engine V1",
-    description: "Keyword-based algorithm identifying related challenges",
+    deliverable: "Smart Filtering System",
+    description: "Multi-dimensional filters (sector, problem type, budget, timeline)",
     status: "complete",
-    evidence: "Basic prototype - powers network graph connections",
-    type: "individual"
+    evidence: "Functional prototype enables targeted exploration of challenge space",
+    type: "poc"
   },
   {
-    deliverable: "Smart Filters",
-    description: "Filter by sector, problem type, budget, deadline",
+    deliverable: "Technical Architecture Validation",
+    description: "Scalable foundation for live data ingestion and AI enhancement",
     status: "complete",
-    evidence: "Functional prototype in current build",
-    type: "individual"
-  },
-  {
-    deliverable: "Validation Interviews",
-    description: "10 stakeholder interviews testing pattern recognition hypothesis",
-    status: "in-progress",
-    evidence: "Scheduled for post-hackathon validation phase",
-    type: "individual"
-  },
-  {
-    deliverable: "Anchor Buyer MOUs",
-    description: "3-5 committed buyers for Phase 2",
-    status: "in-progress",
-    evidence: "Network Rail + 2 local authorities in early discussions",
-    type: "individual"
-  },
-  {
-    deliverable: "Technical Architecture Document",
-    description: "Detailed design for scalability and Phase 2 expansion",
-    status: "complete",
-    evidence: "Prototype architecture documented for scaling validation",
-    type: "individual"
+    evidence: "Architecture documented and validated for Phase 1 expansion options",
+    type: "poc"
   }
 ];
+
+export const phase1OptionsData = {
+  optionA: {
+    id: "rapid-prototype",
+    name: "Rapid Conversation Prototype",
+    subtitle: "Lean Demo",
+    goal: "Engage stakeholders, showcase early AI insight and procurement coaching potential",
+    timeline: "3 months",
+    investment: "£75-100k",
+    milestones: [
+      {
+        deliverable: "500+ Curated Challenges",
+        description: "Expanded static dataset across all infrastructure sectors",
+        evidence: "Comprehensive challenge landscape for stakeholder demos"
+      },
+      {
+        deliverable: "Limited Live Data Ingestion",
+        description: "Automated ingestion from 1-2 procurement portals",
+        evidence: "Proof of concept for real-time data integration"
+      },
+      {
+        deliverable: "Enhanced Visualization Engine",
+        description: "Robust force-graph with basic AI-insight analytics",
+        evidence: "Professional demo-ready interface for events and meetings"
+      },
+      {
+        deliverable: "Innovation Procurement Coaching",
+        description: "Intro modules for 1-2 sectors (rail + local government)",
+        evidence: "Basic guidance templates and compliance support"
+      },
+      {
+        deliverable: "Stakeholder Demo Platform",
+        description: "Landing page and explainer for events and presentations",
+        evidence: "Professional showcase for investor and buyer engagement"
+      }
+    ]
+  },
+  optionB: {
+    id: "validation-mvp",
+    name: "Validation-Ready MVP",
+    subtitle: "Light Build",
+    goal: "Validate analytical and market value through multi-source live data and user engagement",
+    timeline: "6 months", 
+    investment: "£150-200k",
+    milestones: [
+      {
+        deliverable: "100+ Live Challenges",
+        description: "Real-time ingestion from 2-5 procurement portals",
+        evidence: "Automated scraping + manual curation pipeline operational"
+      },
+      {
+        deliverable: "Dual Visual Modes",
+        description: "Force-graph + cluster map with AI-driven insight analytics",
+        evidence: "Multiple visualization approaches for different user preferences"
+      },
+      {
+        deliverable: "Expanded Procurement Coaching",
+        description: "Coverage for 3-4 sectors (rail, energy, local gov, transport)",
+        evidence: "Sector-specific guidance and compliance templates"
+      },
+      {
+        deliverable: "Stakeholder Validation Program",
+        description: "10 structured interviews + SME/buyer feedback collection",
+        evidence: "Quantified validation of pattern recognition hypothesis"
+      },
+      {
+        deliverable: "Initial User Profiles",
+        description: "Basic SME/buyer accounts with metadata and preferences",
+        evidence: "Foundation for personalization and matching features"
+      },
+      {
+        deliverable: "Validation Evidence Report",
+        description: "Comprehensive analysis of market validation and user feedback",
+        evidence: "Data-driven case for Phase 2 investment and scaling"
+      }
+    ]
+  },
+  optionC: {
+    id: "full-build",
+    name: "Full Build",
+    subtitle: "Production Ready",
+    goal: "Deliver scalable, production-ready platform with live ingestion, profiling, and AI intelligence",
+    timeline: "12 months",
+    investment: "£300-400k", 
+    milestones: [
+      {
+        deliverable: "Continuous Data Ingestion",
+        description: "Automated ingestion from 5+ procurement & innovation sources",
+        evidence: "Robust pipeline handling multiple data formats and update frequencies"
+      },
+      {
+        deliverable: "Full AI Semantic Similarity Engine",
+        description: "Advanced NLP with trend analytics dashboard",
+        evidence: "Production-grade AI matching with confidence scoring and explanations"
+      },
+      {
+        deliverable: "Multi-Visualization Suite",
+        description: "Network, cluster, map, and table views with export capabilities",
+        evidence: "Comprehensive analytics platform for different analysis needs"
+      },
+      {
+        deliverable: "Robust User Profiles",
+        description: "Full SME + buyer authentication with admin console",
+        evidence: "Secure user management with role-based access and preferences"
+      },
+      {
+        deliverable: "Comprehensive Procurement Coaching",
+        description: "5+ sector guidance with templates and compliance support",
+        evidence: "Complete coaching system with sector-specific workflows"
+      },
+      {
+        deliverable: "Success Metrics Dashboard",
+        description: "Analytics tracking + 3-5 buyer MOUs secured",
+        evidence: "Quantified platform impact with committed buyer partnerships"
+      }
+    ]
+  }
+};
+
+// Legacy data for backward compatibility - will be removed after timeline update
+export const phase1DeliverablesData = pocDeliverablesData;
 
 // Phase 2 and 3 data for summary cards
 export const phaseData = {
