@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { BarChart3, Network, Zap, Sun, GitBranch, Download, Settings, MessageCircle, Maximize2, Menu, X, ChevronDown, Home, Target, Users, FileText, User, TestTube } from "lucide-react"
+import { BarChart3, Network, Zap, Sun, GitBranch, Download, Settings, MessageCircle, Maximize2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { CreativeHero } from "@/components/ui/CreativeHero"
-import Link from "next/link"
+
+
 
 // Import existing visualization components and data
 import { SankeyChart } from "@/components/visualizations/SankeyChart"
@@ -22,6 +22,7 @@ import { UnifiedFloatingNav } from "@/components/ui/UnifiedFloatingNav"
 
 // Import cluster analysis types
 import { ClusterInfo } from "@/lib/cluster-analysis"
+import { CreativeHero } from "@/components/ui/CreativeHero"
 
 // Note: Using custom panels instead of importing existing ones to avoid prop dependencies
 
@@ -755,8 +756,6 @@ function VisualizationsContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#CCE2DC]/20 via-white to-[#CCE2DC]/10 text-[#2E2D2B]">
-      {/* Background Pattern */}
-      <CreativeHero className="fixed inset-0 z-0" />
       <div className="fixed inset-0 z-0">
         <div className="absolute inset-0 opacity-5">
           <div className="absolute inset-0" style={{

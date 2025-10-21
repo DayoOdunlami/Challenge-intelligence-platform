@@ -197,15 +197,30 @@ export function CreativeHero({
 
     let devicePixelRatio: number
 
-    // Set canvas dimensions
+    // Set canvas dimensions - Chrome-optimized
     const setCanvasDimensions = () => {
-      devicePixelRatio = window.devicePixelRatio || 1
+      // Clamp devicePixelRatio to prevent Chrome scaling issues
+      devicePixelRatio = Math.min(window.devicePixelRatio || 1, 2)
       const rect = canvas.getBoundingClientRect()
 
-      canvas.width = rect.width * devicePixelRatio
-      canvas.height = rect.height * devicePixelRatio
+      // Round dimensions to prevent sub-pixel rendering issues in Chrome
+      const width = Math.round(rect.width)
+      const height = Math.round(rect.height)
 
+      canvas.width = width * devicePixelRatio
+      canvas.height = height * devicePixelRatio
+      
+      // Set CSS size to prevent Chrome scaling artifacts
+      canvas.style.width = width + 'px'
+      canvas.style.height = height + 'px'
+
+      // Reset transform and apply clean scaling
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
       ctx.scale(devicePixelRatio, devicePixelRatio)
+      
+      // Chrome-specific optimizations
+      ctx.imageSmoothingEnabled = true
+      ctx.imageSmoothingQuality = 'high'
     }
 
     setCanvasDimensions()
@@ -637,7 +652,7 @@ export function CreativeHero({
               ctx.shadowBlur = 8 * this.orbitFade
             } else {
               ctx.fillStyle = baseColor
-              ctx.shadowBlur = 8 * this.orbitFade
+              ctx.shadowBlur = Math.round(8 * this.orbitFade) // Round for Chrome performance
             }
           }
           // Enhanced brightness for illuminated particles (timeline-flow)
@@ -651,7 +666,7 @@ export function CreativeHero({
             
             if (this.illumination > 0.5) {
               ctx.shadowColor = `rgba(0, 110, 81, ${this.illumination * 0.8})`
-              ctx.shadowBlur = this.illumination * 15
+              ctx.shadowBlur = Math.round(this.illumination * 15) // Round for Chrome performance
             }
           }
           // Data flow effect (timeline-flow left side)
@@ -663,7 +678,7 @@ export function CreativeHero({
             
             ctx.fillStyle = `rgba(${flowR}, ${flowG}, ${flowB}, ${flowA})`
             ctx.shadowColor = `rgba(0, 150, 100, ${this.dataFlow * 0.8})`
-            ctx.shadowBlur = this.dataFlow * 12
+            ctx.shadowBlur = Math.round(this.dataFlow * 12) // Round for Chrome performance
           }
           // Lightning effect (timeline-flow right side)
           else if (this.lightning > 0) {
@@ -674,7 +689,7 @@ export function CreativeHero({
             
             ctx.fillStyle = `rgba(${lightR}, ${lightG}, ${lightB}, ${lightA})`
             ctx.shadowColor = `rgba(100, 200, 255, ${this.lightning * 0.9})`
-            ctx.shadowBlur = this.lightning * 25
+            ctx.shadowBlur = Math.round(this.lightning * 25) // Round for Chrome performance
           }
           // Burst effect for flying particles (pulsing)
           else if (this.burstIntensity > 0) {
@@ -685,7 +700,7 @@ export function CreativeHero({
             
             ctx.fillStyle = `rgba(${burstR}, ${burstG}, ${burstB}, ${burstA})`
             ctx.shadowColor = `rgba(255, 200, 0, ${this.burstIntensity * 0.6})`
-            ctx.shadowBlur = this.burstIntensity * 20
+            ctx.shadowBlur = Math.round(this.burstIntensity * 20) // Round for Chrome performance
           }
           // Normal particles
           else {
@@ -836,9 +851,17 @@ export function CreativeHero({
       return minOpacity
     }
 
-    // Animation loop
-    const animate = () => {
+    // Animation loop - Chrome optimized
+    let lastFrameTime = 0
+    const animate = (currentTime: number = 0) => {
       if (!isVisible) return
+
+      // Chrome optimization: Limit frame rate to prevent stuttering
+      if (currentTime - lastFrameTime < 16.67) { // ~60fps max
+        animationRef.current = requestAnimationFrame(animate)
+        return
+      }
+      lastFrameTime = currentTime
 
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
