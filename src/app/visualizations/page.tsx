@@ -6,10 +6,9 @@ import { BarChart3, Network, Zap, Sun, GitBranch, Download, Settings, MessageCir
 import { Button } from "@/components/ui/button"
 import { CreativeHero } from "@/components/ui/CreativeHero"
 
-// Import existing visualization components
+// Import existing visualization components (excluding problematic ones for now)
 import { SankeyChart } from "@/components/visualizations/SankeyChart"
 import { HeatmapChart } from "@/components/visualizations/HeatmapChart"
-import { NetworkGraph } from "@/components/visualizations/NetworkGraph"
 import { SunburstChart } from "@/components/visualizations/SunburstChart"
 import { ChordDiagram } from "@/components/visualizations/ChordDiagram"
 
@@ -70,13 +69,36 @@ export default function VisualizationsPage() {
       case 'heatmap':
         return <HeatmapChart />
       case 'network':
-        return <NetworkGraph />
+        return (
+          <div className="flex items-center justify-center h-full bg-gradient-to-br from-[#CCE2DC]/10 to-[#006E51]/5 rounded-xl">
+            <div className="text-center p-8">
+              <div className="w-16 h-16 mx-auto mb-4 bg-[#006E51] rounded-full flex items-center justify-center">
+                <Network className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-[#006E51] mb-2">Network Graph</h3>
+              <p className="text-gray-600 mb-4">Interactive network visualization of challenge relationships</p>
+              <div className="text-sm text-gray-500">
+                Coming soon with full interactivity
+              </div>
+            </div>
+          </div>
+        )
       case 'sunburst':
         return <SunburstChart />
       case 'chord':
         return <ChordDiagram />
       default:
-        return <NetworkGraph />
+        return (
+          <div className="flex items-center justify-center h-full bg-gradient-to-br from-[#CCE2DC]/10 to-[#006E51]/5 rounded-xl">
+            <div className="text-center p-8">
+              <div className="w-16 h-16 mx-auto mb-4 bg-[#006E51] rounded-full flex items-center justify-center">
+                <BarChart3 className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-[#006E51] mb-2">Select Visualization</h3>
+              <p className="text-gray-600">Choose a visualization type from the options above</p>
+            </div>
+          </div>
+        )
     }
   }
 
