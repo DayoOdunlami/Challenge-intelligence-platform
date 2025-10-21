@@ -60,15 +60,15 @@ export const DEFAULT_PARTICLE_CONFIG: ParticleConfig = {
     saturation: 70,
     lightness: 40,
   },
-  gridSize: 35, // Much denser for clearer shape formation
-  maxDistance: 180, // Larger interaction area
+  gridSize: 40, // Optimized density for performance (15% fewer particles)
+  maxDistance: 120, // More focused interaction area
   forceFactor: 2.0, // Stronger base force
-  returnSpeed: 8, // Much faster return to base
-  connectionDistance: 60, // More connections
+  returnSpeed: 12, // Faster return to base
+  connectionDistance: 51, // Optimized connections (15% fewer connections)
   connectionOpacity: 0.25, // More visible connections
   connectionWidth: 1.0, // Thicker connections
   connectionColor: "rgba(0, 110, 81, {opacity})",
-  mouseEasing: 0.15, // More responsive mouse following
+  mouseEasing: 0.2, // Smoother, more efficient mouse following
 }
 
 export function CreativeHero({
@@ -217,50 +217,29 @@ export function CreativeHero({
     let targetX = 0
     let targetY = 0
 
-    let isMouseInCanvas = true
-    
     const handleMouseMove = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect()
       targetX = e.clientX - rect.left
       targetY = e.clientY - rect.top
       
-      // Check if mouse is actually over the canvas
-      isMouseInCanvas = (
-        e.clientX >= rect.left && 
-        e.clientX <= rect.right && 
-        e.clientY >= rect.top && 
-        e.clientY <= rect.bottom
+      // Calculate mouse intensity for section themes
+      const centerX = rect.width / 2
+      const centerY = rect.height / 2
+      const maxDistance = Math.sqrt(centerX * centerX + centerY * centerY)
+      const currentDistance = Math.sqrt(
+        Math.pow(targetX - centerX, 2) + Math.pow(targetY - centerY, 2)
       )
       
-      if (isMouseInCanvas) {
-        // Calculate mouse intensity for section themes
-        const centerX = rect.width / 2
-        const centerY = rect.height / 2
-        const maxDistance = Math.sqrt(centerX * centerX + centerY * centerY)
-        const currentDistance = Math.sqrt(
-          Math.pow(targetX - centerX, 2) + Math.pow(targetY - centerY, 2)
-        )
-        
-        // Check if hovering over special elements
-        const hoveredElement = document.elementFromPoint(e.clientX, e.clientY)
-        const isHoveringInteractive = hoveredElement?.closest('[data-particle-zone]')
-        
-        // Enhanced intensity for interactive elements
-        const baseIntensity = Math.max(0.1, 1 - currentDistance / maxDistance) // Reduced minimum
-        setMouseIntensity(isHoveringInteractive ? 1.0 : baseIntensity * 1.2)
-      } else {
-        // Mouse is off canvas - reduce intensity quickly
-        setMouseIntensity(prev => Math.max(0, prev * 0.8)) // Rapid decay
-      }
-    }
-    
-    const handleMouseLeave = () => {
-      isMouseInCanvas = false
-      setMouseIntensity(0) // Immediate return to default when mouse leaves
+      // Check if hovering over special elements
+      const hoveredElement = document.elementFromPoint(e.clientX, e.clientY)
+      const isHoveringInteractive = hoveredElement?.closest('[data-particle-zone]')
+      
+      // Enhanced intensity for interactive elements
+      const baseIntensity = Math.max(0.2, 1 - currentDistance / maxDistance) // Minimum 20% intensity
+      setMouseIntensity(isHoveringInteractive ? 1.0 : baseIntensity * 1.5) // Full intensity on hover
     }
 
     window.addEventListener("mousemove", handleMouseMove)
-    canvas.addEventListener("mouseleave", handleMouseLeave)
 
     // Particle class
     class Particle {
@@ -331,73 +310,93 @@ export function CreativeHero({
             force = 0
           }
         } else if (sectionTheme === 'pulsing') {
-          // Future features: Simple circle formation with pulsing
+          // Future features: Question mark formation for "what's coming?"
           if (this.distance < maxDist * 1.2) {
-            const pulseIntensity = Math.sin(Date.now() * 0.004) * 0.3 + 0.7
-            const formationForce = 0.6 * pulseIntensity * mouseIntensity
+            const pulseIntensity = Math.sin(Date.now() * 0.004) * 0.2 + 0.8
+            const formationForce = 0.85 * pulseIntensity * mouseIntensity
             
-            // Create a simple pulsing circle - much clearer than question mark
-            const circleRadius = 60 + (pulseIntensity * 20) // Pulsing radius
-            const angle = Math.atan2(this.baseY - mouseY, this.baseX - mouseX)
-            
-            // Only move particles that should be on the circle perimeter
-            const distanceFromMouse = Math.sqrt(
-              Math.pow(this.baseX - mouseX, 2) + Math.pow(this.baseY - mouseY, 2)
-            )
-            
-            // Only affect particles near where the circle should be
-            if (Math.abs(distanceFromMouse - circleRadius) < 15) {
-              const targetX = mouseX + Math.cos(angle) * circleRadius
-              const targetY = mouseY + Math.sin(angle) * circleRadius
-              
-              this.x += (targetX - this.x) * formationForce
-              this.y += (targetY - this.y) * formationForce
-              force = 0
-            }
-            // Let other particles behave normally
-          }
-        } else if (sectionTheme === 'timeline-flow') {
-          // How it works: Simple but clear arrow - only move particles that should be IN the arrow
-          if (this.distance < maxDist * 1.2) {
-            const flowForce = 0.7 * mouseIntensity
-            
-            // Create a simple arrow pointing right (→)
-            const arrowSize = 80
+            // Create a clear QUESTION MARK (?) shape
+            const qSize = 90
             const relativeX = this.baseX - mouseX
             const relativeY = this.baseY - mouseY
             
-            // Only affect particles that should form the arrow shape
-            let shouldMoveToArrow = false
-            let targetX = this.x
-            let targetY = this.y
+            let targetX = mouseX
+            let targetY = mouseY
             
-            // Arrow shaft (horizontal line)
-            if (Math.abs(relativeX) <= arrowSize * 0.4 && Math.abs(relativeY) <= arrowSize * 0.06) {
-              targetX = mouseX + (relativeX > 0 ? arrowSize * 0.4 : -arrowSize * 0.4) * Math.sign(relativeX || 1)
-              targetY = mouseY
-              shouldMoveToArrow = true
+            // Top curve of question mark
+            if (relativeY <= -qSize * 0.2 && relativeY >= -qSize * 0.7) {
+              const curveY = relativeY + qSize * 0.7
+              const curveProgress = curveY / (qSize * 0.5)
+              const curveX = Math.sin(curveProgress * Math.PI) * qSize * 0.4
+              if (Math.abs(relativeX - curveX) < qSize * 0.15) {
+                targetX = mouseX + curveX
+                targetY = mouseY + relativeY
+              }
+            }
+            // Vertical stroke
+            else if (relativeX >= -qSize * 0.1 && relativeX <= qSize * 0.1 &&
+                     relativeY >= -qSize * 0.2 && relativeY <= qSize * 0.2) {
+              targetX = mouseX
+              targetY = mouseY + relativeY
+            }
+            // Dot at bottom
+            else if (Math.abs(relativeX) < qSize * 0.1 && relativeY >= qSize * 0.4 && relativeY <= qSize * 0.6) {
+              targetX = mouseX
+              targetY = mouseY + qSize * 0.5
+            }
+            
+            this.x += (targetX - this.x) * formationForce
+            this.y += (targetY - this.y) * formationForce
+            force = 0
+          }
+        } else if (sectionTheme === 'timeline-flow') {
+          // How it works: CLEAR ARROW formation with dense particles
+          if (this.distance < maxDist * 1.5) {
+            const flowForce = 0.9 * mouseIntensity
+            
+            // Create a VERY CLEAR arrow pointing right (→)
+            const arrowSize = 100
+            const relativeX = this.baseX - mouseX
+            const relativeY = this.baseY - mouseY
+            
+            let targetX = mouseX + relativeX
+            let targetY = mouseY + relativeY
+            let isInArrow = false
+            
+            // Arrow shaft (horizontal line) - THICK for visibility
+            if (relativeX >= -arrowSize * 0.6 && relativeX <= arrowSize * 0.2 && Math.abs(relativeY) <= arrowSize * 0.08) { // Very thick shaft
+              targetX = mouseX + relativeX
+              targetY = mouseY // Perfectly straight
+              isInArrow = true
             }
             // Arrow head - upper diagonal
-            else if (relativeX >= arrowSize * 0.3 && relativeX <= arrowSize * 0.5 &&
-                     relativeY >= -arrowSize * 0.25 && relativeY <= 0) {
-              targetX = mouseX + arrowSize * 0.5
-              targetY = mouseY - arrowSize * 0.25
-              shouldMoveToArrow = true
+            else if (relativeX >= arrowSize * 0.2 && relativeX <= arrowSize * 0.5 &&
+                     relativeY >= -arrowSize * 0.3 && relativeY <= arrowSize * 0.08) {
+              const headProgress = (relativeX - arrowSize * 0.2) / (arrowSize * 0.3)
+              const expectedY = -arrowSize * 0.3 + (headProgress * arrowSize * 0.38)
+              if (Math.abs(relativeY - expectedY) <= arrowSize * 0.05) { // Thick diagonal
+                targetX = mouseX + relativeX
+                targetY = mouseY + expectedY
+                isInArrow = true
+              }
             }
-            // Arrow head - lower diagonal  
-            else if (relativeX >= arrowSize * 0.3 && relativeX <= arrowSize * 0.5 &&
-                     relativeY >= 0 && relativeY <= arrowSize * 0.25) {
-              targetX = mouseX + arrowSize * 0.5
-              targetY = mouseY + arrowSize * 0.25
-              shouldMoveToArrow = true
+            // Arrow head - lower diagonal
+            else if (relativeX >= arrowSize * 0.2 && relativeX <= arrowSize * 0.5 &&
+                     relativeY >= -arrowSize * 0.08 && relativeY <= arrowSize * 0.3) {
+              const headProgress = (relativeX - arrowSize * 0.2) / (arrowSize * 0.3)
+              const expectedY = arrowSize * 0.3 - (headProgress * arrowSize * 0.38)
+              if (Math.abs(relativeY - expectedY) <= arrowSize * 0.05) { // Thick diagonal
+                targetX = mouseX + relativeX
+                targetY = mouseY + expectedY
+                isInArrow = true
+              }
             }
             
-            if (shouldMoveToArrow) {
+            if (isInArrow) {
               this.x += (targetX - this.x) * flowForce
               this.y += (targetY - this.y) * flowForce
-              force = 0 // Don't apply normal repulsion
+              force = 0
             }
-            // Let other particles behave normally (they'll get repelled as usual)
           }
         } else if (sectionTheme === 'rippling') {
           // Audio section: DRAMATIC rippling waves emanating from mouse
@@ -750,7 +749,6 @@ export function CreativeHero({
     return () => {
       window.removeEventListener("resize", handleResize)
       window.removeEventListener("mousemove", handleMouseMove)
-      canvas.removeEventListener("mouseleave", handleMouseLeave)
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current)
       }
