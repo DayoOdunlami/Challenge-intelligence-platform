@@ -163,6 +163,44 @@ export default function HomePage() {
       {/* Section Divider */}
       <div className="h-px bg-gradient-to-r from-transparent via-[#CCE2DC] to-transparent"></div>
 
+      {/* Audio Explainer Section - Moved up for immediate clarity */}
+      <section className="py-32 relative bg-[#CCE2DC]/10">
+        <CreativeHero 
+          className="absolute inset-0 z-0" 
+          sectionTheme="rippling"
+          contentAreas={[
+            // Audio player area - gentle rippling around it
+            { x: 0.5, y: 0.5, width: 600, height: 400, shape: 'rectangle', fadeStart: 0.9 }
+          ]}
+        />
+        <div className="relative z-10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center space-y-4 mb-16">
+              <div className="inline-block">
+                <div className="relative px-4 py-2 text-sm font-medium rounded-full bg-white/50 backdrop-blur-sm border border-[#006E51]/20 mb-4">
+                  <span className="relative z-10 text-[#006E51]">Hear from us</span>
+                </div>
+              </div>
+              <h2 className="text-4xl md:text-5xl font-bold text-[#2E2D2B]">Why We Built Innovation Atlas</h2>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                Listen to our founder explain the vision behind the UK's first cross-sector innovation intelligence platform.
+              </p>
+              <div className="w-24 h-1.5 bg-gradient-to-r from-[#006E51] to-[#CCE2DC] rounded-full mx-auto mt-6"></div>
+            </div>
+            
+            {/* Audio Player - Adapted for light background */}
+            <div className="max-w-4xl mx-auto">
+              <div className="bg-white/80 backdrop-blur-sm border border-[#CCE2DC]/50 rounded-2xl p-8 shadow-lg">
+                <AudioExplainerSection />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Section Divider */}
+      <div className="h-px bg-gradient-to-r from-transparent via-[#006E51]/30 to-transparent"></div>
+
       {/* Vision Section - Moved up for clarity */}
       <section className="py-32 relative">
         <CreativeHero 
@@ -347,23 +385,10 @@ export default function HomePage() {
       </section>
 
 
-      {/* Audio Explainer Section */}
-      <section className="py-32 relative bg-gradient-to-br from-gray-900 to-gray-800 text-white">
-        <CreativeHero 
-          className="absolute inset-0 z-0" 
-          sectionTheme="rippling"
-          contentAreas={[
-            // Audio player area - gentle rippling around it
-            { x: 0.5, y: 0.5, width: 600, height: 400, shape: 'rectangle', fadeStart: 0.9 }
-          ]}
-        />
-        <div className="relative z-10">
-          <AudioExplainerSection />
-        </div>
-      </section>
+
 
       {/* Future Features Section */}
-      <section className="py-32 relative">
+      <section className="py-32 relative bg-gradient-to-br from-gray-900 to-gray-800 text-white">
         <CreativeHero 
           className="absolute inset-0 z-0" 
           sectionTheme="pulsing"
@@ -381,8 +406,8 @@ export default function HomePage() {
                 <span className="relative z-10 text-blue-600">Innovation pipeline</span>
               </div>
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-[#2E2D2B]">What's Coming Next</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <h2 className="text-4xl md:text-5xl font-bold text-white">What's Coming Next</h2>
+            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
               We're building the future of innovation intelligence. Here's what's in development.
             </p>
             <div className="w-24 h-1.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mx-auto mt-6"></div>
@@ -435,7 +460,7 @@ export default function HomePage() {
             ].map((feature, idx) => (
               <motion.div
                 key={idx}
-                className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 cursor-pointer group"
+                className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 hover:shadow-lg hover:bg-white/15 transition-all duration-300 cursor-pointer group"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.1 }}
@@ -449,12 +474,12 @@ export default function HomePage() {
                   });
                 }}
               >
-                <div className="w-12 h-12 mb-4 rounded-lg bg-gradient-to-r from-gray-100 to-gray-200 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <feature.icon className="w-6 h-6 text-gray-600" />
+                <div className="w-12 h-12 mb-4 rounded-lg bg-gradient-to-r from-white/20 to-white/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <feature.icon className="w-6 h-6 text-white" />
                 </div>
                 
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-[#2E2D2B]">{feature.title}</h3>
+                  <h3 className="text-lg font-semibold text-white">{feature.title}</h3>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     feature.status === 'In Development' 
                       ? 'bg-blue-100 text-blue-700'
@@ -466,28 +491,28 @@ export default function HomePage() {
                   </span>
                 </div>
                 
-                <p className="text-sm font-medium text-[#006E51] mb-2">{feature.subtitle}</p>
-                <p className="text-gray-600 text-sm mb-4 leading-relaxed">{feature.description}</p>
+                <p className="text-sm font-medium text-[#CCE2DC] mb-2">{feature.subtitle}</p>
+                <p className="text-gray-300 text-sm mb-4 leading-relaxed">{feature.description}</p>
                 
-                <div className="flex items-center justify-between text-xs text-gray-500">
+                <div className="flex items-center justify-between text-xs text-gray-400">
                   <span>{feature.timeline}</span>
-                  <span className="group-hover:text-[#006E51] transition-colors">Click to learn more →</span>
+                  <span className="group-hover:text-[#CCE2DC] transition-colors">Click to learn more →</span>
                 </div>
               </motion.div>
             ))}
           </div>
 
           <div className="text-center mt-12">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-2xl mx-auto">
+            <div className="bg-white/10 border border-white/20 rounded-lg p-4 max-w-2xl mx-auto">
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Bell className="w-4 h-4 text-blue-600" />
+                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Bell className="w-4 h-4 text-white" />
                 </div>
                 <div className="text-left">
-                  <h4 className="font-medium text-blue-800 mb-1">Development Updates</h4>
-                  <p className="text-sm text-blue-700">
+                  <h4 className="font-medium text-white mb-1">Development Updates</h4>
+                  <p className="text-sm text-gray-300">
                     Follow detailed progress, timelines, and technical specifications in our 
-                    <Link href="/for-reviewers-v2" className="font-medium hover:underline ml-1">
+                    <Link href="/for-reviewers-v2" className="font-medium hover:underline ml-1 text-[#CCE2DC] hover:text-white">
                       comprehensive reviewer response
                     </Link>.
                   </p>
@@ -502,7 +527,7 @@ export default function HomePage() {
       <div className="h-px bg-gradient-to-r from-transparent via-[#006E51]/30 to-transparent"></div>
 
       {/* Platform Stats Section */}
-      <section className="py-32 relative bg-[#CCE2DC]/10">
+      <section className="py-32 relative">
         <CreativeHero className="absolute inset-0 z-0" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center space-y-4 mb-16">
