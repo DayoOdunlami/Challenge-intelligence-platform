@@ -22,13 +22,13 @@ const navigationItems = [
   },
   {
     name: "For Reviewers",
-    href: "/for-reviewers",
+    href: "/for-reviewers-v2",
     icon: FileText,
     description: "Reviewer resources and tools"
   },
   {
     name: "Profiles",
-    href: "/profile/sme-profile",
+    href: "/profile",
     icon: Users,
     description: "User profiles and examples"
   }

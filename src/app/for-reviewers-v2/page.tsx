@@ -13,6 +13,7 @@ import { InteractivePlatformComparison } from "@/components/reviewer-v2/Interact
 import { InteractiveCPCAdvantages } from "@/components/reviewer-v2/InteractiveCPCAdvantages"
 import { CreativeHero } from "@/components/ui/CreativeHero"
 import { AudioExplainerSection } from "@/components/reviewer/AudioExplainerSection"
+import { TopNavigation } from "@/components/ui/TopNavigation"
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs"
 import { UnifiedFloatingNav } from "@/components/ui/UnifiedFloatingNav"
 import { useActiveSection } from "@/hooks/useActiveSection"
@@ -27,6 +28,7 @@ export default function ReviewerResponseV2() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#CCE2DC]/20 via-white to-[#CCE2DC]/10 text-[#2E2D2B] overflow-hidden">
+      <TopNavigation />
       <ReviewerScrollProgress />
       <UnifiedFloatingNav 
         currentPage="reviewer"
