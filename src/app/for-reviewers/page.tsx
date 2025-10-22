@@ -9,6 +9,7 @@ import { WhyCPCSection } from "@/components/reviewer/WhyCPCSection";
 import { Phase1FeasibilitySection } from "@/components/reviewer/Phase1FeasibilitySection";
 import { AudioExplainerSection } from "@/components/reviewer/AudioExplainerSection";
 import { ReviewerResponsePDF } from "@/components/reviewer/ReviewerResponsePDF";
+import { TopNavigation } from "@/components/ui/TopNavigation";
 import { reviewerFeedbackData } from "@/data/reviewerData";
 
 export default function ForReviewersPage() {
@@ -44,6 +45,7 @@ export default function ForReviewersPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <TopNavigation />
       <ScrollProgress />
       
       {/* Sticky Navigation */}

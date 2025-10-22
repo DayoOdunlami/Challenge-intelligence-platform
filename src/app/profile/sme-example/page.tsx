@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import QuickNavSidebar from '@/components/ui/QuickNavSidebar';
+import { TopNavigation } from '@/components/ui/TopNavigation';
 
 export default function SMEExample() {
   return (
     <div className="min-h-screen bg-gray-50 py-12">
+      <TopNavigation />
       <QuickNavSidebar />
       <div className="max-w-5xl mx-auto px-4">
         {/* Navigation */}

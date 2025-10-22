@@ -65,3 +65,43 @@ Implement one of these approaches:
 
 ### Expected Insights Format:
 "Transport ↔ Energy connection: 8 shared problem types including 'Smart Infrastructure' and 'Data Analytics'. Total funding: £12M across 15 challenges. Key collaboration opportunities: IoT sensor networks, predictive maintenance platforms."
+
+---
+
+## 🐛 Chrome Particle Rendering Issue - NEEDS INVESTIGATION
+
+**Status:** Bug Report  
+**Priority:** Medium (Browser compatibility issue)
+
+### Issue Description
+Particle background system shows "glitchy edges" on right and bottom sides in Chrome browser when window size exceeds a certain threshold. Issue does NOT occur in Safari.
+
+### Symptoms
+- ✅ Works perfectly in Safari at all window sizes
+- ❌ Chrome shows particle rendering artifacts at larger viewport sizes
+- ❌ Glitchy edges appear specifically on right and bottom boundaries
+- ❌ Issue is window-size dependent (works fine at smaller sizes)
+
+### Suspected Root Causes
+1. **Canvas boundary calculations** - Particle grid may extend beyond actual canvas dimensions
+2. **Chrome viewport handling** - Different from Safari's approach to large canvas sizing
+3. **devicePixelRatio scaling** - Chrome may handle high-DPI differently at large sizes
+4. **Particle grid initialization** - Grid size calculations may be off for large viewports
+
+### Investigation Needed
+- [ ] Test at various Chrome window sizes to find exact breakpoint
+- [ ] Compare canvas.width/height vs getBoundingClientRect() at large sizes
+- [ ] Check if particles are being created outside intended boundaries
+- [ ] Verify particle grid calculations match actual canvas dimensions
+- [ ] Test with Chrome DevTools device emulation at various sizes
+
+### Files to Investigate
+- `src/components/ui/CreativeHero.tsx` - Main particle system
+- Canvas sizing logic in `setCanvasDimensions()`
+- Particle grid initialization in `init()` function
+- Boundary checking in particle update loops
+
+### Notes
+- Previous fixes addressed general Chrome performance but not this size-specific issue
+- Need to understand exact window size threshold where issue begins
+- May need Chrome-specific boundary clamping or canvas size limits

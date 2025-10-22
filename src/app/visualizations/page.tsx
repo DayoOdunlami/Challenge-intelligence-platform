@@ -19,6 +19,7 @@ import { AppProvider, useAppContext } from "@/contexts/AppContext"
 import { InsightsSummary } from "@/components/ui/InsightsSummary"
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs"
 import { UnifiedFloatingNav } from "@/components/ui/UnifiedFloatingNav"
+import { TopNavigation } from "@/components/ui/TopNavigation"
 
 // Import cluster analysis types
 import { ClusterInfo } from "@/lib/cluster-analysis"
@@ -756,6 +757,7 @@ function VisualizationsContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#CCE2DC]/20 via-white to-[#CCE2DC]/10 text-[#2E2D2B]">
+      <TopNavigation />
       <div className="fixed inset-0 z-0">
         <div className="absolute inset-0 opacity-5">
           <div className="absolute inset-0" style={{

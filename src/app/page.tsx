@@ -6,6 +6,7 @@ import { ArrowRight, BarChart3, Users, Target, Zap, CheckCircle, Play, Eye, Netw
 import { Button } from '@/components/ui/button';
 import { CreativeHero } from '@/components/ui/CreativeHero';
 import { UnifiedFloatingNav } from '@/components/ui/UnifiedFloatingNav';
+import { TopNavigation } from '@/components/ui/TopNavigation';
 import { AudioExplainerSection } from '@/components/reviewer/AudioExplainerSection';
 import { ComingSoonModal } from '@/components/ui/ComingSoonModal';
 import Link from 'next/link';
@@ -21,6 +22,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#CCE2DC]/20 via-white to-[#CCE2DC]/10 text-[#2E2D2B] overflow-hidden">
+      <TopNavigation />
       <UnifiedFloatingNav currentPage="home" />
 
       {/* Hero Section */}
@@ -60,10 +62,14 @@ export default function HomePage() {
                 <span className="text-[#006E51]">Atlas</span>
               </h1>
               
-              <p className="text-xl text-gray-600 max-w-[600px] mb-8">
-                The UK's first cross-sector innovation intelligence platform. 
-                Discover patterns, accelerate adoption, and turn invisible connections into inevitable progress.
-              </p>
+              <div className="mb-4">
+                <p className="text-2xl font-semibold text-[#006E51] mb-2">
+                  The UK's cross-sector innovation intelligence platform
+                </p>
+                <p className="text-lg text-gray-600">
+                  Discover patterns, accelerate adoption, and turn invisible connections into inevitable progress
+                </p>
+              </div>
 
               {/* Key Stats */}
               <div className="grid grid-cols-3 gap-4 mb-8">
@@ -156,6 +162,75 @@ export default function HomePage() {
 
       {/* Section Divider */}
       <div className="h-px bg-gradient-to-r from-transparent via-[#CCE2DC] to-transparent"></div>
+
+      {/* Vision Section - Moved up for clarity */}
+      <section className="py-32 relative">
+        <CreativeHero 
+          className="absolute inset-0 z-0" 
+          sectionTheme="timeline-flow"
+          contentAreas={[
+            // Three step cards - create flow between them
+            { x: 0.2, y: 0.6, width: 280, height: 320, shape: 'rectangle', fadeStart: 0.85 },
+            { x: 0.5, y: 0.6, width: 280, height: 320, shape: 'rectangle', fadeStart: 0.85 },
+            { x: 0.8, y: 0.6, width: 280, height: 320, shape: 'rectangle', fadeStart: 0.85 }
+          ]}
+        />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center space-y-4 mb-16">
+            <div className="inline-block">
+              <div className="relative px-4 py-2 text-sm font-medium rounded-full bg-[#CCE2DC]/50 backdrop-blur-sm border border-[#006E51]/20 mb-4">
+                <span className="relative z-10 text-[#006E51]">Our vision</span>
+              </div>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold text-[#2E2D2B]">How Innovation Atlas Works</h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              We're building the UK's first cross-sector innovation intelligence platform. Here's how we turn invisible connections into inevitable progress.
+            </p>
+            <div className="w-24 h-1.5 bg-gradient-to-r from-[#006E51] to-[#CCE2DC] rounded-full mx-auto mt-6"></div>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-12">
+            {[
+              {
+                icon: BarChart3,
+                title: "Discover Patterns",
+                description: "Explore challenges and innovations across all UK infrastructure sectors in one visual intelligence platform",
+                color: "from-[#006E51] to-green-600"
+              },
+              {
+                icon: Target,
+                title: "Match Intelligently", 
+                description: "AI-powered matching reveals cross-sector patterns and connects solutions with relevant challenges",
+                color: "from-blue-500 to-blue-600"
+              },
+              {
+                icon: Zap,
+                title: "Accelerate Adoption",
+                description: "Reuse validated evidence across sectors and reduce procurement time by up to 50%",
+                color: "from-purple-500 to-purple-600"
+              }
+            ].map((step, idx) => (
+              <motion.div
+                key={idx}
+                className="text-center bg-white/80 backdrop-blur-sm border border-[#CCE2DC]/50 rounded-xl p-8 hover:shadow-lg transition-all duration-300"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.2 }}
+                viewport={{ once: true }}
+              >
+                <div className={`w-20 h-20 mx-auto mb-6 rounded-xl bg-gradient-to-r ${step.color} flex items-center justify-center`}>
+                  <step.icon className="w-10 h-10 text-white" />
+                </div>
+                <h3 className="text-xl font-bold mb-4 text-[#2E2D2B]">{step.title}</h3>
+                <p className="text-gray-600 leading-relaxed">{step.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Section Divider */}
+      <div className="h-px bg-gradient-to-r from-transparent via-[#006E51]/30 to-transparent"></div>
 
       {/* Role Selection Section */}
       <section className="py-32 relative bg-[#CCE2DC]/10">
@@ -270,71 +345,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-      {/* Section Divider */}
-      <div className="h-px bg-gradient-to-r from-transparent via-[#006E51]/30 to-transparent"></div>
 
-      {/* How It Works Section */}
-      <section className="py-32 relative">
-        <CreativeHero 
-          className="absolute inset-0 z-0" 
-          sectionTheme="timeline-flow"
-          contentAreas={[
-            // Three step cards - create flow between them
-            { x: 0.2, y: 0.6, width: 280, height: 320, shape: 'rectangle', fadeStart: 0.85 },
-            { x: 0.5, y: 0.6, width: 280, height: 320, shape: 'rectangle', fadeStart: 0.85 },
-            { x: 0.8, y: 0.6, width: 280, height: 320, shape: 'rectangle', fadeStart: 0.85 }
-          ]}
-        />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center space-y-4 mb-16">
-            <div className="inline-block">
-              <div className="relative px-4 py-2 text-sm font-medium rounded-full bg-[#CCE2DC]/50 backdrop-blur-sm border border-[#006E51]/20 mb-4">
-                <span className="relative z-10 text-[#006E51]">Three-step process</span>
-              </div>
-            </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-[#2E2D2B]">How Innovation Atlas Works</h2>
-            <div className="w-24 h-1.5 bg-gradient-to-r from-[#006E51] to-[#CCE2DC] rounded-full mx-auto mt-6"></div>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-12">
-            {[
-              {
-                icon: BarChart3,
-                title: "Discover Patterns",
-                description: "Explore challenges and innovations across all UK infrastructure sectors in one visual intelligence platform",
-                color: "from-[#006E51] to-green-600"
-              },
-              {
-                icon: Target,
-                title: "Match Intelligently", 
-                description: "AI-powered matching reveals cross-sector patterns and connects solutions with relevant challenges",
-                color: "from-blue-500 to-blue-600"
-              },
-              {
-                icon: Zap,
-                title: "Accelerate Adoption",
-                description: "Reuse validated evidence across sectors and reduce procurement time by up to 50%",
-                color: "from-purple-500 to-purple-600"
-              }
-            ].map((step, idx) => (
-              <motion.div
-                key={idx}
-                className="text-center bg-white/80 backdrop-blur-sm border border-[#CCE2DC]/50 rounded-xl p-8 hover:shadow-lg transition-all duration-300"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.2 }}
-                viewport={{ once: true }}
-              >
-                <div className={`w-20 h-20 mx-auto mb-6 rounded-xl bg-gradient-to-r ${step.color} flex items-center justify-center`}>
-                  <step.icon className="w-10 h-10 text-white" />
-                </div>
-                <h3 className="text-xl font-bold mb-4 text-[#2E2D2B]">{step.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{step.description}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* Audio Explainer Section */}
       <section className="py-32 relative bg-gradient-to-br from-gray-900 to-gray-800 text-white">

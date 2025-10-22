@@ -1,5 +1,6 @@
 import QuickNavSidebar from '@/components/ui/QuickNavSidebar';
 import { UnifiedFloatingNav } from '@/components/ui/UnifiedFloatingNav';
+import { TopNavigation } from '@/components/ui/TopNavigation';
 
 export default function BuyerProfileExample() {
   const profile = {
@@ -19,6 +20,7 @@ export default function BuyerProfileExample() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
+      <TopNavigation />
       <QuickNavSidebar />
       <UnifiedFloatingNav currentPage="owner-profile" />
       <div className="max-w-5xl mx-auto px-4">

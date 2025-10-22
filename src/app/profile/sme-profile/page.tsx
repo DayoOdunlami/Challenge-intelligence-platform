@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import QuickNavSidebar from '@/components/ui/QuickNavSidebar';
 import { UnifiedFloatingNav } from '@/components/ui/UnifiedFloatingNav';
+import { TopNavigation } from '@/components/ui/TopNavigation';
 
 export default function SMEProfileExample() {
   return (
     <div className="min-h-screen bg-gray-50 py-12">
+      <TopNavigation />
       <QuickNavSidebar />
       <UnifiedFloatingNav currentPage="innovator-profile" />
       <div className="max-w-5xl mx-auto px-4">
