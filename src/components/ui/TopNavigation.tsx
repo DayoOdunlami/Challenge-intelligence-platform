@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
-import { Menu, X, BarChart3, Users, FileText, Home } from "lucide-react"
+import { Menu, X, BarChart3, Users, FileText, Home, ChevronDown, Archive } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 const navigationItems = [
@@ -24,7 +24,21 @@ const navigationItems = [
     name: "For Reviewers",
     href: "/for-reviewers-v2",
     icon: FileText,
-    description: "Reviewer resources and tools"
+    description: "Reviewer resources and tools",
+    hasDropdown: true,
+    dropdownItems: [
+      {
+        name: "Current Response",
+        href: "/for-reviewers-v2",
+        description: "Latest comprehensive response"
+      },
+      {
+        name: "Original Response",
+        href: "/for-reviewers",
+        description: "Archived initial response",
+        isArchived: true
+      }
+    ]
   },
   {
     name: "Profiles",
@@ -36,7 +50,21 @@ const navigationItems = [
 
 export function TopNavigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const pathname = usePathname()
+  const navRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (navRef.current && !navRef.current.contains(event.target as Node)) {
+        setOpenDropdown(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const isActive = (href: string) => {
     if (href === "/") {
@@ -45,8 +73,15 @@ export function TopNavigation() {
     return pathname.startsWith(href)
   }
 
+  const isDropdownActive = (item: any) => {
+    if (item.hasDropdown && item.dropdownItems) {
+      return item.dropdownItems.some((dropdownItem: any) => isActive(dropdownItem.href))
+    }
+    return isActive(item.href)
+  }
+
   return (
-    <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#CCE2DC]/30">
+    <nav ref={navRef} className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#CCE2DC]/30">
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -64,7 +99,70 @@ export function TopNavigation() {
           <div className="hidden md:flex items-center space-x-1">
             {navigationItems.map((item) => {
               const Icon = item.icon
-              const active = isActive(item.href)
+              const active = isDropdownActive(item)
+              
+              if (item.hasDropdown) {
+                return (
+                  <div key={item.name} className="relative">
+                    <motion.button
+                      className={`relative flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                        active 
+                          ? 'bg-[#006E51] text-white' 
+                          : 'text-gray-700 hover:bg-[#CCE2DC]/30 hover:text-[#006E51]'
+                      }`}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setOpenDropdown(openDropdown === item.name ? null : item.name)}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span className="font-medium">{item.name}</span>
+                      <ChevronDown className={`h-3 w-3 transition-transform ${
+                        openDropdown === item.name ? 'rotate-180' : ''
+                      }`} />
+                      
+                      {active && (
+                        <motion.div
+                          className="absolute inset-0 rounded-lg border-2 border-[#CCE2DC]"
+                          layoutId="activeNavBorder"
+                          transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                        />
+                      )}
+                    </motion.button>
+
+                    {/* Dropdown Menu */}
+                    {openDropdown === item.name && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50"
+                      >
+                        {item.dropdownItems?.map((dropdownItem: any) => (
+                          <Link 
+                            key={dropdownItem.name} 
+                            href={dropdownItem.href}
+                            onClick={() => setOpenDropdown(null)}
+                          >
+                            <div className={`px-4 py-3 hover:bg-gray-50 transition-colors ${
+                              isActive(dropdownItem.href) ? 'bg-[#006E51]/5 border-l-4 border-[#006E51]' : ''
+                            }`}>
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="font-medium text-gray-900">{dropdownItem.name}</div>
+                                  <div className="text-sm text-gray-500">{dropdownItem.description}</div>
+                                </div>
+                                {dropdownItem.isArchived && (
+                                  <Archive className="h-4 w-4 text-gray-400" />
+                                )}
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
+                      </motion.div>
+                    )}
+                  </div>
+                )
+              }
               
               return (
                 <Link key={item.name} href={item.href}>
@@ -129,7 +227,64 @@ export function TopNavigation() {
             <div className="space-y-2">
               {navigationItems.map((item) => {
                 const Icon = item.icon
-                const active = isActive(item.href)
+                const active = isDropdownActive(item)
+                
+                if (item.hasDropdown) {
+                  return (
+                    <div key={item.name} className="space-y-1">
+                      <button
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+                          active 
+                            ? 'bg-[#006E51] text-white' 
+                            : 'text-gray-700 hover:bg-[#CCE2DC]/30'
+                        }`}
+                        onClick={() => setOpenDropdown(openDropdown === item.name ? null : item.name)}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <Icon className="h-5 w-5" />
+                          <div className="text-left">
+                            <div className="font-medium">{item.name}</div>
+                            <div className={`text-sm ${active ? 'text-white/80' : 'text-gray-500'}`}>
+                              {item.description}
+                            </div>
+                          </div>
+                        </div>
+                        <ChevronDown className={`h-4 w-4 transition-transform ${
+                          openDropdown === item.name ? 'rotate-180' : ''
+                        }`} />
+                      </button>
+                      
+                      {openDropdown === item.name && (
+                        <div className="ml-4 space-y-1">
+                          {item.dropdownItems?.map((dropdownItem: any) => (
+                            <Link 
+                              key={dropdownItem.name} 
+                              href={dropdownItem.href}
+                              onClick={() => {
+                                setIsMobileMenuOpen(false)
+                                setOpenDropdown(null)
+                              }}
+                            >
+                              <div className={`flex items-center justify-between px-4 py-2 rounded-lg transition-colors ${
+                                isActive(dropdownItem.href) 
+                                  ? 'bg-[#006E51]/10 text-[#006E51]' 
+                                  : 'text-gray-600 hover:bg-gray-50'
+                              }`}>
+                                <div>
+                                  <div className="font-medium text-sm">{dropdownItem.name}</div>
+                                  <div className="text-xs text-gray-500">{dropdownItem.description}</div>
+                                </div>
+                                {dropdownItem.isArchived && (
+                                  <Archive className="h-4 w-4 text-gray-400" />
+                                )}
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                }
                 
                 return (
                   <Link 

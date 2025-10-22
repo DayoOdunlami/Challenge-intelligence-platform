@@ -17,7 +17,6 @@ import challenges from "@/data/challenges"
 import { Challenge } from "@/lib/types"
 import { AppProvider, useAppContext } from "@/contexts/AppContext"
 import { InsightsSummary } from "@/components/ui/InsightsSummary"
-import { Breadcrumbs } from "@/components/ui/Breadcrumbs"
 import { UnifiedFloatingNav } from "@/components/ui/UnifiedFloatingNav"
 import { TopNavigation } from "@/components/ui/TopNavigation"
 
@@ -782,15 +781,6 @@ function VisualizationsContent() {
       {/* Header */}
       <header className="relative z-10 border-b border-[#CCE2DC]/30 bg-white/80 backdrop-blur-md">
         <div className="container mx-auto px-6 py-4">
-          {/* Breadcrumbs */}
-          <Breadcrumbs 
-            items={[
-              { label: "Innovation Atlas", href: "/" },
-              { label: "Data Visualizations", current: true }
-            ]}
-            className="mb-4"
-          />
-          
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-[#006E51]">Data Visualizations</h1>
