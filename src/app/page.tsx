@@ -188,11 +188,9 @@ export default function HomePage() {
               <div className="w-24 h-1.5 bg-gradient-to-r from-[#006E51] to-[#CCE2DC] rounded-full mx-auto mt-6"></div>
             </div>
             
-            {/* Audio Player - Adapted for light background */}
+            {/* Audio Player - Light theme version */}
             <div className="max-w-4xl mx-auto">
-              <div className="bg-white/80 backdrop-blur-sm border border-[#CCE2DC]/50 rounded-2xl p-8 shadow-lg">
-                <AudioExplainerSection />
-              </div>
+              <AudioExplainerSection theme="light" />
             </div>
           </div>
         </div>
