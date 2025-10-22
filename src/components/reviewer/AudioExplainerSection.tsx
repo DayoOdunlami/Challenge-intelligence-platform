@@ -4,7 +4,11 @@ import { useState, useRef } from "react";
 import { Play, Pause, Download, FileText, Volume2 } from "lucide-react";
 import { StaggeredItem } from "../animations/ReviewerAnimations";
 
-export function AudioExplainerSection() {
+interface AudioExplainerSectionProps {
+  theme?: 'dark' | 'light'
+}
+
+export function AudioExplainerSection({ theme = 'dark' }: AudioExplainerSectionProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0); // Will be set when audio loads
@@ -96,17 +100,22 @@ Innovation Atlas — mapping connections that move the UK forward.
     <div className="container mx-auto px-6">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-white mb-4">
+          <h2 className={`text-4xl font-bold mb-4 ${theme === 'light' ? 'text-[#2E2D2B]' : 'text-white'
+            }`}>
             Hear the Vision
           </h2>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Sometimes the best way to understand a vision is to hear it. This audio explainer walks through the Innovation Atlas concept, from invisible connections to inevitable progress.
+          <p className={`text-xl max-w-2xl mx-auto ${theme === 'light' ? 'text-gray-600' : 'text-gray-300'
+            }`}>
+            Sometimes the best way to understand a vision is to hear it. This audio overview walks through the Innovation Atlas concept, from invisible connections to inevitable progress.
           </p>
         </div>
 
         {/* Audio Player */}
         <StaggeredItem>
-          <div className="bg-gray-800 rounded-lg p-8 mb-8 border-2 border-[#006E51] shadow-xl">
+          <div className={`rounded-lg p-8 mb-8 border-2 border-[#006E51] shadow-xl ${theme === 'light'
+            ? 'bg-white/90 backdrop-blur-sm'
+            : 'bg-gray-800'
+            }`}>
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-4">
                 <button
@@ -121,13 +130,18 @@ Innovation Atlas — mapping connections that move the UK forward.
                   )}
                 </button>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">Innovation Atlas Vision</h3>
-                  <p className="text-gray-400">Mapping connections that move the UK forward</p>
+                  <h3 className={`text-lg font-semibold ${theme === 'light' ? 'text-[#2E2D2B]' : 'text-white'
+                    }`}>Innovation Atlas Vision</h3>
+                  <p className={theme === 'light' ? 'text-gray-600' : 'text-gray-400'}>
+                    Mapping connections that move the UK forward
+                  </p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <Volume2 className="w-5 h-5 text-gray-400" />
-                <span className="text-gray-400 text-sm">
+                <Volume2 className={`w-5 h-5 ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'
+                  }`} />
+                <span className={`text-sm ${theme === 'light' ? 'text-gray-600' : 'text-gray-400'
+                  }`}>
                   {isLoading ? 'Loading...' : `${formatTime(currentTime)} / ${formatTime(duration)}`}
                 </span>
               </div>
@@ -135,12 +149,13 @@ Innovation Atlas — mapping connections that move the UK forward.
 
             {/* Progress Bar */}
             <div className="mb-6">
-              <div 
-                className="relative h-2 bg-gray-700 rounded-full cursor-pointer hover:h-3 transition-all duration-200"
+              <div
+                className={`relative h-2 rounded-full cursor-pointer hover:h-3 transition-all duration-200 ${theme === 'light' ? 'bg-gray-200' : 'bg-gray-700'
+                  }`}
                 onClick={handleProgressClick}
                 title="Click to seek"
               >
-                <div 
+                <div
                   className="absolute top-0 left-0 h-full bg-[#006E51] rounded-full transition-all duration-100"
                   style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
                 />
@@ -148,14 +163,16 @@ Innovation Atlas — mapping connections that move the UK forward.
                 {chapters.map((chapter, idx) => (
                   <div
                     key={idx}
-                    className="absolute top-0 w-0.5 h-full bg-gray-500"
+                    className={`absolute top-0 w-0.5 h-full ${theme === 'light' ? 'bg-gray-400' : 'bg-gray-500'
+                      }`}
                     style={{ left: `${(chapter.time / duration) * 100}%` }}
                   />
                 ))}
               </div>
-              
+
               {/* Chapter labels */}
-              <div className="flex justify-between mt-2 text-xs text-gray-400">
+              <div className={`flex justify-between mt-2 text-xs ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'
+                }`}>
                 {chapters.map((chapter, idx) => (
                   <button
                     key={idx}
@@ -175,7 +192,10 @@ Innovation Atlas — mapping connections that move the UK forward.
               <div className="flex items-center space-x-4">
                 <button
                   onClick={() => setShowTranscript(!showTranscript)}
-                  className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors duration-200"
+                  className={`flex items-center space-x-2 transition-colors duration-200 ${theme === 'light'
+                    ? 'text-gray-600 hover:text-[#006E51]'
+                    : 'text-gray-400 hover:text-white'
+                    }`}
                 >
                   <FileText className="w-4 h-4" />
                   <span className="text-sm">
@@ -184,8 +204,11 @@ Innovation Atlas — mapping connections that move the UK forward.
                 </button>
               </div>
               <div className="flex items-center space-x-4">
-                <select 
-                  className="bg-gray-700 text-white text-sm rounded px-2 py-1 border border-gray-600"
+                <select
+                  className={`text-sm rounded px-2 py-1 border ${theme === 'light'
+                    ? 'bg-white text-gray-700 border-gray-300'
+                    : 'bg-gray-700 text-white border-gray-600'
+                    }`}
                   value={playbackRate}
                   onChange={(e) => handlePlaybackRateChange(parseFloat(e.target.value))}
                 >
@@ -194,10 +217,13 @@ Innovation Atlas — mapping connections that move the UK forward.
                   <option value="1.5">1.5x</option>
                   <option value="2">2x</option>
                 </select>
-                <a 
+                <a
                   href="/Audio/ElevenLabs_Across_the_UK,_thousands_of_innovators....mp3"
                   download="Innovation-Atlas-Vision.mp3"
-                  className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors duration-200"
+                  className={`flex items-center space-x-2 transition-colors duration-200 ${theme === 'light'
+                    ? 'text-gray-600 hover:text-[#006E51]'
+                    : 'text-gray-400 hover:text-white'
+                    }`}
                 >
                   <Download className="w-4 h-4" />
                   <span className="text-sm">Download MP3</span>
@@ -251,13 +277,18 @@ Innovation Atlas — mapping connections that move the UK forward.
         {/* Transcript */}
         {showTranscript && (
           <StaggeredItem>
-            <div className="bg-gray-800 rounded-lg p-6">
-              <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
+            <div className={`rounded-lg p-6 ${theme === 'light'
+              ? 'bg-white/90 backdrop-blur-sm border border-[#CCE2DC]/50'
+              : 'bg-gray-800'
+              }`}>
+              <h3 className={`text-xl font-semibold mb-4 flex items-center ${theme === 'light' ? 'text-[#2E2D2B]' : 'text-white'
+                }`}>
                 <FileText className="w-5 h-5 mr-2" />
                 Full Transcript
               </h3>
-              <div className="prose prose-invert max-w-none">
-                <div className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">
+              <div className="prose max-w-none">
+                <div className={`text-sm leading-relaxed whitespace-pre-line ${theme === 'light' ? 'text-gray-700' : 'text-gray-300'
+                  }`}>
                   {transcript}
                 </div>
               </div>
@@ -268,10 +299,11 @@ Innovation Atlas — mapping connections that move the UK forward.
         {/* Call to Action */}
         <StaggeredItem>
           <div className="mt-8 text-center">
-            <p className="text-gray-300 mb-6">
+            <p className={`mb-6 ${theme === 'light' ? 'text-gray-600' : 'text-gray-300'
+              }`}>
               Ready to explore the interactive prototype?
             </p>
-            <button className="bg-cpc-green-600 hover:bg-cpc-green-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors duration-200">
+            <button className="bg-[#006E51] hover:bg-[#005A42] text-white px-8 py-3 rounded-lg font-semibold transition-colors duration-200">
               Explore the Challenge Map
             </button>
           </div>

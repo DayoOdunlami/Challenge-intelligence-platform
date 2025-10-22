@@ -183,7 +183,7 @@ export default function HomePage() {
               </div>
               <h2 className="text-4xl md:text-5xl font-bold text-[#2E2D2B]">Why We Built Innovation Atlas</h2>
               <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                Listen to our founder explain the vision behind the UK's first cross-sector innovation intelligence platform.
+                An audio overview of the Innovation Atlas concept, exploring how we're making invisible connections visible across UK sectors.
               </p>
               <div className="w-24 h-1.5 bg-gradient-to-r from-[#006E51] to-[#CCE2DC] rounded-full mx-auto mt-6"></div>
             </div>
