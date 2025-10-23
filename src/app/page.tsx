@@ -110,9 +110,9 @@ export default function HomePage() {
                 </Link>
               </div>
 
-              {/* Trusted by */}
+              {/* Target Organizations */}
               <div className="text-sm text-gray-500">
-                Trusted by Network Rail • Ofgem • DfT • Local Authorities
+                Designed for Network Rail • Ofgem • DfT • Local Authorities
               </div>
             </div>
           </div>
