@@ -89,13 +89,23 @@ export default function HomePage() {
 
               {/* Primary CTAs */}
               <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                <Link href="/visualizations">
+                <Link href="/navigate">
                   <Button 
                     className="bg-[#006E51] hover:bg-[#005A42] text-white border-0 px-8 py-4 text-lg"
                     data-particle-zone="explore-data"
                   >
+                    <Navigation className="mr-2 h-5 w-5" />
+                    NAVIGATE Platform
+                  </Button>
+                </Link>
+                <Link href="/visualizations">
+                  <Button
+                    variant="outline"
+                    className="border-[#006E51] text-[#006E51] hover:bg-[#006E51] hover:text-white px-8 py-4 text-lg"
+                    data-particle-zone="explore-data"
+                  >
                     <BarChart3 className="mr-2 h-5 w-5" />
-                    Explore Data
+                    All Visualizations
                   </Button>
                 </Link>
                 <Link href="/for-reviewers-v2">

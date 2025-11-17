@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
-import { Menu, X, BarChart3, Users, FileText, Home, ChevronDown, Archive } from "lucide-react"
+import { Menu, X, BarChart3, Users, FileText, Home, ChevronDown, Archive, Network } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 const navigationItems = [
@@ -13,6 +13,12 @@ const navigationItems = [
     href: "/",
     icon: Home,
     description: "Innovation Atlas homepage"
+  },
+  {
+    name: "NAVIGATE",
+    href: "/navigate",
+    icon: Network,
+    description: "NAVIGATE Platform - Zero-emission aviation intelligence"
   },
   {
     name: "Explore Data",

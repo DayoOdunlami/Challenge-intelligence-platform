@@ -442,14 +442,14 @@ const challenges: Challenge[] = [
 
 // Helper functions for data access
 export function getChallengesBySector(sector: Sector): Challenge[] {
-  return challenges.filter(challenge => 
-    challenge.sector.primary === sector || 
+  return challenges.filter(challenge =>
+    challenge.sector.primary === sector ||
     challenge.sector.secondary.includes(sector)
   );
 }
 
 export function getChallengesByProblemType(problemType: string): Challenge[] {
-  return challenges.filter(challenge => 
+  return challenges.filter(challenge =>
     challenge.problem_type.primary === problemType ||
     challenge.problem_type.sub_categories.includes(problemType)
   );
@@ -479,12 +479,12 @@ export function getDatasetStats(): DatasetStats {
     return sum + (challenge.funding.amount_max || challenge.funding.amount_min || 0);
   }, 0);
 
-  const withEvidenceRequired = challenges.filter(challenge => 
+  const withEvidenceRequired = challenges.filter(challenge =>
     challenge.maturity.evidence_required.length > 0
   ).length;
 
   const netZeroRelated = challenges.filter(challenge =>
-    challenge.keywords.some(keyword => 
+    challenge.keywords.some(keyword =>
       ['net zero', 'carbon', 'decarbonisation', 'renewable', 'sustainable'].some(term =>
         keyword.toLowerCase().includes(term)
       )

@@ -18,7 +18,7 @@ interface NavItem {
 }
 
 interface UnifiedFloatingNavProps {
-  currentPage: 'home' | 'visualizations' | 'reviewer' | 'innovator-profile' | 'owner-profile';
+  currentPage: 'home' | 'navigate' | 'visualizations' | 'reviewer' | 'innovator-profile' | 'owner-profile';
   // For reviewer page - section navigation
   sections?: Array<{
     id: string;
@@ -51,6 +51,13 @@ export function UnifiedFloatingNav({
       icon: Home, 
       description: "Platform overview",
       current: currentPage === 'home'
+    },
+    { 
+      name: "NAVIGATE", 
+      href: "/navigate", 
+      icon: Network, 
+      description: "Zero-emission aviation intelligence platform",
+      current: currentPage === 'navigate'
     },
     { 
       name: "Data Visualizations", 
