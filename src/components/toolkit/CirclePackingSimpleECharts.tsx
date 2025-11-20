@@ -107,8 +107,21 @@ const findSimpleNode = (root: SimpleNode | null, targetId: string): SimpleNode |
   return null;
 };
 
-export function CirclePackingSimpleECharts() {
-  const [selectedNode, setSelectedNode] = useState<CirclePackingNode | null>(null);
+type CirclePackingSimpleEChartsProps = {
+  selectedId: string | null;
+  selectedNode: CirclePackingNode | null;
+  highlightedIds: Set<string> | null;
+  relatedEntities: CirclePackingNode[];
+  onSelectNodeAction: (id: string | null) => void;
+};
+
+export function CirclePackingSimpleECharts({
+  selectedId,
+  selectedNode,
+  highlightedIds,
+  relatedEntities,
+  onSelectNodeAction,
+}: CirclePackingSimpleEChartsProps) {
   const [displayTree, setDisplayTree] = useState<SimpleNode | null>(null);
   const [breadcrumb, setBreadcrumb] = useState<SimpleNode[]>([]);
 
@@ -181,11 +194,37 @@ export function CirclePackingSimpleECharts() {
             if (!node) return;
 
             const isLeaf = !node.children || node.children.length === 0;
+            const dimNode = Boolean(highlightedIds && highlightedIds.size > 0 && !highlightedIds.has(node.data.id));
             const focus = new Uint32Array(
               node.descendants().map((desc) => rows.findIndex((r) => r.id === desc.data.id))
             );
 
-            return {
+            const children: Record<string, unknown>[] = [];
+
+            if (selectedId && node.data.id === selectedId && relatedEntities.length > 0 && context.nodes) {
+              relatedEntities.forEach((entity) => {
+                if (!entity.id) return;
+                const target = context.nodes?.[entity.id];
+                if (!target) return;
+                children.push({
+                  type: 'line',
+                  shape: {
+                    x1: node.x,
+                    y1: node.y,
+                    x2: target.x,
+                    y2: target.y,
+                  },
+                  style: {
+                    stroke: '#f97316',
+                    lineWidth: 2,
+                    opacity: 0.7,
+                  },
+                  z2: 60,
+                });
+              });
+            }
+
+            children.push({
               type: 'circle',
               focus,
               shape: {
@@ -195,28 +234,12 @@ export function CirclePackingSimpleECharts() {
               },
               transition: ['shape'],
               z2: (api.value('depth') as number) * 2,
-              textContent: {
-                type: 'text',
-                style: {
-                  text: isLeaf ? node.data.name : '',
-                  fontFamily: 'Arial',
-                  width: node.r * 1.3,
-                  overflow: 'truncate',
-                  fontSize: node.r / 3,
-                  fill: '#fff',
-                },
-                emphasis: {
-                  style: {
-                    fontSize: Math.max(node.r / 3, 12),
-                  },
-                },
-              },
-              textConfig: { position: 'inside' },
               style: {
                 fill: node.data.color || '#1f2937',
                 stroke: '#fff',
                 shadowBlur: 10,
                 shadowColor: 'rgba(15,23,42,0.3)',
+                opacity: dimNode ? 0.25 : 1,
               },
               emphasis: {
                 focus: 'self',
@@ -232,6 +255,32 @@ export function CirclePackingSimpleECharts() {
                   opacity: 0.2,
                 },
               },
+            });
+
+            children.push({
+              type: 'text',
+              style: {
+                text: isLeaf ? node.data.name : '',
+                fontFamily: 'Arial',
+                width: node.r * 1.3,
+                overflow: 'truncate',
+                fontSize: node.r / 3,
+                fill: dimNode ? 'rgba(255,255,255,0.5)' : '#fff',
+                x: node.x,
+                y: node.y,
+                textAlign: 'center',
+                textVerticalAlign: 'middle',
+              },
+              emphasis: {
+                style: {
+                  fontSize: Math.max(node.r / 3, 12),
+                },
+              },
+            });
+
+            return {
+              type: 'group',
+              children,
             };
           },
           encode: {
@@ -243,7 +292,7 @@ export function CirclePackingSimpleECharts() {
         },
       ],
     };
-  }, [currentTree, rows, maxDepth, meta]);
+  }, [currentTree, rows, maxDepth, meta, highlightedIds, selectedId, relatedEntities]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -261,8 +310,9 @@ export function CirclePackingSimpleECharts() {
                 if (simpleNode?.children && simpleNode.children.length > 0) {
                   setDisplayTree(simpleNode);
                   setBreadcrumb((prev) => [...prev, simpleNode]);
+                  onSelectNodeAction(null);
                 } else if (nodeMeta) {
-                  setSelectedNode(nodeMeta);
+                  onSelectNodeAction(nodeMeta.id ?? null);
                 }
               },
             }}
@@ -301,6 +351,7 @@ export function CirclePackingSimpleECharts() {
                   onClick={() => {
                     setBreadcrumb([]);
                     setDisplayTree(null);
+                    onSelectNodeAction(null);
                   }}
                 >
                   Reset
@@ -346,6 +397,22 @@ export function CirclePackingSimpleECharts() {
                         <span key={connection} className="px-2 py-0.5 rounded-full bg-slate-200 text-xs text-slate-700">
                           {connection.toUpperCase()}
                         </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {relatedEntities.length > 0 && (
+                  <div>
+                    <div className="text-xs font-medium text-slate-500">Related Entities</div>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {relatedEntities.map((entity) => (
+                        <button
+                          key={entity.id || entity.name}
+                          className="px-2 py-0.5 rounded-full bg-emerald-100 text-xs text-emerald-700 hover:bg-emerald-200 transition"
+                          onClick={() => onSelectNodeAction(entity.id || null)}
+                        >
+                          {entity.name}
+                        </button>
                       ))}
                     </div>
                   </div>

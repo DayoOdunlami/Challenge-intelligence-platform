@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ReactFlowNetworkView } from './ReactFlowNetworkView';
 import { ReactFlowNetworkViewEnhanced } from './ReactFlowNetworkViewEnhanced';
@@ -8,6 +8,7 @@ import { EChartsGraphView } from './EChartsGraphView';
 import { InfographicView } from './InfographicView';
 import { CirclePackingSimpleNivo } from './CirclePackingSimpleNivo';
 import { CirclePackingSimpleECharts } from './CirclePackingSimpleECharts';
+import { buildCirclePackingMaps, getHighlightedIds } from '@/lib/circlePackingRelationships';
 
 export function StakeholderDynamicsView() {
   const [view, setView] = useState<
@@ -15,6 +16,18 @@ export function StakeholderDynamicsView() {
   >(
     'reactflow-enhanced'
   );
+  const { nodeMap, adjacency } = useMemo(() => buildCirclePackingMaps(), []);
+  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
+  const highlightedIds = useMemo(() => getHighlightedIds(selectedEntityId, adjacency), [selectedEntityId, adjacency]);
+  const selectedNode = selectedEntityId ? nodeMap[selectedEntityId] : null;
+  const relatedEntities = useMemo(() => {
+    if (!selectedEntityId) return [];
+    const relatedIds = adjacency[selectedEntityId];
+    if (!relatedIds) return [];
+    return Array.from(relatedIds)
+      .map((id) => nodeMap[id])
+      .filter((node): node is NonNullable<typeof node> => Boolean(node));
+  }, [selectedEntityId, adjacency, nodeMap]);
 
   return (
     <div className="w-full">
@@ -50,11 +63,23 @@ export function StakeholderDynamicsView() {
         </TabsContent>
 
         <TabsContent value="circle-packing-nivo" className="mt-0">
-          <CirclePackingSimpleNivo />
+          <CirclePackingSimpleNivo
+            selectedId={selectedEntityId}
+            selectedNode={selectedNode}
+            highlightedIds={highlightedIds}
+            relatedEntities={relatedEntities}
+            onSelectNodeAction={setSelectedEntityId}
+          />
         </TabsContent>
 
         <TabsContent value="circle-packing-echarts" className="mt-0">
-          <CirclePackingSimpleECharts />
+          <CirclePackingSimpleECharts
+            selectedId={selectedEntityId}
+            selectedNode={selectedNode}
+            highlightedIds={highlightedIds}
+            relatedEntities={relatedEntities}
+            onSelectNodeAction={setSelectedEntityId}
+          />
         </TabsContent>
       </Tabs>
     </div>

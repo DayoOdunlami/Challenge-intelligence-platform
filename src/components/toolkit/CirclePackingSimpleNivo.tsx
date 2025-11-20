@@ -57,8 +57,21 @@ const toNivoNode = (node: CirclePackingNode): NivoNode => {
   };
 };
 
-export function CirclePackingSimpleNivo() {
-  const [selectedNode, setSelectedNode] = useState<CirclePackingNode | null>(null);
+type CirclePackingSimpleNivoProps = {
+  selectedId: string | null;
+  selectedNode: CirclePackingNode | null;
+  highlightedIds: Set<string> | null;
+  relatedEntities: CirclePackingNode[];
+  onSelectNodeAction: (id: string | null) => void;
+};
+
+export function CirclePackingSimpleNivo({
+  selectedId,
+  selectedNode,
+  highlightedIds,
+  relatedEntities,
+  onSelectNodeAction,
+}: CirclePackingSimpleNivoProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [displayNode, setDisplayNode] = useState<NivoNode | null>(null);
   const [breadcrumb, setBreadcrumb] = useState<NivoNode[]>([]);
@@ -66,6 +79,7 @@ export function CirclePackingSimpleNivo() {
   const nivoData = useMemo(() => toNivoNode(circlePackingData), []);
 
   const currentData = displayNode || nivoData;
+  const highlightActive = Boolean(highlightedIds && highlightedIds.size > 0);
 
   const getColor = (node: CirclePackingNode) => {
     if (node.color) return node.color;
@@ -83,7 +97,12 @@ export function CirclePackingSimpleNivo() {
             value="value"
             colors={(node) => {
               const nivoNode = node?.data as NivoNode | undefined;
-              return nivoNode ? getColor(nivoNode.data) : TYPE_COLORS.default;
+              if (!nivoNode) return TYPE_COLORS.default;
+              const base = getColor(nivoNode.data);
+              if (highlightActive && !highlightedIds?.has(nivoNode.id)) {
+                return '#e2e8f0';
+              }
+              return base;
             }}
             colorBy="color"
             padding={6}
@@ -91,14 +110,14 @@ export function CirclePackingSimpleNivo() {
             enableLabels={false}
             borderWidth={2}
             borderColor={{ from: 'color', modifiers: [['darker', 0.3]] }}
-            onClick={(node, event) => {
+            onClick={(node) => {
               const nivoNode = node?.data as NivoNode | undefined;
               if (!nivoNode) return;
               if (nivoNode.children && nivoNode.children.length > 0) {
                 setDisplayNode(nivoNode);
                 setBreadcrumb((prev) => [...prev, nivoNode]);
-              } else if (nivoNode.data) {
-                setSelectedNode(nivoNode.data);
+              } else if (nivoNode.data && nivoNode.id) {
+                onSelectNodeAction(nivoNode.id);
               }
             }}
             onMouseEnter={(node) => {
@@ -161,6 +180,30 @@ export function CirclePackingSimpleNivo() {
                   </g>
                 );
               },
+              ({ nodes }) => {
+                if (!selectedId || !highlightedIds) return null;
+                const selectedNodeLayer = nodes.find((node) => node.id === selectedId);
+                if (!selectedNodeLayer) return null;
+                return (
+                  <g pointerEvents="none">
+                    {nodes
+                      .filter((node) => node.id !== selectedId && highlightedIds.has(node.id))
+                      .map((node) => (
+                        <line
+                          key={`link-${selectedId}-${node.id}`}
+                          x1={selectedNodeLayer.x}
+                          y1={selectedNodeLayer.y}
+                          x2={node.x}
+                          y2={node.y}
+                          stroke="#f97316"
+                          strokeWidth={2}
+                          strokeDasharray="4 2"
+                          opacity={0.8}
+                        />
+                      ))}
+                  </g>
+                );
+              },
             ]}
           />
         </div>
@@ -188,17 +231,18 @@ export function CirclePackingSimpleNivo() {
                   Back
                 </button>
               )}
-              {breadcrumb.length > 0 && (
-                <button
-                  className="text-xs px-3 py-1 border rounded-lg text-slate-600 hover:bg-slate-100"
+            {breadcrumb.length > 0 && (
+              <button
+                className="text-xs px-3 py-1 border rounded-lg text-slate-600 hover:bg-slate-100"
                   onClick={() => {
                     setBreadcrumb([]);
                     setDisplayNode(null);
+                    onSelectNodeAction(null);
                   }}
-                >
-                  Reset
-                </button>
-              )}
+              >
+                Reset
+              </button>
+            )}
             </div>
           </div>
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
@@ -210,7 +254,8 @@ export function CirclePackingSimpleNivo() {
                 </div>
                 {INFO_FIELDS.map(({ label, key }) => {
                   const value = selectedNode[key];
-                  if (!value) return null;
+                  if (value === null || value === undefined) return null;
+                  if (Array.isArray(value) || typeof value === 'object') return null;
                   return (
                     <div key={key as string}>
                       <div className="text-xs font-medium text-slate-500">{label}</div>
@@ -238,6 +283,22 @@ export function CirclePackingSimpleNivo() {
                         <span key={connection} className="px-2 py-0.5 rounded-full bg-slate-200 text-xs text-slate-700">
                           {connection.toUpperCase()}
                         </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {relatedEntities.length > 0 && (
+                  <div>
+                    <div className="text-xs font-medium text-slate-500">Related Entities</div>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {relatedEntities.map((entity) => (
+                        <button
+                          key={entity.id || entity.name}
+                          className="px-2 py-0.5 rounded-full bg-emerald-100 text-xs text-emerald-700 hover:bg-emerald-200 transition"
+                          onClick={() => onSelectNodeAction(entity.id || null)}
+                        >
+                          {entity.name}
+                        </button>
                       ))}
                     </div>
                   </div>

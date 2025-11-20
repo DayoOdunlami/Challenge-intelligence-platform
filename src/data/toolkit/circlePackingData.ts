@@ -12,6 +12,7 @@ export interface CirclePackingNode {
   funding_role?: string;
   funding_amount?: string;
   funding_received?: string;
+  funders?: string[];
   trl?: number;
   status?: string;
   capabilities?: string[];
