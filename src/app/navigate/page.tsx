@@ -1,55 +1,34 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { useState, useEffect, useMemo, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { motion, AnimatePresence } from "framer-motion"
-import { BarChart3, Network, Zap, Sun, GitBranch, Download, Settings, MessageCircle, Maximize2, TrendingUp, DollarSign, Cpu } from "lucide-react"
+import { BarChart3, Network, Zap, Sun, GitBranch, MessageCircle, Maximize2, TrendingUp, DollarSign, Cpu, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { LayoutSwitcher, LayoutOption } from "@/components/layouts/LayoutSwitcher"
 import { LayoutRenderer } from "@/components/layouts/LayoutRenderer"
-
-// Import all visualization components and data (same as visualizations page)
-import { SankeyChart } from "@/components/visualizations/SankeyChart"
-import { SankeyChartNavigate } from "@/components/visualizations/SankeyChartNavigate"
-import { RadarChartNavigate } from "@/components/visualizations/RadarChartNavigate"
-import { BarChartNavigate } from "@/components/visualizations/BarChartNavigate"
-import { CirclePackingNavigate } from "@/components/visualizations/CirclePackingNavigate"
-import { BumpChartNavigate } from "@/components/visualizations/BumpChartNavigate"
-import { TreemapNavigate } from "@/components/visualizations/TreemapNavigate"
-import { HeatmapChart } from "@/components/visualizations/HeatmapChart"
-import { HeatmapNavigate } from "@/components/visualizations/HeatmapNavigate"
-import { SunburstChart } from "@/components/visualizations/SunburstChart"
-import { ChordDiagram } from "@/components/visualizations/ChordDiagram"
-import { ChordDiagramNavigate } from "@/components/visualizations/ChordDiagramNavigate"
-import { NetworkGraph } from "@/components/visualizations/NetworkGraph"
-import { NetworkGraphNavigate } from "@/components/visualizations/NetworkGraphNavigate"
-import { StreamGraphNavigate } from "@/components/visualizations/StreamGraphNavigate"
-import { ParallelCoordinatesNavigate } from "@/components/visualizations/ParallelCoordinatesNavigate"
-import { SwarmPlotNavigate } from "@/components/visualizations/SwarmPlotNavigate"
+import GlobalControlsPanel from "@/components/controls/GlobalControlsPanel"
+import { VisualizationControlSections, VisualizationControlContext } from "@/components/controls/VisualizationControlSections"
 import { VisualizationRenderer } from "@/components/visualizations/VisualizationRenderer"
-import challenges from "@/data/challenges"
 import { stakeholders, technologies, projects, relationships, fundingEvents } from "@/data/navigate-dummy-data"
-import { Challenge } from "@/lib/types"
 import { AppProvider, useAppContext } from "@/contexts/AppContext"
-import { InsightsSummary } from "@/components/ui/InsightsSummary"
 import { UnifiedFloatingNav } from "@/components/ui/UnifiedFloatingNav"
 import { TopNavigation } from "@/components/ui/TopNavigation"
 import { ClusterInfo } from "@/lib/cluster-analysis"
-import { CreativeHero } from "@/components/ui/CreativeHero"
-import { QuickStatsBar } from "@/components/layouts/QuickStatsBar"
 import { AIChatPanel } from "@/components/layouts/AIChatPanel"
+import { TimelineTrack, BarSortOrder, BarValueMode, HeatmapColorMode, TreemapViewMode } from "@/types/visualization-controls"
+import { TechnologyCategory, StakeholderType } from "@/lib/navigate-types"
 
-type VisualizationType = 'sankey' | 'heatmap' | 'network' | 'sunburst' | 'chord' | 'radar' | 'bar' | 'circle' | 'bump' | 'treemap' | 'stream' | 'parallel' | 'swarm'
+type VisualizationType = 'sankey' | 'heatmap' | 'network' | 'sunburst' | 'chord' | 'radar' | 'bar' | 'circle' | 'bump' | 'treemap' | 'stream' | 'parallel' | 'swarm' | 'timeline' | 'bubble-scatter'
 
 type ViewCategory = 'all' | 'network' | 'funding' | 'technology' | 'dashboard'
 
 // Visualization categories mapping
 const visualizationCategories: Record<ViewCategory, VisualizationType[]> = {
-  all: ['sankey', 'heatmap', 'network', 'sunburst', 'chord', 'radar', 'bar', 'circle', 'bump', 'treemap', 'stream', 'parallel', 'swarm'],
+  all: ['sankey', 'heatmap', 'network', 'sunburst', 'chord', 'radar', 'bar', 'circle', 'bump', 'treemap', 'stream', 'parallel', 'swarm', 'timeline', 'bubble-scatter'],
   network: ['network', 'circle'],
   funding: ['sankey', 'treemap', 'stream'],
-  technology: ['radar', 'bump', 'parallel', 'swarm'],
-  dashboard: ['bar', 'heatmap']
+  technology: ['radar', 'bump', 'timeline', 'parallel', 'swarm', 'bubble-scatter'],
+  dashboard: ['bar', 'heatmap', 'bubble-scatter']
 }
 
 const visualizations = [
@@ -91,6 +70,22 @@ const visualizations = [
     description: 'Technology readiness level advancement over time',
     icon: BarChart3,
     color: '#EC4899',
+    category: 'technology' as ViewCategory
+  },
+  {
+    id: 'timeline' as VisualizationType,
+    name: 'Decarbonisation Roadmap',
+    description: 'Hydrogen aviation milestones and timeline',
+    icon: Clock,
+    color: '#0EA5E9',
+    category: 'technology' as ViewCategory
+  },
+  {
+    id: 'bubble-scatter' as VisualizationType,
+    name: 'Funding vs TRL',
+    description: 'Technology maturity vs funding analysis',
+    icon: TrendingUp,
+    color: '#006E51',
     category: 'technology' as ViewCategory
   },
   {
@@ -233,19 +228,17 @@ function NavigateContent() {
   const [useNavigateData, setUseNavigateData] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showInsights, setShowInsights] = useState(true)
-  const [showControls, setShowControls] = useState(true)
   const [controlsPinned, setControlsPinned] = useState(false)
   const [controlsHovered, setControlsHovered] = useState(false)
   const [controlsCollapseTimeout, setControlsCollapseTimeout] = useState<NodeJS.Timeout | null>(null)
-  const [focusMode, setFocusMode] = useState(false)
   const [currentLayout, setCurrentLayout] = useState<LayoutOption>('option2')
   const [categoriesCollapsed, setCategoriesCollapsed] = useState(true) // Start minimized
   
   // All the same state variables as visualizations page...
   const [circlePackingView, setCirclePackingView] = useState<'by_stakeholder_type' | 'by_technology_category' | 'by_funding'>('by_stakeholder_type')
   const [bumpView, setBumpView] = useState<'all_technologies' | 'by_category' | 'top_advancing'>('all_technologies')
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
-  const [treemapView, setTreemapView] = useState<'by_stakeholder_type' | 'by_tech_category' | 'by_funding_type' | 'by_project'>('by_stakeholder_type')
+  const [selectedCategories, setSelectedCategories] = useState<TechnologyCategory[]>([])
+  const [treemapView, setTreemapView] = useState<TreemapViewMode>('treemap')
   const [barChartView, setBarChartView] = useState<'funding_by_stakeholder' | 'funding_by_tech' | 'projects_by_status' | 'tech_by_trl'>('funding_by_stakeholder')
   const [selectedTechIds, setSelectedTechIds] = useState<string[]>([])
   const [selectedDimensions, setSelectedDimensions] = useState<string[]>([
@@ -266,6 +259,33 @@ function NavigateContent() {
     '2030 Maturity'
   ])
   const [swarmView, setSwarmView] = useState<'by_trl' | 'by_category'>('by_trl')
+  const [streamScenario, setStreamScenario] = useState<'baseline' | 'accelerated'>('baseline')
+  const [streamScenarioState, setStreamScenarioState] = useState<{ government_funding_multiplier: number; private_funding_multiplier: number }>({
+    government_funding_multiplier: 100,
+    private_funding_multiplier: 200 // Default accelerated: double private funding
+  })
+  const [timelineTracks, setTimelineTracks] = useState<Record<TimelineTrack, boolean>>({
+    technology: true,
+    infrastructure: true,
+    policy: true,
+    skills: true
+  })
+  const activeTimelineGroups = Object.entries(timelineTracks)
+    .filter(([, enabled]) => enabled)
+    .map(([track]) => track)
+  const toggleTimelineTrack = (track: TimelineTrack) => {
+    setTimelineTracks(prev => {
+      const isEnabled = prev[track]
+      const enabledCount = Object.values(prev).filter(Boolean).length
+      if (isEnabled && enabledCount === 1) {
+        return prev
+      }
+      return { ...prev, [track]: !isEnabled }
+    })
+  }
+  const [barSortOrder, setBarSortOrder] = useState<BarSortOrder>('desc')
+  const [barValueMode, setBarValueMode] = useState<BarValueMode>('absolute')
+  const [heatmapColorMode, setHeatmapColorMode] = useState<HeatmapColorMode>('absolute')
   const [trlRange, setTrlRange] = useState<[number, number]>([1, 9])
   const [detectedClusters, setDetectedClusters] = useState<ClusterInfo[]>([])
   const [selectedCluster, setSelectedCluster] = useState<ClusterInfo | null>(null)
@@ -280,7 +300,348 @@ function NavigateContent() {
     id: string;
     data: any;
   } | null>(null)
-  
+  const [highlightedEntityIds, setHighlightedEntityIds] = useState<string[]>([]) // New state for highlighting
+  const MAX_RADAR_SELECTIONS = 8
+  const TECHNOLOGY_CATEGORY_VALUES: TechnologyCategory[] = ['H2Production', 'H2Storage', 'FuelCells', 'Aircraft', 'Infrastructure']
+  const STAKEHOLDER_TYPES: StakeholderType[] = ['Government', 'Research', 'Industry', 'Intermediary']
+
+  interface EntityRecord {
+    type: 'stakeholder' | 'technology' | 'project' | 'funding'
+    id: string
+    name: string
+    data: any
+  }
+
+  const { entityById, entityByName } = useMemo(() => {
+    const byId = new Map<string, EntityRecord>()
+    const byName = new Map<string, EntityRecord[]>()
+
+    const addEntity = (record: EntityRecord) => {
+      byId.set(record.id.toLowerCase(), record)
+      const key = record.name.trim().toLowerCase()
+      if (!byName.has(key)) {
+        byName.set(key, [])
+      }
+      byName.get(key)!.push(record)
+    }
+
+    stakeholders.forEach((stakeholder) => addEntity({ type: 'stakeholder', id: stakeholder.id, name: stakeholder.name, data: stakeholder }))
+    technologies.forEach((tech) => addEntity({ type: 'technology', id: tech.id, name: tech.name, data: tech }))
+    projects.forEach((project) => addEntity({ type: 'project', id: project.id, name: project.name, data: project }))
+    fundingEvents.forEach((event) =>
+      addEntity({
+        type: 'funding',
+        id: event.id,
+        name: `${event.program || 'Funding'} ${event.id}`.trim(),
+        data: event,
+      }),
+    )
+
+    return { entityById: byId, entityByName: byName }
+  }, [])
+
+  const filterTechnologyCategories = (values: string[]): TechnologyCategory[] =>
+    values
+      .map((value) => value.trim())
+      .filter((value): value is TechnologyCategory => TECHNOLOGY_CATEGORY_VALUES.includes(value as TechnologyCategory))
+
+  const filterStakeholderTypes = (values: string[]): StakeholderType[] =>
+    values
+      .map((value) => value.trim())
+      .filter((value): value is StakeholderType => STAKEHOLDER_TYPES.includes(value as StakeholderType))
+
+  const parseString = (value: any): string | undefined => {
+    if (typeof value === 'string') {
+      const trimmed = value.trim()
+      return trimmed.length > 0 ? trimmed : undefined
+    }
+    if (typeof value === 'number') {
+      return String(value)
+    }
+    return undefined
+  }
+
+  const parseStringArray = (value: any): string[] => {
+    if (Array.isArray(value)) {
+      return value.map((item) => parseString(item)).filter((item): item is string => Boolean(item))
+    }
+    if (typeof value === 'string') {
+      return value
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+    }
+    return []
+  }
+
+  const parseBoolean = (value: any): boolean | undefined => {
+    if (typeof value === 'boolean') return value
+    if (typeof value === 'string') {
+      const normalized = value.toLowerCase()
+      if (normalized === 'true') return true
+      if (normalized === 'false') return false
+    }
+    if (typeof value === 'number') {
+      return value !== 0
+    }
+    return undefined
+  }
+
+  const parseNumber = (value: any): number | undefined => {
+    if (typeof value === 'number' && !Number.isNaN(value)) return value
+    if (typeof value === 'string') {
+      const parsed = Number(value)
+      if (!Number.isNaN(parsed)) {
+        return parsed
+      }
+    }
+    return undefined
+  }
+
+  const parseRange = (value: any): [number, number] | null => {
+    if (Array.isArray(value) && value.length >= 2) {
+      const min = parseNumber(value[0])
+      const max = parseNumber(value[1])
+      if (typeof min === 'number' && typeof max === 'number') {
+        return [min, max]
+      }
+    }
+    if (typeof value === 'object' && value !== null) {
+      const min = parseNumber(value.min ?? value.start ?? value.from)
+      const max = parseNumber(value.max ?? value.end ?? value.to)
+      if (typeof min === 'number' && typeof max === 'number') {
+        return [min, max]
+      }
+    }
+    if (typeof value === 'string' && value.includes('-')) {
+      const [minPart, maxPart] = value.split('-')
+      const min = parseNumber(minPart)
+      const max = parseNumber(maxPart)
+      if (typeof min === 'number' && typeof max === 'number') {
+        return [min, max]
+      }
+    }
+    return null
+  }
+
+  const resolveEntities = ({
+    entityIds,
+    entityNames,
+  }: {
+    entityIds?: string | string[]
+    entityNames?: string | string[]
+  }): EntityRecord[] => {
+    const results: EntityRecord[] = []
+    const seen = new Set<string>()
+
+    const tryAdd = (record?: EntityRecord) => {
+      if (record && !seen.has(record.id)) {
+        results.push(record)
+        seen.add(record.id)
+      }
+    }
+
+    const idList = Array.isArray(entityIds) ? entityIds : entityIds ? [entityIds] : []
+    idList.forEach((rawId) => {
+      const idKey = rawId.trim().toLowerCase()
+      tryAdd(entityById.get(idKey))
+    })
+
+    const nameList = Array.isArray(entityNames) ? entityNames : entityNames ? [entityNames] : []
+    nameList.forEach((rawName) => {
+      const key = rawName.trim().toLowerCase()
+      const matches = entityByName.get(key)
+      matches?.forEach((match) => tryAdd(match))
+    })
+
+    return results
+  }
+
+  const handleAIHighlightEntities = (args: any) => {
+    const matches = resolveEntities({ entityIds: args?.entityIds, entityNames: args?.entityNames })
+    if (matches.length > 0) {
+      const first = matches[0]
+      setSelectedEntity({ type: first.type, id: first.id, data: first.data })
+      return true
+    }
+    return false
+  }
+
+  const handleAISetControl = (controlId: string, value: any) => {
+    const stringValue = parseString(value)
+    switch (controlId) {
+      case 'circle.setView':
+        if (stringValue) {
+          setCirclePackingView(stringValue as typeof circlePackingView)
+          return true
+        }
+        break
+      case 'bar.setView':
+        if (stringValue) {
+          setBarChartView(stringValue as typeof barChartView)
+          return true
+        }
+        break
+      case 'bar.setSort':
+        if (stringValue === 'asc' || stringValue === 'desc') {
+          setBarSortOrder(stringValue as BarSortOrder)
+          return true
+        }
+        break
+      case 'bar.setValueMode':
+        if (stringValue === 'absolute' || stringValue === 'percentage') {
+          setBarValueMode(stringValue as BarValueMode)
+          return true
+        }
+        break
+      case 'treemap.setView':
+        if (stringValue) {
+          setTreemapView(stringValue as typeof treemapView)
+          return true
+        }
+        break
+      case 'chord.setView':
+        if (stringValue) {
+          setChordView(stringValue as typeof chordView)
+          return true
+        }
+        break
+      case 'stream.setView':
+        if (stringValue) {
+          setStreamView(stringValue as typeof streamView)
+          return true
+        }
+        break
+      case 'swarm.setView':
+        if (stringValue) {
+          setSwarmView(stringValue as typeof swarmView)
+          return true
+        }
+        break
+      case 'radar.toggleTechnology': {
+        const techIds = parseStringArray(value).slice(0, MAX_RADAR_SELECTIONS)
+        if (techIds.length > 0) {
+          setSelectedTechIds(techIds)
+          return true
+        }
+        break
+      }
+      case 'radar.toggleDimension': {
+        const dims = parseStringArray(value)
+        if (dims.length > 0) {
+          setSelectedDimensions(dims)
+          return true
+        }
+        break
+      }
+      case 'bump.setMode':
+        if (stringValue) {
+          setBumpView(stringValue as typeof bumpView)
+          return true
+        }
+        break
+      case 'bump.toggleCategory': {
+        const categories = filterTechnologyCategories(parseStringArray(value))
+        setSelectedCategories(categories)
+        if (categories.length > 0) {
+          setBumpView('by_category')
+        }
+        return true
+      }
+      case 'timeline.toggleTrack': {
+        const entries = Array.isArray(value) ? value : [value]
+        setTimelineTracks((prev) => {
+          const updated = { ...prev }
+          entries.forEach((entry) => {
+            if (typeof entry === 'string') {
+              const track = entry as TimelineTrack
+              if (track in updated) {
+                updated[track] = !updated[track]
+              }
+            } else if (entry && typeof entry === 'object' && entry.track) {
+              const track = entry.track as TimelineTrack
+              if (track in updated) {
+                if (typeof entry.enabled === 'boolean') {
+                  updated[track] = entry.enabled
+                } else {
+                  updated[track] = !updated[track]
+                }
+              }
+            }
+          })
+          return updated
+        })
+        return true
+      }
+      case 'heatmap.setMatrix':
+        if (stringValue) {
+          setHeatmapView(stringValue as typeof heatmapView)
+          return true
+        }
+        break
+      case 'heatmap.setScale':
+        if (stringValue === 'absolute' || stringValue === 'normalized') {
+          setHeatmapColorMode(stringValue as HeatmapColorMode)
+          return true
+        }
+        break
+      case 'parallel.setDimensions': {
+        const dims = parseStringArray(value)
+        if (dims.length > 0) {
+          setParallelDimensions(dims)
+          return true
+        }
+        break
+      }
+      case 'network.setSimilarity': {
+        const num = parseNumber(value)
+        if (typeof num === 'number') {
+          const clamped = Math.min(Math.max(num, 0), 1)
+          setSimilarityThreshold(clamped)
+          return true
+        }
+        break
+      }
+      case 'network.toggleCluster': {
+        const bool = parseBoolean(value)
+        if (typeof bool === 'boolean') {
+          setShowClusters(bool)
+          return true
+        }
+        break
+      }
+      case 'network.toggleOrbit': {
+        const bool = parseBoolean(value)
+        if (typeof bool === 'boolean') {
+          setIsOrbiting(bool)
+          return true
+        }
+        break
+      }
+      case 'data_source': {
+        const bool = parseBoolean(value)
+        if (typeof bool === 'boolean') {
+          setUseNavigateData(bool)
+          return true
+        }
+        break
+      }
+      case 'trl_range': {
+        const range = parseRange(value)
+        if (range) {
+          const min = Math.max(1, Math.min(range[0], range[1]))
+          const max = Math.min(9, Math.max(range[0], range[1]))
+          if (min <= max) {
+            setTrlRange([min, max])
+            return true
+          }
+        }
+        break
+      }
+    }
+    return false
+  }
+
   // Update activeViz when category changes
   useEffect(() => {
     if (filteredVisualizations.length > 0) {
@@ -304,6 +665,58 @@ function NavigateContent() {
     const trl = tech.trl_current || 0;
     return trl >= trlRange[0] && trl <= trlRange[1];
   });
+  const technologyCategories = Array.from(
+    new Set(filteredTechnologies.map(t => t.category)),
+  ).filter(Boolean) as TechnologyCategory[]
+
+  const activeCategoryMeta = categoryNavItems.find(category => category.id === viewCategory);
+  const controlContext: VisualizationControlContext = {
+    useNavigateData,
+    timelineTracks,
+    toggleTimelineTrack,
+    barSortOrder,
+    setBarSortOrder,
+    barValueMode,
+    setBarValueMode,
+    barChartView,
+    setBarChartView,
+    circlePackingView,
+    setCirclePackingView,
+    bumpView,
+    setBumpView,
+    selectedCategories,
+    setSelectedCategories,
+    treemapView,
+    setTreemapView,
+    chordView,
+    setChordView,
+    heatmapView,
+    setHeatmapView,
+    heatmapColorMode,
+    setHeatmapColorMode,
+    streamView,
+    setStreamView,
+    streamScenario,
+    setStreamScenario,
+    streamScenarioState,
+    setStreamScenarioState,
+    parallelDimensions,
+    setParallelDimensions,
+    swarmView,
+    setSwarmView,
+    selectedTechIds,
+    setSelectedTechIds,
+    selectedDimensions,
+    setSelectedDimensions,
+    filteredTechnologies,
+    technologyCategories,
+    similarityThreshold,
+    setSimilarityThreshold,
+    showClusters,
+    setShowClusters,
+    isOrbiting,
+    setIsOrbiting,
+  }
   
   // Handle category change
   const handleCategoryChange = (category: ViewCategory) => {
@@ -347,10 +760,10 @@ function NavigateContent() {
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#CCE2DC]/20 via-white to-[#CCE2DC]/10">
-      <TopNavigation />
-      <UnifiedFloatingNav currentPage="navigate" />
-      
-      <div className="container mx-auto px-4 py-8">
+        <TopNavigation />
+        <UnifiedFloatingNav currentPage="navigate" />
+        
+        <div className="container mx-auto px-4 py-8">
         {/* Category Navigation */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
@@ -363,14 +776,6 @@ function NavigateContent() {
                 currentLayout={currentLayout}
                 onLayoutChange={setCurrentLayout}
               />
-              <Button
-                variant="outline"
-                onClick={() => setShowControls(!showControls)}
-                className="border-[#006E51] text-[#006E51]"
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                {showControls ? 'Hide' : 'Show'} Controls
-              </Button>
               <Button
                 variant="outline"
                 onClick={() => setShowInsights(!showInsights)}
@@ -516,124 +921,35 @@ function NavigateContent() {
                   if (!controlsPinned) {
                     const timeout = setTimeout(() => {
                       setControlsHovered(false)
-                    }, 500) // 500ms delay before collapsing
+                    }, 500)
                     setControlsCollapseTimeout(timeout)
                   }
                 }}
               >
-                <div className="p-6 h-full overflow-y-auto">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-[#006E51]">Controls</h3>
-                    <button
-                      onClick={() => {
-                        setControlsPinned(!controlsPinned)
-                        if (controlsPinned) {
-                          setControlsHovered(false)
-                        }
-                      }}
-                      className={`p-1.5 rounded transition-colors ${
-                        controlsPinned 
-                          ? 'bg-[#006E51] text-white' 
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                      title={controlsPinned ? 'Unpin controls' : 'Pin controls'}
-                    >
-                      <Settings className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <div className="space-y-4">
-                    {/* Data Source Toggle */}
-                    <div className="p-4 bg-gradient-to-r from-[#006E51]/10 to-[#CCE2DC]/20 rounded-lg border border-[#006E51]/20">
-                      <h4 className="font-medium text-[#006E51] mb-3">Data Source</h4>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setUseNavigateData(false)}
-                          className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                            !useNavigateData
-                              ? 'bg-[#006E51] text-white shadow-md'
-                              : 'bg-white/60 text-gray-700 hover:bg-white/80'
-                          }`}
-                        >
-                          Challenge Data
-                        </button>
-                        <button
-                          onClick={() => setUseNavigateData(true)}
-                          className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                            useNavigateData
-                              ? 'bg-[#006E51] text-white shadow-md'
-                              : 'bg-white/60 text-gray-700 hover:bg-white/80'
-                          }`}
-                        >
-                          NAVIGATE Data
-                        </button>
-                      </div>
-                    </div>
-                    
-                    {/* TRL Filter */}
-                    {useNavigateData && (
-                      <div className="p-4 bg-gradient-to-r from-[#006E51]/10 to-[#CCE2DC]/20 rounded-lg border border-[#006E51]/20">
-                        <h4 className="font-medium text-[#006E51] mb-3">TRL Range Filter</h4>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">TRL Range</span>
-                            <span className="px-2 py-1 bg-[#006E51]/10 text-[#006E51] text-xs rounded font-medium">
-                              {trlRange[0]} - {trlRange[1]}
-                            </span>
-                          </div>
-                          <div className="space-y-2">
-                            <div>
-                              <label className="text-xs text-gray-600 mb-1 block">Min TRL: {trlRange[0]}</label>
-                              <input
-                                type="range"
-                                min="1"
-                                max="9"
-                                step="1"
-                                value={trlRange[0]}
-                                onChange={(e) => {
-                                  const min = parseInt(e.target.value);
-                                  if (min <= trlRange[1]) {
-                                    setTrlRange([min, trlRange[1]]);
-                                  }
-                                }}
-                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#006E51]"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-xs text-gray-600 mb-1 block">Max TRL: {trlRange[1]}</label>
-                              <input
-                                type="range"
-                                min="1"
-                                max="9"
-                                step="1"
-                                value={trlRange[1]}
-                                onChange={(e) => {
-                                  const max = parseInt(e.target.value);
-                                  if (max >= trlRange[0]) {
-                                    setTrlRange([trlRange[0], max]);
-                                  }
-                                }}
-                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#006E51]"
-                              />
-                            </div>
-                          </div>
-                          <p className="text-xs text-gray-600 mt-2">
-                            Showing {filteredTechnologies.length} of {technologies.length} technologies
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    
-                    <div className="p-4 bg-[#CCE2DC]/20 rounded-lg">
-                      <h4 className="font-medium text-[#006E51] mb-2">Current View</h4>
-                      <p className="text-sm text-gray-600">
-                        {activeVisualization?.name || 'Select a visualization'}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Category: {viewCategory} | {filteredVisualizations.length} available
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <GlobalControlsPanel
+                  pinned={controlsPinned}
+                  onTogglePin={() => {
+                    setControlsPinned(!controlsPinned)
+                    if (controlsHovered) {
+                      setControlsHovered(false)
+                    }
+                  }}
+                  showDataSourceToggle
+                  useNavigateData={useNavigateData}
+                  onDataSourceChange={(val) => setUseNavigateData(val)}
+                  showTrlFilter
+                  trlRange={trlRange}
+                  onTrlRangeChange={setTrlRange}
+                  activeVisualizationName={activeVisualization?.name}
+                  activeCategoryLabel={activeCategoryMeta?.name}
+                  availableCount={filteredTechnologies.length}
+                  totalTechnologyCount={technologies.length}
+                >
+              <VisualizationControlSections
+                activeViz={activeViz}
+                context={controlContext}
+              />
+                </GlobalControlsPanel>
               </div>
             </>
           }
@@ -662,6 +978,9 @@ function NavigateContent() {
               setBarChartView={setBarChartView}
               circlePackingView={circlePackingView}
               setCirclePackingView={setCirclePackingView}
+              bumpView={bumpView}
+              setBumpView={setBumpView}
+              selectedCategories={selectedCategories}
               treemapView={treemapView}
               setTreemapView={setTreemapView}
               chordView={chordView}
@@ -670,10 +989,18 @@ function NavigateContent() {
               setHeatmapView={setHeatmapView}
               streamView={streamView}
               setStreamView={setStreamView}
+              streamScenario={streamScenario}
+              setStreamScenario={setStreamScenario}
+              streamScenarioState={streamScenarioState}
+              setStreamScenarioState={setStreamScenarioState}
               parallelDimensions={parallelDimensions}
               setParallelDimensions={setParallelDimensions}
               swarmView={swarmView}
               setSwarmView={setSwarmView}
+              timelineGroups={activeTimelineGroups}
+              barSortOrder={barSortOrder}
+              barValueMode={barValueMode}
+              heatmapColorMode={heatmapColorMode}
               similarityThreshold={similarityThreshold}
               setSimilarityThreshold={setSimilarityThreshold}
               showClusters={showClusters}
@@ -692,6 +1019,7 @@ function NavigateContent() {
                   setSelectedEntity({ type: 'technology', id: tech.id, data: tech });
                 }
               }}
+              highlightedEntityIds={highlightedEntityIds}
             />
             </div>
           }
@@ -755,7 +1083,66 @@ function NavigateContent() {
               </div>
             )
           }
-          aiChatPanel={<AIChatPanel />}
+          aiChatPanel={
+            <AIChatPanel
+              context={{
+                activeViz: activeViz,
+                useNavigateData: useNavigateData,
+                selectedEntities: selectedEntity
+                  ? [
+                      {
+                        type: selectedEntity.type,
+                        id: selectedEntity.id,
+                        name: selectedEntity.data.name,
+                        ...selectedEntity.data,
+                      },
+                    ]
+                  : [],
+              }}
+              onFunctionCall={(functionName, args) => {
+                switch (functionName) {
+                  case 'switch_visualization':
+                    if (args?.visualization) {
+                      setActiveViz(args.visualization as VisualizationType)
+                    }
+                    break
+                  case 'set_control':
+                    if (!handleAISetControl(args?.controlId, args?.value)) {
+                      console.warn('AI control change failed', args)
+                    }
+                    break
+                  case 'filter_data': {
+                    const range = parseRange(args?.trlRange)
+                    if (range) {
+                      const min = Math.max(1, Math.min(range[0], range[1]))
+                      const max = Math.min(9, Math.max(range[0], range[1]))
+                      if (min <= max) {
+                        setTrlRange([min, max])
+                      }
+                    }
+                    if (args?.categories) {
+                      const categories = filterTechnologyCategories(parseStringArray(args.categories))
+                      if (categories.length > 0) {
+                        setSelectedCategories(categories)
+                      }
+                    }
+                    if (typeof args?.useNavigateData !== 'undefined') {
+                      const bool = parseBoolean(args.useNavigateData)
+                      if (typeof bool === 'boolean') {
+                        setUseNavigateData(bool)
+                      }
+                    }
+                    break
+                  }
+                  case 'highlight_entities':
+                    if (!handleAIHighlightEntities(args)) {
+                      console.warn('AI highlight failed', args)
+                    }
+                    break
+                }
+              }}
+            />
+          }
           quickStats={null}
         />
       </div>

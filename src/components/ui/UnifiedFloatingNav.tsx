@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Menu, X, Home, BarChart3, FileText, ChevronDown, 
   Target, Users, User, TestTube, Network, Sun, 
-  GitBranch, Zap, Archive 
+  GitBranch, Zap, Archive, Wrench
 } from "lucide-react";
 import Link from "next/link";
 
@@ -18,7 +18,7 @@ interface NavItem {
 }
 
 interface UnifiedFloatingNavProps {
-  currentPage: 'home' | 'navigate' | 'visualizations' | 'reviewer' | 'innovator-profile' | 'owner-profile';
+  currentPage: 'home' | 'navigate' | 'toolkit' | 'visualizations' | 'reviewer' | 'innovator-profile' | 'owner-profile';
   // For reviewer page - section navigation
   sections?: Array<{
     id: string;
@@ -58,6 +58,13 @@ export function UnifiedFloatingNav({
       icon: Network, 
       description: "Zero-emission aviation intelligence platform",
       current: currentPage === 'navigate'
+    },
+    { 
+      name: "Toolkit", 
+      href: "/toolkit", 
+      icon: Wrench, 
+      description: "Stakeholder dynamics and innovation tracker",
+      current: currentPage === 'toolkit'
     },
     { 
       name: "Data Visualizations", 

@@ -1,0 +1,244 @@
+import { ToolkitStakeholder } from './types';
+
+export const stakeholdersData: ToolkitStakeholder[] = [
+  {
+    id: "dft",
+    name: "Department for Transport",
+    shortName: "DfT",
+    category: "government",
+    logo: "/logos/dft.png",
+    description: "UK government department responsible for transport policy and funding",
+    verified: true
+  },
+  {
+    id: "dbt",
+    name: "Department for Business & Trade",
+    shortName: "DBT",
+    category: "government",
+    logo: "/logos/dbt.png",
+    description: "Supports UK businesses and trade, including aerospace sector",
+    verified: true
+  },
+  {
+    id: "cranfield",
+    name: "Cranfield University",
+    category: "academia",
+    logo: "/logos/cranfield.png",
+    description: "Leading aerospace research university, hosts Cranfield Aerospace Solutions",
+    verified: true
+  },
+  {
+    id: "nottingham",
+    name: "University of Nottingham",
+    category: "academia",
+    logo: "/logos/nottingham.png",
+    description: "Research on cryogenic inverter technology and motor design for H2GEAR",
+    verified: true
+  },
+  {
+    id: "manchester",
+    name: "University of Manchester",
+    category: "academia",
+    logo: "/logos/manchester.png",
+    description: "Research on hyperconducting motor coil design for H2GEAR",
+    verified: true
+  },
+  {
+    id: "oxford",
+    name: "University of Oxford",
+    category: "academia",
+    logo: "/logos/oxford.png",
+    description: "Aerospace and materials research",
+    verified: true
+  },
+  {
+    id: "ucl",
+    name: "University College London",
+    category: "academia",
+    logo: "/logos/ucl.png",
+    description: "Air Transportation Systems Lab - market feasibility modeling for NAPKIN",
+    verified: true,
+    additional: true
+  },
+  {
+    id: "southampton",
+    name: "University of Southampton",
+    category: "academia",
+    logo: "/logos/southampton.png",
+    description: "Aerospace engineering research, NAPKIN consortium member",
+    verified: true,
+    additional: true
+  },
+  {
+    id: "zeroavia",
+    name: "ZeroAvia",
+    category: "industry",
+    logo: "/logos/zeroavia.png",
+    description: "Hydrogen-electric aviation company developing fuel cell powertrains",
+    verified: true
+  },
+  {
+    id: "gkn",
+    name: "GKN Aerospace",
+    category: "industry",
+    logo: "/logos/gkn.png",
+    description: "Multi-technology aerospace supplier leading H2GEAR programme",
+    verified: true
+  },
+  {
+    id: "bristol-airport",
+    name: "Bristol Airport",
+    category: "industry",
+    logo: "/logos/bristol-airport.png",
+    description: "Regional airport, host of Project ACORN trials",
+    verified: true
+  },
+  {
+    id: "rolls-royce",
+    name: "Rolls-Royce",
+    category: "industry",
+    logo: "/logos/rolls-royce.png",
+    description: "Aero engine manufacturer, hydrogen engine testing with easyJet",
+    verified: true,
+    additional: true
+  },
+  {
+    id: "airbus",
+    name: "Airbus",
+    category: "industry",
+    logo: "/logos/airbus.png",
+    description: "Aircraft manufacturer, ZEROe hydrogen aircraft programme targeting 2035",
+    verified: true,
+    additional: true
+  },
+  {
+    id: "easyjet",
+    name: "easyJet",
+    category: "industry",
+    logo: "/logos/easyjet.png",
+    description: "Airline, first chair of HIA, led Project ACORN",
+    verified: true,
+    additional: true
+  },
+  {
+    id: "heathrow",
+    name: "Heathrow Airport",
+    category: "industry",
+    logo: "/logos/heathrow.png",
+    description: "UK's largest airport, leads Project NAPKIN",
+    verified: true,
+    additional: true
+  },
+  {
+    id: "london-city",
+    name: "London City Airport",
+    category: "industry",
+    logo: "/logos/london-city.png",
+    description: "Regional airport, NAPKIN consortium member",
+    verified: true,
+    additional: true
+  },
+  {
+    id: "hial",
+    name: "Highlands and Islands Airports",
+    shortName: "HIAL",
+    category: "industry",
+    logo: "/logos/hial.png",
+    description: "Scottish airport group, early adopter routes for hydrogen aircraft",
+    verified: true,
+    additional: true
+  },
+  {
+    id: "cranfield-aerospace",
+    name: "Cranfield Aerospace Solutions",
+    shortName: "CAeS",
+    category: "industry",
+    logo: "/logos/caes.png",
+    description: "Leads Project Fresson, hydrogen aircraft conversion",
+    verified: true,
+    additional: true
+  },
+  {
+    id: "britten-norman",
+    name: "Britten-Norman",
+    category: "industry",
+    logo: "/logos/britten-norman.png",
+    description: "Manufacturer of BN-2 Islander aircraft being converted for hydrogen",
+    verified: true,
+    additional: true
+  },
+  {
+    id: "caa",
+    name: "Civil Aviation Authority",
+    shortName: "CAA",
+    category: "intermediary",
+    logo: "/logos/caa.png",
+    description: "UK aviation regulator, reviewing hydrogen safety cases",
+    verified: true
+  },
+  {
+    id: "ukri",
+    name: "UK Research and Innovation",
+    shortName: "UKRI",
+    category: "intermediary",
+    logo: "/logos/ukri.png",
+    description: "Research funding body",
+    verified: true
+  },
+  {
+    id: "epsrc",
+    name: "Engineering and Physical Sciences Research Council",
+    shortName: "EPSRC",
+    category: "intermediary",
+    logo: "/logos/epsrc.png",
+    description: "Research council funding engineering research",
+    verified: true
+  },
+  {
+    id: "hse",
+    name: "Health and Safety Executive",
+    shortName: "HSE",
+    category: "intermediary",
+    logo: "/logos/hse.png",
+    description: "Workplace safety regulator",
+    verified: true
+  },
+  {
+    id: "innovate-uk",
+    name: "Innovate UK",
+    shortName: "IUK",
+    category: "intermediary",
+    logo: "/logos/innovate-uk.png",
+    description: "Innovation funding agency, runs Future Flight Challenge",
+    verified: true
+  },
+  {
+    id: "ati",
+    name: "Aerospace Technology Institute",
+    shortName: "ATI",
+    category: "intermediary",
+    logo: "/logos/ati.png",
+    description: "Strategic body for UK aerospace R&D, ran FlyZero project",
+    verified: true
+  },
+  {
+    id: "cpc",
+    name: "Connected Places Catapult",
+    shortName: "CPC",
+    category: "intermediary",
+    logo: "/logos/cpc.png",
+    description: "Innovation centre, delivers ZEFI programme",
+    verified: true
+  },
+  {
+    id: "esc",
+    name: "Energy Systems Catapult",
+    shortName: "ESC",
+    category: "intermediary",
+    logo: "/logos/esc.png",
+    description: "Innovation centre for energy systems",
+    verified: true,
+    additional: true
+  }
+];
+

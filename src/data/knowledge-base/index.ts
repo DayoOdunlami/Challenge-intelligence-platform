@@ -5,17 +5,13 @@
  * and data enrichment.
  */
 
-// Policy Documents
-export { default as hydrogenAviationStrategy } from './policies/hydrogen-aviation-strategy.md?raw';
-
-// Stakeholder Information
-export { default as hydrogenInAviation } from './stakeholders/hydrogen-in-aviation.md?raw';
-
-// Technology Information
-export { default as hydrogenAircraft } from './technologies/hydrogen-aircraft.md?raw';
-
-// Statistics & Data
-export { default as hydrogenAviationStats } from './statistics/hydrogen-aviation-stats.md?raw';
+// Export content from TypeScript file (avoids Next.js markdown import issues)
+export {
+  hydrogenAviationStrategy,
+  hydrogenInAviation,
+  hydrogenAircraft,
+  hydrogenAviationStats,
+} from './content';
 
 /**
  * Knowledge Base Structure

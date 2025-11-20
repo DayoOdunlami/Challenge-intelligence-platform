@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
-import { Menu, X, BarChart3, Users, FileText, Home, ChevronDown, Archive, Network } from "lucide-react"
+import { Menu, X, BarChart3, Users, FileText, Home, ChevronDown, Archive, Network, Wrench } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 const navigationItems = [
@@ -19,6 +19,12 @@ const navigationItems = [
     href: "/navigate",
     icon: Network,
     description: "NAVIGATE Platform - Zero-emission aviation intelligence"
+  },
+  {
+    name: "Toolkit",
+    href: "/toolkit",
+    icon: Wrench,
+    description: "Stakeholder dynamics and innovation tracker tools"
   },
   {
     name: "Explore Data",

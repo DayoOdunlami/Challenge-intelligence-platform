@@ -1,0 +1,94 @@
+import { ToolkitProject } from './types';
+
+export const projectsData: ToolkitProject[] = [
+  {
+    id: "acorn",
+    name: "ACORN",
+    fullName: "Project Acorn",
+    description: "First UK airside hydrogen refuelling trial at Bristol Airport, April 2024",
+    stakeholderIds: ["easyjet", "bristol-airport", "cranfield", "cranfield-aerospace", "cpc", "caa"],
+    funderId: "various",
+    fundingAmount: null,
+    trlLevel: 6,
+    category: "infrastructure",
+    status: "completed",
+    startDate: "2023",
+    endDate: "2024",
+    verified: true
+  },
+  {
+    id: "napkin",
+    name: "NAPKIN",
+    fullName: "New Aviation Propulsion Knowledge and Innovation Network",
+    description: "Blueprint for zero carbon aviation in UK by 2040, led by Heathrow",
+    stakeholderIds: ["heathrow", "london-city", "hial", "gkn", "rolls-royce", "cranfield-aerospace", "ucl", "cranfield", "southampton", "easyjet"],
+    funderId: "innovate-uk",
+    fundingAmount: null,
+    trlLevel: 4,
+    category: "research",
+    status: "completed",
+    startDate: "2020",
+    endDate: "2022",
+    verified: true
+  },
+  {
+    id: "fresson",
+    name: "FRESSON",
+    fullName: "Project Fresson",
+    description: "Converting Britten-Norman Islander to hydrogen fuel cell power",
+    stakeholderIds: ["cranfield-aerospace", "britten-norman", "cranfield", "ati"],
+    funderId: "ati",
+    fundingAmount: null,
+    trlLevel: 6,
+    category: "aircraft",
+    status: "active",
+    startDate: "2019",
+    verified: true
+  },
+  {
+    id: "zefi",
+    name: "ZEFI",
+    fullName: "Zero Emission Flight Infrastructure",
+    description: "Programme to prepare UK airports for hydrogen and electric aircraft",
+    stakeholderIds: ["cpc", "dft", "zeroavia", "cranfield"],
+    funderId: "dft",
+    fundingAmount: 3000000,
+    trlLevel: 5,
+    category: "infrastructure",
+    status: "active",
+    startDate: "2021",
+    verified: true
+  },
+  {
+    id: "h2gear",
+    name: "H2GEAR",
+    fullName: "Hybrid Hydrogen & Electric Architecture",
+    description: "£54M programme to develop hydrogen propulsion system for sub-regional aircraft",
+    stakeholderIds: ["gkn", "manchester", "nottingham", "ati"],
+    funderId: "ati",
+    fundingAmount: 54000000,
+    trlLevel: 5,
+    category: "propulsion",
+    status: "active",
+    startDate: "2020",
+    verified: true,
+    additional: true
+  },
+  {
+    id: "flyzero",
+    name: "FlyZero",
+    fullName: "ATI FlyZero",
+    description: "ATI project studying zero-carbon emission aircraft concepts",
+    stakeholderIds: ["ati"],
+    funderId: "ati",
+    fundingAmount: null,
+    trlLevel: 3,
+    category: "research",
+    status: "completed",
+    startDate: "2021",
+    endDate: "2022",
+    verified: true,
+    additional: true
+  }
+];
+

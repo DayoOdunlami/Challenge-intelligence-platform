@@ -1,0 +1,32 @@
+import { WorkingGroup } from './types';
+
+export const workingGroupsData: WorkingGroup[] = [
+  {
+    id: "jet-zero",
+    name: "Jet Zero Taskforce",
+    description: "Government-industry partnership for aviation decarbonisation, replaced Jet Zero Council in Nov 2024",
+    memberIds: ["dft", "dbt", "easyjet", "heathrow", "ati"],
+    focus: ["SAF production", "Zero emission flights", "Aviation system efficiency"],
+    established: "2024",
+    verified: true
+  },
+  {
+    id: "hia",
+    name: "Hydrogen in Aviation Alliance",
+    shortName: "HIA",
+    description: "Industry alliance to accelerate hydrogen aviation in UK",
+    memberIds: ["easyjet", "rolls-royce", "airbus", "gkn", "bristol-airport", "zeroavia"],
+    focus: ["Infrastructure", "Regulation", "Investment"],
+    established: "2023",
+    verified: true
+  },
+  {
+    id: "hydrogen-working-group",
+    name: "Hydrogen Working Group",
+    description: "Working group focused on hydrogen technology development",
+    memberIds: [],
+    focus: ["Hydrogen technology", "Standards"],
+    verified: true
+  }
+];
+

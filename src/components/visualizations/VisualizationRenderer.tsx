@@ -13,7 +13,7 @@ import { RadarChartNavigate } from './RadarChartNavigate';
 import { BarChartNavigate } from './BarChartNavigate';
 import { CirclePackingNavigate } from './CirclePackingNavigate';
 import { BumpChartNavigate } from './BumpChartNavigate';
-import { TreemapNavigate } from './TreemapNavigate';
+import { TreemapSunburstExplorer } from './TreemapSunburstExplorer';
 import { HeatmapChart } from './HeatmapChart';
 import { HeatmapNavigate } from './HeatmapNavigate';
 import { SunburstChart } from './SunburstChart';
@@ -24,11 +24,14 @@ import { NetworkGraphNavigate } from './NetworkGraphNavigate';
 import { StreamGraphNavigate } from './StreamGraphNavigate';
 import { ParallelCoordinatesNavigate } from './ParallelCoordinatesNavigate';
 import { SwarmPlotNavigate } from './SwarmPlotNavigate';
+import { TimelineNavigate } from './TimelineNavigate';
+import { BubbleScatterNavigate } from './BubbleScatterNavigate';
 import { BarChart3, Zap, Sun, Network } from 'lucide-react';
-import { Challenge, Stakeholder, Technology, Project, Relationship, FundingEvent } from '@/lib/navigate-types';
+import { Challenge, Stakeholder, Technology, Project, Relationship, FundingEvent, TechnologyCategory } from '@/lib/navigate-types';
 import { ClusterInfo } from '@/lib/cluster-analysis';
+import { TreemapViewMode } from '@/types/visualization-controls';
 
-type VisualizationType = 'sankey' | 'heatmap' | 'network' | 'sunburst' | 'chord' | 'radar' | 'bar' | 'circle' | 'bump' | 'treemap' | 'stream' | 'parallel' | 'swarm';
+type VisualizationType = 'sankey' | 'heatmap' | 'network' | 'sunburst' | 'chord' | 'radar' | 'bar' | 'circle' | 'bump' | 'treemap' | 'stream' | 'parallel' | 'swarm' | 'timeline' | 'bubble-scatter';
 
 interface VisualizationRendererProps {
   activeViz: VisualizationType;
@@ -57,18 +60,29 @@ interface VisualizationRendererProps {
   setBarChartView?: (view: 'funding_by_stakeholder' | 'funding_by_tech' | 'projects_by_status' | 'tech_by_trl') => void;
   circlePackingView?: 'by_stakeholder_type' | 'by_technology_category' | 'by_funding';
   setCirclePackingView?: (view: 'by_stakeholder_type' | 'by_technology_category' | 'by_funding') => void;
-  treemapView?: 'by_stakeholder_type' | 'by_tech_category' | 'by_funding_type' | 'by_project';
-  setTreemapView?: (view: 'by_stakeholder_type' | 'by_tech_category' | 'by_funding_type' | 'by_project') => void;
+  bumpView?: 'all_technologies' | 'by_category' | 'top_advancing';
+  setBumpView?: (view: 'all_technologies' | 'by_category' | 'top_advancing') => void;
+  selectedCategories?: TechnologyCategory[];
+  treemapView?: TreemapViewMode;
+  setTreemapView?: (view: TreemapViewMode) => void;
   chordView?: 'by_stakeholder_type' | 'by_tech_category' | 'by_funding_flow';
   setChordView?: (view: 'by_stakeholder_type' | 'by_tech_category' | 'by_funding_flow') => void;
   heatmapView?: 'trl_vs_category' | 'tech_vs_stakeholder' | 'funding_vs_status';
   setHeatmapView?: (view: 'trl_vs_category' | 'tech_vs_stakeholder' | 'funding_vs_status') => void;
   streamView?: 'by_stakeholder_type' | 'by_tech_category' | 'by_funding_type';
   setStreamView?: (view: 'by_stakeholder_type' | 'by_tech_category' | 'by_funding_type') => void;
+  streamScenario?: 'baseline' | 'accelerated';
+  setStreamScenario?: (scenario: 'baseline' | 'accelerated') => void;
+  streamScenarioState?: { government_funding_multiplier: number; private_funding_multiplier: number };
+  setStreamScenarioState?: (state: { government_funding_multiplier: number; private_funding_multiplier: number }) => void;
   parallelDimensions?: string[];
   setParallelDimensions?: (dims: string[]) => void;
   swarmView?: 'by_trl' | 'by_category';
   setSwarmView?: (view: 'by_trl' | 'by_category') => void;
+  timelineGroups?: string[];
+  barSortOrder?: 'asc' | 'desc';
+  barValueMode?: 'absolute' | 'percentage';
+  heatmapColorMode?: 'absolute' | 'normalized';
   
   // Network-specific
   similarityThreshold?: number;
@@ -79,6 +93,9 @@ interface VisualizationRendererProps {
   setIsOrbiting?: (val: boolean) => void;
   selectedCluster?: ClusterInfo | null;
   setSelectedCluster?: (cluster: ClusterInfo | null) => void;
+  
+  // Highlighting
+  highlightedEntityIds?: string[];
   
   // Callbacks
   onNodeClick?: (nodeId: string) => void;
@@ -110,7 +127,10 @@ export function VisualizationRenderer({
   setBarChartView,
   circlePackingView = 'by_stakeholder_type',
   setCirclePackingView,
-  treemapView = 'by_stakeholder_type',
+  bumpView = 'all_technologies',
+  setBumpView,
+  selectedCategories = [] as TechnologyCategory[],
+  treemapView = 'treemap',
   setTreemapView,
   chordView = 'by_stakeholder_type',
   setChordView,
@@ -118,10 +138,18 @@ export function VisualizationRenderer({
   setHeatmapView,
   streamView = 'by_stakeholder_type',
   setStreamView,
+  streamScenario,
+  setStreamScenario,
+  streamScenarioState,
+  setStreamScenarioState,
   parallelDimensions = [],
   setParallelDimensions,
   swarmView = 'by_trl',
   setSwarmView,
+  timelineGroups = ['technology', 'infrastructure', 'policy', 'skills'],
+  barSortOrder = 'desc',
+  barValueMode = 'absolute',
+  heatmapColorMode = 'absolute',
   similarityThreshold = 0.2,
   setSimilarityThreshold,
   showClusters = false,
@@ -130,6 +158,7 @@ export function VisualizationRenderer({
   setIsOrbiting,
   selectedCluster,
   setSelectedCluster,
+  highlightedEntityIds = [],
   onNodeClick,
   onCellClick,
   onEntitySelect,
@@ -170,6 +199,10 @@ export function VisualizationRenderer({
         return 'min-h-[70vh] max-h-[800px]'
       case 'swarm':
         return 'min-h-[70vh] max-h-[750px]'
+      case 'timeline':
+        return 'min-h-[70vh] max-h-[800px]'
+      case 'bubble-scatter':
+        return 'min-h-[80vh] max-h-[900px]' // Increased for better visibility
       default:
         return 'min-h-[65vh] max-h-[700px]'
     }
@@ -233,6 +266,8 @@ export function VisualizationRenderer({
               fundingEvents={fundingEvents}
               view={barChartView}
               onViewChange={setBarChartView}
+              sortOrder={barSortOrder}
+              valueMode={barValueMode}
               className="w-full min-h-full"
             />
           ) : (
@@ -280,6 +315,9 @@ export function VisualizationRenderer({
           {useNavigateData ? (
             <BumpChartNavigate 
               technologies={technologies}
+              view={bumpView}
+              onViewChange={setBumpView}
+              selectedCategories={selectedCategories as TechnologyCategory[]}
               onTechnologySelect={onTechnologySelect}
               className="w-full min-h-full"
             />
@@ -297,18 +335,12 @@ export function VisualizationRenderer({
       return (
         <div className={containerClass}>
           {useNavigateData ? (
-            <TreemapNavigate 
+            <TreemapSunburstExplorer
+              fundingEvents={fundingEvents}
               stakeholders={stakeholders}
               technologies={technologies}
-              projects={projects}
-              fundingEvents={fundingEvents}
-              view={treemapView}
-              onViewChange={setTreemapView}
-              onNodeClick={(nodeId, nodeData) => {
-                if (onEntitySelect && nodeData) {
-                  onEntitySelect({ type: nodeData.type, id: nodeId, data: nodeData });
-                }
-              }}
+              mode={treemapView}
+              onModeChange={(view) => setTreemapView?.(view)}
               className="w-full min-h-full"
             />
           ) : (
@@ -330,6 +362,7 @@ export function VisualizationRenderer({
               technologies={technologies}
               view={heatmapView}
               onViewChange={setHeatmapView}
+              colorMode={heatmapColorMode}
               onCellClick={(row, col, value) => {
                 if (onCellClick) {
                   onCellClick(row, col);
@@ -440,6 +473,11 @@ export function VisualizationRenderer({
               technologies={technologies}
               view={streamView}
               onViewChange={setStreamView}
+              scenario={streamScenario}
+              onScenarioChange={setStreamScenario}
+              scenarioState={streamScenarioState}
+              onScenarioStateChange={setStreamScenarioState}
+              showTargets={true}
               onStreamClick={(id, data) => {
                 console.log('Stream clicked:', id, data);
               }}
@@ -489,6 +527,67 @@ export function VisualizationRenderer({
             <div className="flex items-center justify-center h-full bg-gradient-to-br from-[#CCE2DC]/10 to-[#006E51]/5 rounded-xl">
               <div className="text-center p-8">
                 <p className="text-gray-600">Swarm Plot is only available with NAVIGATE data</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )
+    case 'timeline':
+      return (
+        <div className={containerClass}>
+          {useNavigateData ? (
+            <TimelineNavigate
+              onItemClick={(item) => {
+                // Handle timeline item click - could link to related entities
+                if (item.relatedEntities && item.relatedEntities.length > 0 && onEntitySelect) {
+                  // Find first related entity and select it
+                  const firstEntityId = item.relatedEntities[0];
+                  const stakeholder = stakeholders.find(s => s.id === firstEntityId);
+                  const technology = technologies.find(t => t.id === firstEntityId);
+                  
+                  if (stakeholder) {
+                    onEntitySelect({ type: 'stakeholder', id: stakeholder.id, data: stakeholder });
+                  } else if (technology) {
+                    onEntitySelect({ type: 'technology', id: technology.id, data: technology });
+                  }
+                }
+              }}
+              height={isFullscreen ? 800 : 600}
+              visibleGroups={timelineGroups}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full bg-gradient-to-br from-[#CCE2DC]/10 to-[#006E51]/5 rounded-xl">
+              <div className="text-center p-8">
+                <p className="text-gray-600">Timeline visualization is only available with NAVIGATE data</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )
+    case 'bubble-scatter':
+      return (
+        <div className={containerClass}>
+          {useNavigateData ? (
+            <BubbleScatterNavigate
+              technologies={technologies}
+              onTechnologySelect={(tech) => {
+                if (onEntitySelect) {
+                  onEntitySelect({ type: 'technology', id: tech.id, data: tech });
+                }
+                if (onTechnologySelect) {
+                  onTechnologySelect(tech.id);
+                }
+              }}
+              highlightedTechIds={highlightedEntityIds.filter(id => 
+                technologies.some(t => t.id === id)
+              )}
+              className="w-full min-h-full"
+              height="100%" // Use 100% to fill container, container handles sizing
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full bg-gradient-to-br from-[#CCE2DC]/10 to-[#006E51]/5 rounded-xl">
+              <div className="text-center p-8">
+                <p className="text-gray-600">Bubble Scatter is only available with NAVIGATE data</p>
               </div>
             </div>
           )}

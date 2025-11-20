@@ -25,6 +25,8 @@ interface BarChartNavigateProps {
   onViewChange?: (view: 'funding_by_stakeholder' | 'funding_by_tech' | 'projects_by_status' | 'tech_by_trl') => void;
   onBarClick?: (barData: any, barType: 'stakeholder' | 'technology' | 'project') => void;
   className?: string;
+  sortOrder?: 'asc' | 'desc';
+  valueMode?: 'absolute' | 'percentage';
 }
 
 type BarChartView = 'funding_by_stakeholder' | 'funding_by_tech' | 'projects_by_status' | 'tech_by_trl';
@@ -37,7 +39,9 @@ export function BarChartNavigate({
   view: externalView,
   onViewChange,
   onBarClick,
-  className = '' 
+  className = '',
+  sortOrder = 'desc',
+  valueMode = 'absolute'
 }: BarChartNavigateProps) {
   const [internalView, setInternalView] = useState<BarChartView>('funding_by_stakeholder');
   const view = externalView ?? internalView;
@@ -115,7 +119,7 @@ export function BarChartNavigate({
       .sort((a, b) => a.trlValue - b.trlValue);
   }, [technologies]);
 
-  const getData = () => {
+  const getBaseData = () => {
     switch (view) {
       case 'funding_by_stakeholder':
         return fundingByStakeholder;
@@ -143,6 +147,57 @@ export function BarChartNavigate({
       default:
         return [];
     }
+  };
+
+  const getPrimaryValueKey = () => {
+    switch (view) {
+      case 'funding_by_stakeholder':
+      case 'funding_by_tech':
+        return 'Funding (£M)';
+      case 'projects_by_status':
+        return 'Project Count';
+      case 'tech_by_trl':
+        return 'Technology Count';
+      default:
+        return undefined;
+    }
+  };
+
+  const applyValueModeToDataset = (dataset: any[], key?: string) => {
+    if (!key) return dataset;
+
+    const total = dataset.reduce((sum, item) => sum + (Number(item[key]) || 0), 0);
+
+    return dataset.map(item => {
+      const base = Number(item[key]) || 0;
+      const value =
+        valueMode === 'percentage' && total > 0
+          ? Number(((base / total) * 100).toFixed(1))
+          : base;
+
+      return {
+        ...item,
+        [key]: value,
+        __rawValue: base
+      };
+    });
+  };
+
+  const sortDataset = (dataset: any[], key?: string) => {
+    if (view === 'tech_by_trl') {
+      const sorted = [...dataset].sort((a, b) => (a.trlValue ?? 0) - (b.trlValue ?? 0));
+      return sortOrder === 'asc' ? sorted : sorted.reverse();
+    }
+
+    if (!key) return dataset;
+
+    const sorted = [...dataset].sort((a, b) => {
+      const aVal = Number(a[key]) || 0;
+      const bVal = Number(b[key]) || 0;
+      return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+    });
+
+    return sorted;
   };
 
   const getIndexBy = () => {
@@ -195,9 +250,16 @@ export function BarChartNavigate({
     }
   };
 
-  const data = getData();
   const keys = getKeys();
   const indexBy = getIndexBy();
+  const primaryKey = getPrimaryValueKey();
+  const data = sortDataset(
+    applyValueModeToDataset(
+      getBaseData().map(item => ({ ...item })),
+      primaryKey
+    ),
+    primaryKey
+  );
 
   if (data.length === 0) {
     return (
@@ -251,9 +313,12 @@ export function BarChartNavigate({
               tickSize: 5,
               tickPadding: 5,
               tickRotation: 0,
-              legend: view === 'funding_by_stakeholder' || view === 'funding_by_tech' 
-                ? 'Funding (£M)' 
-                : 'Count',
+              legend:
+                valueMode === 'percentage'
+                  ? 'Share (%)'
+                  : view === 'funding_by_stakeholder' || view === 'funding_by_tech'
+                    ? 'Funding (£M)'
+                    : 'Count',
               legendPosition: 'middle',
               legendOffset: -60
             }}
@@ -262,20 +327,32 @@ export function BarChartNavigate({
             labelTextColor={{ from: 'color', modifiers: [['darker', 1.6]] }}
             animate={true}
             motionConfig="gentle"
-            tooltip={({ id, value, indexValue }) => (
-              <div className="bg-white p-2 border rounded shadow-lg">
-                <div className="font-semibold">{indexValue}</div>
-                <div className="text-sm">
-                  <span className="font-medium">{id}:</span> {
-                    typeof value === 'number' 
-                      ? view === 'funding_by_stakeholder' || view === 'funding_by_tech'
-                        ? `£${value.toFixed(1)}M`
-                        : value
-                      : value
-                  }
+            tooltip={({ id, value, indexValue, data: barData }) => {
+              const isFundingView = view === 'funding_by_stakeholder' || view === 'funding_by_tech';
+              const rawValue = typeof barData?.__rawValue === 'number' ? barData.__rawValue : Number(value) || 0;
+              const formattedValue =
+                valueMode === 'percentage'
+                  ? `${Number(value).toFixed(1)}%`
+                  : isFundingView
+                    ? `£${Number(value).toFixed(1)}M`
+                    : Number(value).toLocaleString();
+              const extraText =
+                valueMode === 'percentage'
+                  ? isFundingView
+                    ? ` (£${rawValue.toFixed(1)}M)`
+                    : ` (${rawValue.toLocaleString()})`
+                  : '';
+
+              return (
+                <div className="bg-white p-2 border rounded shadow-lg">
+                  <div className="font-semibold">{indexValue}</div>
+                  <div className="text-sm">
+                    <span className="font-medium">{id}:</span> {formattedValue}
+                    {extraText && <span className="text-gray-500"> {extraText}</span>}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            }}
           />
         </div>
       </CardContent>

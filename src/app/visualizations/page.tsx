@@ -14,7 +14,7 @@ import { RadarChartNavigate } from "@/components/visualizations/RadarChartNaviga
 import { BarChartNavigate } from "@/components/visualizations/BarChartNavigate"
 import { CirclePackingNavigate } from "@/components/visualizations/CirclePackingNavigate"
 import { BumpChartNavigate } from "@/components/visualizations/BumpChartNavigate"
-import { TreemapNavigate } from "@/components/visualizations/TreemapNavigate"
+import { TreemapSunburstExplorer } from "@/components/visualizations/TreemapSunburstExplorer"
 import { HeatmapChart } from "@/components/visualizations/HeatmapChart"
 import { HeatmapNavigate } from "@/components/visualizations/HeatmapNavigate"
 import { SunburstChart } from "@/components/visualizations/SunburstChart"
@@ -32,6 +32,7 @@ import { AppProvider, useAppContext } from "@/contexts/AppContext"
 import { InsightsSummary } from "@/components/ui/InsightsSummary"
 import { UnifiedFloatingNav } from "@/components/ui/UnifiedFloatingNav"
 import { TopNavigation } from "@/components/ui/TopNavigation"
+import { TreemapViewMode } from "@/types/visualization-controls"
 
 // Import cluster analysis types
 import { ClusterInfo } from "@/lib/cluster-analysis"
@@ -157,7 +158,7 @@ function VisualizationsContent() {
   // NAVIGATE visualization control states
   const [bumpView, setBumpView] = useState<'all_technologies' | 'by_category' | 'top_advancing'>('all_technologies')
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
-  const [treemapView, setTreemapView] = useState<'by_stakeholder_type' | 'by_tech_category' | 'by_funding_type' | 'by_project'>('by_stakeholder_type')
+  const [treemapView, setTreemapView] = useState<TreemapViewMode>('treemap')
   const [barChartView, setBarChartView] = useState<'funding_by_stakeholder' | 'funding_by_tech' | 'projects_by_status' | 'tech_by_trl'>('funding_by_stakeholder')
   const [selectedTechIds, setSelectedTechIds] = useState<string[]>([])
   const [selectedDimensions, setSelectedDimensions] = useState<string[]>([
@@ -442,12 +443,12 @@ function VisualizationsContent() {
         return (
           <div className={containerClass}>
             {useNavigateData ? (
-              <TreemapNavigate 
+              <TreemapSunburstExplorer
+                fundingEvents={fundingEvents}
                 stakeholders={stakeholders}
                 technologies={filteredTechnologies}
-                projects={projects}
-                fundingEvents={fundingEvents}
-                view={treemapView}
+                mode={treemapView}
+                onModeChange={setTreemapView}
                 className="w-full min-h-full"
               />
             ) : (
@@ -719,31 +720,30 @@ function VisualizationsContent() {
   const getTreemapDistribution = () => {
     if (!useNavigateData || activeViz !== 'treemap') return null;
     
-    let totalFunding = 0;
-    let entityCount = 0;
-    let largestEntity = { name: '', value: 0, percentage: 0 };
+    const totals = fundingEvents.reduce(
+      (acc, event) => {
+        const amount = event.amount || 0;
+        acc.total += amount;
+        const key = event.funding_type || 'Other';
+        acc.bySource.set(key, (acc.bySource.get(key) || 0) + amount);
+        return acc;
+      },
+      { total: 0, bySource: new Map<string, number>() },
+    );
     
-    if (treemapView === 'by_stakeholder_type') {
-      const byType = new Map<string, number>();
-      stakeholders.forEach(s => {
-        const value = (s.total_funding_provided || 0) + (s.total_funding_received || 0);
-        totalFunding += value;
-        entityCount++;
-        byType.set(s.type, (byType.get(s.type) || 0) + value);
-      });
-      
-      const largest = Array.from(byType.entries())
-        .sort((a, b) => b[1] - a[1])[0];
-      if (largest) {
-        largestEntity = {
-          name: largest[0],
-          value: largest[1],
-          percentage: (largest[1] / totalFunding) * 100
-        };
-      }
-    }
+    const [topSource, topValue] = [...totals.bySource.entries()].sort((a, b) => b[1] - a[1])[0] || ['', 0];
     
-    return { totalFunding, entityCount, largestEntity };
+    return {
+      totalFunding: totals.total,
+      sourceCount: totals.bySource.size,
+      topSource: topSource
+        ? {
+            name: topSource,
+            value: topValue,
+            percentage: totals.total ? (topValue / totals.total) * 100 : 0,
+          }
+        : null,
+    };
   };
 
   const renderInsightsPanel = () => {
@@ -1230,16 +1230,16 @@ function VisualizationsContent() {
                       <span className="font-medium text-purple-700">{formatValue(distribution.totalFunding)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Entities:</span>
-                      <span className="font-medium text-purple-700">{distribution.entityCount}</span>
+                      <span>Funding Sources:</span>
+                      <span className="font-medium text-purple-700">{distribution.sourceCount}</span>
                     </div>
-                    {distribution.largestEntity.name && (
+                    {distribution.topSource && (
                       <div className="pt-2 border-t border-purple-200">
-                        <div className="text-xs text-gray-500 mb-1">Largest Category:</div>
+                        <div className="text-xs text-gray-500 mb-1">Top Source:</div>
                         <div className="flex justify-between">
-                          <span className="capitalize">{distribution.largestEntity.name}</span>
+                          <span className="capitalize">{distribution.topSource.name}</span>
                           <span className="font-medium text-purple-700">
-                            {formatValue(distribution.largestEntity.value)} ({distribution.largestEntity.percentage.toFixed(1)}%)
+                            {formatValue(distribution.topSource.value)} ({distribution.topSource.percentage.toFixed(1)}%)
                           </span>
                         </div>
                       </div>
@@ -2324,61 +2324,34 @@ function VisualizationsContent() {
               
               {trlFilterSection}
               
-              {/* View Selector - MOVED FROM COMPONENT */}
+              {/* View Selector */}
               <div>
-                <h4 className="font-medium text-[#006E51] mb-3">Hierarchy View</h4>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => setTreemapView('by_stakeholder_type')}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                      treemapView === 'by_stakeholder_type'
-                        ? 'bg-[#006E51] text-white'
-                        : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
-                    }`}
-                  >
-                    By Stakeholder Type
-                  </button>
-                  <button
-                    onClick={() => setTreemapView('by_tech_category')}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                      treemapView === 'by_tech_category'
-                        ? 'bg-[#006E51] text-white'
-                        : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
-                    }`}
-                  >
-                    By Tech Category
-                  </button>
-                  <button
-                    onClick={() => setTreemapView('by_funding_type')}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                      treemapView === 'by_funding_type'
-                        ? 'bg-[#006E51] text-white'
-                        : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
-                    }`}
-                  >
-                    By Funding Type
-                  </button>
-                  <button
-                    onClick={() => setTreemapView('by_project')}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                      treemapView === 'by_project'
-                        ? 'bg-[#006E51] text-white'
-                        : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
-                    }`}
-                  >
-                    By Project Status
-                  </button>
+                <h4 className="font-medium text-[#006E51] mb-3">View Mode</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['treemap', 'sunburst'] as TreemapViewMode[]).map((modeOption) => (
+                    <button
+                      key={modeOption}
+                      onClick={() => setTreemapView(modeOption)}
+                      className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+                        treemapView === modeOption
+                          ? 'bg-[#006E51] text-white shadow-sm'
+                          : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
+                      }`}
+                    >
+                      {modeOption === 'treemap' ? 'Treemap' : 'Sunburst'}
+                    </button>
+                  ))}
                 </div>
               </div>
               
               <div className="p-4 bg-[#CCE2DC]/20 rounded-lg">
                 <h4 className="font-medium text-[#006E51] mb-2">How to Use</h4>
                 <ul className="text-sm text-gray-600 space-y-1">
-                  <li>• Switch between views: Stakeholder Type, Tech Category, Funding Type, Project Status</li>
-                  <li>• Rectangle size = Value (funding amount or budget)</li>
-                  <li>• Click rectangles to zoom into a level</li>
-                  <li>• Hover for detailed values</li>
-                  <li>• Colors represent categories/types</li>
+                  <li>• Toggle between Treemap and Sunburst layouts</li>
+                  <li>• Size encodes funding amount (millions)</li>
+                  <li>• Click nodes to drill into departments or programmes</li>
+                  <li>• Use the breadcrumb to navigate back up the hierarchy</li>
+                  <li>• Colors follow technology categories and hydrogen themes</li>
                 </ul>
               </div>
             </div>

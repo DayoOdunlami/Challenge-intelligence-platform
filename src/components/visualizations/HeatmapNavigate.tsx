@@ -18,6 +18,7 @@ interface HeatmapNavigateProps {
   onViewChange?: (view: 'trl_vs_category' | 'tech_vs_stakeholder' | 'funding_vs_status') => void;
   onCellClick?: (row: string, col: string, value: number) => void;
   className?: string;
+  colorMode?: 'absolute' | 'normalized';
 }
 
 type HeatmapView = 'trl_vs_category' | 'tech_vs_stakeholder' | 'funding_vs_status';
@@ -46,9 +47,11 @@ function transformTRLvsCategory(technologies: Technology[]) {
     category: TechnologyCategory;
     count: number;
     avgFunding: number;
+    normalized?: number;
   }> = [];
   
   let maxCount = 0;
+  const rowTotals = new Map<number, number>();
   
   trlLevels.forEach(trl => {
     categories.forEach(category => {
@@ -61,12 +64,21 @@ function transformTRLvsCategory(technologies: Technology[]) {
         : 0;
       
       maxCount = Math.max(maxCount, count);
+      rowTotals.set(trl, (rowTotals.get(trl) || 0) + count);
       
       matrix.push({ trl, category, count, avgFunding });
     });
   });
   
-  return { matrix, rows: trlLevels.map(t => `TRL ${t}`), cols: categories, maxCount };
+  const normalizedMatrix = matrix.map(entry => {
+    const rowTotal = rowTotals.get(entry.trl) || 0;
+    return {
+      ...entry,
+      normalized: rowTotal > 0 ? entry.count / rowTotal : 0
+    };
+  });
+  
+  return { matrix: normalizedMatrix, rows: trlLevels.map(t => `TRL ${t}`), cols: categories, maxCount, maxNormalized: 1 };
 }
 
 // Transform for Technology vs Stakeholder
@@ -92,9 +104,11 @@ function transformTechVsStakeholder(technologies: Technology[], stakeholders: St
     stakeholderId: string;
     stakeholderName: string;
     connectionStrength: number;
+    normalized?: number;
   }> = [];
   
   let maxStrength = 0;
+  const rowTotals = new Map<string, number>();
   
   // For now, create a simple connection matrix
   // In a real implementation, this would use relationships data
@@ -106,6 +120,7 @@ function transformTechVsStakeholder(technologies: Technology[], stakeholders: St
       const connectionStrength = techFunding > 0 && stakeholderFunding > 0 ? Math.min(10, Math.round((techFunding + stakeholderFunding) / 1000000)) : 0;
       
       maxStrength = Math.max(maxStrength, connectionStrength);
+      rowTotals.set(tech.id, (rowTotals.get(tech.id) || 0) + connectionStrength);
       
       matrix.push({
         techId: tech.id,
@@ -117,11 +132,20 @@ function transformTechVsStakeholder(technologies: Technology[], stakeholders: St
     });
   });
   
+  const normalizedMatrix = matrix.map(entry => {
+    const total = rowTotals.get(entry.techId) || 0;
+    return {
+      ...entry,
+      normalized: total > 0 ? entry.connectionStrength / total : 0
+    };
+  });
+  
   return {
-    matrix,
+    matrix: normalizedMatrix,
     rows: topTechs.map(t => t.name),
     cols: topStakeholders.map(s => s.name),
-    maxStrength
+    maxStrength,
+    maxNormalized: 1
   };
 }
 
@@ -135,9 +159,11 @@ function transformFundingVsStatus(stakeholders: Stakeholder[]) {
     status: string;
     count: number;
     totalFunding: number;
+    normalized?: number;
   }> = [];
   
   let maxCount = 0;
+  const rowTotals = new Map<StakeholderType, number>();
   
   types.forEach(type => {
     statusLevels.forEach(status => {
@@ -156,12 +182,21 @@ function transformFundingVsStatus(stakeholders: Stakeholder[]) {
       );
       
       maxCount = Math.max(maxCount, count);
+      rowTotals.set(type, (rowTotals.get(type) || 0) + count);
       
       matrix.push({ type, status, count, totalFunding });
     });
   });
   
-  return { matrix, rows: types, cols: statusLevels, maxCount };
+  const normalizedMatrix = matrix.map(entry => {
+    const total = rowTotals.get(entry.type) || 0;
+    return {
+      ...entry,
+      normalized: total > 0 ? entry.count / total : 0
+    };
+  });
+  
+  return { matrix: normalizedMatrix, rows: types, cols: statusLevels, maxCount, maxNormalized: 1 };
 }
 
 export function HeatmapNavigate({ 
@@ -170,7 +205,8 @@ export function HeatmapNavigate({
   view: externalView,
   onViewChange,
   onCellClick,
-  className = '' 
+  className = '',
+  colorMode = 'absolute'
 }: HeatmapNavigateProps) {
   const [internalView, setInternalView] = useState<HeatmapView>('trl_vs_category');
   const view = externalView ?? internalView;
@@ -199,17 +235,17 @@ export function HeatmapNavigate({
     }
   };
   
-  const getCellValue = (row: string, col: string): number => {
+  const getCellValue = (row: string, col: string, mode: 'absolute' | 'normalized' = 'absolute'): number => {
     if (view === 'trl_vs_category') {
       const trl = parseInt(row.replace('TRL ', ''));
-      const match = heatmapData.matrix.find((m: any) => m.trl === trl && m.category === col);
-      return match?.count || 0;
+      const match = (heatmapData.matrix as any[]).find((m) => m.trl === trl && m.category === col);
+      return mode === 'normalized' ? match?.normalized ?? 0 : match?.count ?? 0;
     } else if (view === 'tech_vs_stakeholder') {
-      const match = heatmapData.matrix.find((m: any) => m.techName === row && m.stakeholderName === col);
-      return match?.connectionStrength || 0;
+      const match = (heatmapData.matrix as any[]).find((m) => m.techName === row && m.stakeholderName === col);
+      return mode === 'normalized' ? match?.normalized ?? 0 : match?.connectionStrength ?? 0;
     } else {
-      const match = heatmapData.matrix.find((m: any) => m.type === row && m.status === col);
-      return match?.count || 0;
+      const match = (heatmapData.matrix as any[]).find((m) => m.type === row && m.status === col);
+      return mode === 'normalized' ? match?.normalized ?? 0 : match?.count ?? 0;
     }
   };
   
@@ -230,9 +266,11 @@ export function HeatmapNavigate({
     );
   }
   
-  const maxValue = view === 'tech_vs_stakeholder' 
-    ? (heatmapData as any).maxStrength 
+  const maxAbsoluteValue = view === 'tech_vs_stakeholder'
+    ? (heatmapData as any).maxStrength
     : (heatmapData as any).maxCount;
+  const maxNormalizedValue = (heatmapData as any).maxNormalized ?? 1;
+  const effectiveMaxValue = colorMode === 'normalized' ? (maxNormalizedValue || 1) : (maxAbsoluteValue || 1);
   
   const handleCellClick = (row: string, col: string) => {
     if (onCellClick) {
@@ -280,8 +318,15 @@ export function HeatmapNavigate({
                 
                 {/* Cells */}
                 {heatmapData.cols.map(col => {
-                  const value = getCellValue(row, col);
-                  const color = getHeatmapColor(value, maxValue);
+                  const displayValue = colorMode === 'normalized'
+                    ? getCellValue(row, col, 'normalized')
+                    : getCellValue(row, col, 'absolute');
+                  const absoluteValue = getCellValue(row, col, 'absolute');
+                  const color = getHeatmapColor(displayValue, effectiveMaxValue);
+                  const formattedValue =
+                    colorMode === 'normalized'
+                      ? `${Math.round(displayValue * 100)}%`
+                      : absoluteValue;
                   
                   return (
                     <div
@@ -293,17 +338,20 @@ export function HeatmapNavigate({
                         height: `${cellHeight}px`,
                         backgroundColor: color
                       }}
-                      title={`${row} × ${col}: ${value}`}
+                      title={`${row} × ${col}: ${formattedValue}`}
                     >
-                      {value > 0 && (
+                      {displayValue > 0 && (
                         <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-800">
-                          {value}
+                          {formattedValue}
                         </div>
                       )}
                       {/* Tooltip on hover */}
                       <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-10">
                         <div className="bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap">
-                          {row} × {col}: {value}
+                          {row} × {col}: {formattedValue}
+                          {colorMode === 'normalized' && (
+                            <span className="ml-1 text-gray-300">({absoluteValue})</span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -326,7 +374,9 @@ export function HeatmapNavigate({
               <div className="w-4 h-4 rounded" style={{ backgroundColor: '#4A9B8A' }}></div>
               <div className="w-4 h-4 rounded" style={{ backgroundColor: '#006E51' }}></div>
               <div className="w-4 h-4 rounded" style={{ backgroundColor: '#004A38' }}></div>
-              <span className="text-xs">Max ({maxValue})</span>
+              <span className="text-xs">
+                Max ({colorMode === 'normalized' ? '100%' : Math.round(effectiveMaxValue)})
+              </span>
             </div>
           </div>
           <div className="text-xs text-gray-500">

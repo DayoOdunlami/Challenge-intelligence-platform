@@ -12,6 +12,7 @@ import { ResponsiveBump } from '@nivo/bump';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Technology, TechnologyCategory } from '@/lib/navigate-types';
+import { hiaRoadmap, RoadmapItem } from '@/data/roadmap-data';
 
 interface BumpChartNavigateProps {
   technologies: Technology[];
@@ -139,6 +140,29 @@ export function BumpChartNavigate({
     }
   };
 
+  // Get timeline milestones that fall within the chart's time range (2019-2024)
+  const timelineMarkerColor = '#0EA5E9';
+
+  const timelineMarkers = useMemo(() => {
+    const chartYears = ['2019', '2020', '2021', '2022', '2023', '2024'];
+    const chartStartYear = 2019;
+    const chartEndYear = 2024;
+    
+    return hiaRoadmap
+      .filter(item => {
+        // Only show technology-related milestones in this timeframe
+        if (item.group !== 'technology') return false;
+        const itemYear = item.start.getFullYear();
+        return itemYear >= chartStartYear && itemYear <= chartEndYear;
+      })
+      .map(item => ({
+        ...item,
+        year: item.start.getFullYear().toString(),
+        yearIndex: chartYears.indexOf(item.start.getFullYear().toString())
+      }))
+      .filter(item => item.yearIndex >= 0); // Only include years in our chart range
+  }, []);
+
   return (
     <Card className={className}>
       <CardHeader>
@@ -148,73 +172,131 @@ export function BumpChartNavigate({
           Steeper lines indicate faster advancement.
         </p>
       </CardHeader>
-      <CardContent className="h-[500px] p-0">
+      <CardContent className="h-[500px] p-0 relative">
         {bumpData.length > 0 ? (
-          <ResponsiveBump
-            data={bumpData}
-            colors={(serie) => {
-              // Get color based on technology category
-              return getTechColor(serie.id);
-            }}
-            lineWidth={3}
-            activeLineWidth={6}
-            inactiveLineWidth={2}
-            inactiveOpacity={0.15}
-            pointSize={10}
-            activePointSize={16}
-            inactivePointSize={0}
-            pointColor={{ theme: 'background' }}
-            pointBorderWidth={3}
-            activePointBorderWidth={3}
-            pointBorderColor={{ from: 'serie.color' }}
-            axisTop={{
-              tickSize: 5,
-              tickPadding: 5,
-              tickRotation: 0,
-              legend: '',
-              legendPosition: 'middle',
-              legendOffset: -36
-            }}
-            axisBottom={{
-              tickSize: 5,
-              tickPadding: 5,
-              tickRotation: 0,
-              legend: 'Year',
-              legendPosition: 'middle',
-              legendOffset: 40
-            }}
-            axisLeft={{
-              tickSize: 5,
-              tickPadding: 5,
-              tickRotation: 0,
-              legend: 'TRL Level',
-              legendPosition: 'middle',
-              legendOffset: -50
-            }}
-            margin={{ top: 40, right: 100, bottom: 60, left: 60 }}
-            axisRight={null}
-            startLabel={d => d.id}
-            endLabel={d => `${d.id} (TRL ${d.y})`}
-            tooltip={({ serie }) => (
-              <div className="bg-white p-2 rounded shadow-md text-sm border border-gray-200">
-                <div className="font-semibold" style={{ color: getTechColor(serie.id) }}>
-                  {serie.id}
+          <div className="relative w-full h-full">
+            <ResponsiveBump
+              data={bumpData}
+              colors={(serie) => {
+                // Get color based on technology category
+                return getTechColor(serie.id);
+              }}
+              lineWidth={3}
+              activeLineWidth={6}
+              inactiveLineWidth={2}
+              inactiveOpacity={0.15}
+              pointSize={10}
+              activePointSize={16}
+              inactivePointSize={0}
+              pointColor={{ theme: 'background' }}
+              pointBorderWidth={3}
+              activePointBorderWidth={3}
+              pointBorderColor={{ from: 'serie.color' }}
+              axisTop={{
+                tickSize: 5,
+                tickPadding: 5,
+                tickRotation: 0,
+                legend: '',
+                legendPosition: 'middle',
+                legendOffset: -36
+              }}
+              axisBottom={{
+                tickSize: 5,
+                tickPadding: 5,
+                tickRotation: 0,
+                legend: 'Year',
+                legendPosition: 'middle',
+                legendOffset: 40
+              }}
+              axisLeft={{
+                tickSize: 5,
+                tickPadding: 5,
+                tickRotation: 0,
+                legend: 'TRL Level',
+                legendPosition: 'middle',
+                legendOffset: -50
+              }}
+              margin={{ top: 40, right: 100, bottom: 60, left: 60 }}
+              axisRight={null}
+              startLabel={d => d.id}
+              endLabel={d => `${d.id} (TRL ${d.y})`}
+              tooltip={({ serie }) => (
+                <div className="bg-white p-2 rounded shadow-md text-sm border border-gray-200">
+                  <div className="font-semibold" style={{ color: getTechColor(serie.id) }}>
+                    {serie.id}
+                  </div>
+                  <div className="text-gray-600 mt-1">
+                    {serie.data.map((point, idx) => (
+                      <div key={idx}>
+                        {point.x}: TRL {point.y}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="text-gray-600 mt-1">
-                  {serie.data.map((point, idx) => (
-                    <div key={idx}>
-                      {point.x}: TRL {point.y}
+              )}
+            />
+            
+            {/* Timeline Markers Overlay */}
+            {timelineMarkers.length > 0 && (
+              <div className="absolute top-0 left-0 w-full h-full pointer-events-none" style={{ marginTop: '40px', marginLeft: '60px', marginRight: '100px', marginBottom: '60px' }}>
+                {timelineMarkers.map((marker, idx) => {
+                  // Calculate position: chart has 6 years (2019-2024), so each year is ~16.67% width
+                  const yearIndex = marker.yearIndex;
+                  const xPosition = `${(yearIndex / 5) * 100}%`; // 0-5 index, 5 intervals
+                  
+                  return (
+                    <div
+                      key={marker.id}
+                      className="absolute pointer-events-auto"
+                      style={{
+                        left: xPosition,
+                        top: '0',
+                        transform: 'translateX(-50%)',
+                        zIndex: 10
+                      }}
+                      title={marker.title || marker.content}
+                    >
+                      {/* Vertical line marker */}
+                      <div 
+                        className="w-0.5 h-full opacity-60"
+                        style={{ height: 'calc(100% - 20px)', backgroundColor: timelineMarkerColor }}
+                      />
+                      {/* Marker dot */}
+                      <div 
+                        className="absolute top-0 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full border-2 border-white shadow-md"
+                        style={{ marginTop: '-6px', backgroundColor: timelineMarkerColor }}
+                      />
+                      {/* Label */}
+                      <div 
+                        className="absolute top-0 left-1/2 transform -translate-x-1/2 mt-2 whitespace-nowrap text-xs font-medium bg-white/90 px-2 py-1 rounded shadow-sm"
+                        style={{ marginTop: '4px', color: timelineMarkerColor }}
+                      >
+                        {marker.content}
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
             )}
-          />
+          </div>
         ) : (
           <div className="flex items-center justify-center h-full text-gray-500">
             {view === 'by_category' && selectedCategories.length === 0
               ? 'Select at least one category to view'
               : 'No data available for this view'}
+          </div>
+        )}
+        
+        {/* Legend for timeline markers */}
+        {timelineMarkers.length > 0 && (
+          <div className="absolute bottom-2 right-2 bg-white/90 px-3 py-2 rounded shadow-sm text-xs border border-gray-200">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-3 h-3 rounded-full border border-white" style={{ backgroundColor: timelineMarkerColor }}></div>
+              <span className="font-medium">Key Milestones</span>
+            </div>
+            <div className="text-gray-600 text-xs">
+              Hover over markers for details
+            </div>
           </div>
         )}
       </CardContent>
