@@ -124,6 +124,9 @@ export function CirclePackingSimpleECharts({
 }: CirclePackingSimpleEChartsProps) {
   const [displayTree, setDisplayTree] = useState<SimpleNode | null>(null);
   const [breadcrumb, setBreadcrumb] = useState<SimpleNode[]>([]);
+  const [selectionsAtLevel, setSelectionsAtLevel] = useState<string[]>([]);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [zoomCenter, setZoomCenter] = useState<{ x: number; y: number } | null>(null);
 
   const { tree, rows, maxDepth, meta } = useMemo(() => prepareSeries(circlePackingData), []);
 
@@ -193,8 +196,17 @@ export function CirclePackingSimpleECharts({
             const node = context.nodes?.[nodePath];
             if (!node) return;
 
-            const isLeaf = !node.children || node.children.length === 0;
-            const dimNode = Boolean(highlightedIds && highlightedIds.size > 0 && !highlightedIds.has(node.data.id));
+            // Apply zoom transform
+            const centerX = zoomCenter?.x ?? api.getWidth() / 2;
+            const centerY = zoomCenter?.y ?? api.getHeight() / 2;
+            const zoomedX = centerX + (node.x - centerX) * zoomLevel;
+            const zoomedY = centerY + (node.y - centerY) * zoomLevel;
+            const zoomedR = node.r * zoomLevel;
+
+            // Only dim when something is actually selected (not just when highlightedIds exists)
+            const dimNode = Boolean(selectedId && highlightedIds && highlightedIds.size > 0 && !highlightedIds.has(node.data.id));
+            const isSelected = node.data.id === selectedId;
+            const isRelated = Boolean(selectedId && highlightedIds && highlightedIds.has(node.data.id) && !isSelected);
             const focus = new Uint32Array(
               node.descendants().map((desc) => rows.findIndex((r) => r.id === desc.data.id))
             );
@@ -206,13 +218,15 @@ export function CirclePackingSimpleECharts({
                 if (!entity.id) return;
                 const target = context.nodes?.[entity.id];
                 if (!target) return;
+                const targetZoomedX = centerX + (target.x - centerX) * zoomLevel;
+                const targetZoomedY = centerY + (target.y - centerY) * zoomLevel;
                 children.push({
                   type: 'line',
                   shape: {
-                    x1: node.x,
-                    y1: node.y,
-                    x2: target.x,
-                    y2: target.y,
+                    x1: zoomedX,
+                    y1: zoomedY,
+                    x2: targetZoomedX,
+                    y2: targetZoomedY,
                   },
                   style: {
                     stroke: '#f97316',
@@ -228,17 +242,18 @@ export function CirclePackingSimpleECharts({
               type: 'circle',
               focus,
               shape: {
-                cx: node.x,
-                cy: node.y,
-                r: node.r,
+                cx: zoomedX,
+                cy: zoomedY,
+                r: zoomedR,
               },
               transition: ['shape'],
               z2: (api.value('depth') as number) * 2,
               style: {
                 fill: node.data.color || '#1f2937',
-                stroke: '#fff',
-                shadowBlur: 10,
-                shadowColor: 'rgba(15,23,42,0.3)',
+                stroke: isSelected ? '#f97316' : isRelated ? '#fbbf24' : '#fff',
+                lineWidth: isSelected ? 4 : isRelated ? 3 : 1,
+                shadowBlur: isSelected ? 20 : isRelated ? 15 : 10,
+                shadowColor: isSelected ? 'rgba(249, 115, 22, 0.5)' : isRelated ? 'rgba(251, 191, 36, 0.4)' : 'rgba(15,23,42,0.3)',
                 opacity: dimNode ? 0.25 : 1,
               },
               emphasis: {
@@ -257,26 +272,67 @@ export function CirclePackingSimpleECharts({
               },
             });
 
-            children.push({
-              type: 'text',
-              style: {
-                text: isLeaf ? node.data.name : '',
-                fontFamily: 'Arial',
-                width: node.r * 1.3,
-                overflow: 'truncate',
-                fontSize: node.r / 3,
-                fill: dimNode ? 'rgba(255,255,255,0.5)' : '#fff',
-                x: node.x,
-                y: node.y,
-                textAlign: 'center',
-                textVerticalAlign: 'middle',
-              },
-              emphasis: {
-                style: {
-                  fontSize: Math.max(node.r / 3, 12),
-                },
-              },
-            });
+            // Text positioning: parent nodes (clusters) get callout labels outside, leaf nodes get text inside
+            const isParent = node.children && node.children.length > 0;
+            const minRadiusForText = 5;
+            const fontSize = Math.max(Math.min(node.r / 3, 14), 8);
+            const showText = node.r >= minRadiusForText && node.data.name;
+            
+            if (showText) {
+              if (isParent) {
+                // Parent nodes: position text outside circle as callout (above the circle)
+                const labelY = zoomedY - zoomedR - 8; // Position above circle
+                children.push({
+                  type: 'text',
+                  z2: 1000,
+                  style: {
+                    text: node.data.name,
+                    fontFamily: 'Arial, sans-serif',
+                    fontSize: Math.max(fontSize * 0.9 * zoomLevel, 10),
+                    fontWeight: 'bold',
+                    fill: dimNode ? 'rgba(0,0,0,0.3)' : '#1f2937',
+                    x: zoomedX,
+                    y: labelY,
+                    textAlign: 'center',
+                    textVerticalAlign: 'bottom',
+                    textBackgroundColor: dimNode ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.9)',
+                    textBorderRadius: 4,
+                    textPadding: [4, 6],
+                    textShadowBlur: 2,
+                    textShadowColor: 'rgba(255, 255, 255, 0.8)',
+                  },
+                });
+              } else {
+                // Leaf nodes: text inside circle
+                children.push({
+                  type: 'text',
+                  z2: 1000,
+                  style: {
+                    text: node.data.name,
+                    fontFamily: 'Arial, sans-serif',
+                    width: zoomedR * 2.5,
+                    overflow: 'truncate',
+                    fontSize: fontSize * zoomLevel,
+                    fontWeight: isSelected ? 'bold' : isRelated ? '600' : 'normal',
+                    fill: dimNode ? 'rgba(255,255,255,0.5)' : '#ffffff',
+                    x: zoomedX,
+                    y: zoomedY,
+                    textAlign: 'center',
+                    textVerticalAlign: 'middle',
+                    textShadowBlur: 5,
+                    textShadowColor: 'rgba(0, 0, 0, 0.9)',
+                    textShadowOffsetX: 1,
+                    textShadowOffsetY: 1,
+                  },
+                  emphasis: {
+                    style: {
+                      fontSize: Math.max(fontSize * 1.2, 11),
+                      fontWeight: 'bold',
+                    },
+                  },
+                });
+              }
+            }
 
             return {
               type: 'group',
@@ -292,26 +348,89 @@ export function CirclePackingSimpleECharts({
         },
       ],
     };
-  }, [currentTree, rows, maxDepth, meta, highlightedIds, selectedId, relatedEntities]);
+  }, [currentTree, rows, maxDepth, meta, highlightedIds, selectedId, relatedEntities, zoomLevel, zoomCenter]);
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col md:flex-row gap-4">
-        <div className="flex-1 min-h-[500px] bg-white rounded-xl shadow border border-slate-200">
+        <div 
+          className="flex-1 min-h-[500px] bg-white rounded-xl shadow border border-slate-200 relative"
+          onClick={(e) => {
+            // If clicking directly on the container (not the chart), go back a level
+            if (e.target === e.currentTarget && breadcrumb.length > 0) {
+              setBreadcrumb((prev) => {
+                const next = [...prev];
+                next.pop();
+                const target = next[next.length - 1];
+                setDisplayTree(target || null);
+                setSelectionsAtLevel([]);
+                onSelectNodeAction(null);
+                return next;
+              });
+            }
+          }}
+          onWheel={(e) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            const newZoom = Math.max(0.5, Math.min(3, zoomLevel + delta));
+            if (newZoom !== zoomLevel) {
+              // Set zoom center to mouse position relative to container
+              const rect = e.currentTarget.getBoundingClientRect();
+              setZoomCenter({
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top,
+              });
+              setZoomLevel(newZoom);
+            }
+          }}
+        >
           <ReactECharts
             option={option}
             style={{ height: '500px', width: '100%' }}
             onEvents={{
               click: (params: ClickEvent) => {
                 const dataId = params.data?.id;
-                if (!dataId) return;
+                if (!dataId) {
+                  // Click outside any circle: go back a level
+                  if (breadcrumb.length > 0) {
+                    setBreadcrumb((prev) => {
+                      const next = [...prev];
+                      next.pop();
+                      const target = next[next.length - 1];
+                      setDisplayTree(target || null);
+                      setSelectionsAtLevel([]);
+                      onSelectNodeAction(null);
+                      return next;
+                    });
+                  }
+                  return;
+                }
                 const nodeMeta = meta[dataId];
                 const simpleNode = findSimpleNode(currentTree, dataId);
                 if (simpleNode?.children && simpleNode.children.length > 0) {
+                  // Drill down: add to breadcrumb path only if not already there
                   setDisplayTree(simpleNode);
-                  setBreadcrumb((prev) => [...prev, simpleNode]);
+                  setBreadcrumb((prev) => {
+                    // Check if this node is already the last item in breadcrumb
+                    const lastItem = prev[prev.length - 1];
+                    if (lastItem && lastItem.id === simpleNode.id) {
+                      return prev; // Don't duplicate
+                    }
+                    return [...prev, simpleNode];
+                  });
+                  setSelectionsAtLevel([]);
+                  setZoomLevel(1); // Reset zoom on drill down
+                  setZoomCenter(null);
                   onSelectNodeAction(null);
                 } else if (nodeMeta) {
+                  // Selection at current level: add to selections list
+                  const nodeName = nodeMeta.name || simpleNode?.name || dataId;
+                  setSelectionsAtLevel((prev) => {
+                    if (!prev.includes(nodeName)) {
+                      return [...prev, nodeName];
+                    }
+                    return prev;
+                  });
                   onSelectNodeAction(nodeMeta.id ?? null);
                 }
               },
@@ -321,43 +440,69 @@ export function CirclePackingSimpleECharts({
           />
         </div>
         <div className="w-full md:w-80 flex flex-col gap-3">
-          <div className="bg-white border border-slate-200 rounded-xl p-3 flex items-center justify-between">
-            <div>
-              <div className="text-xs uppercase text-slate-500">Drill Path</div>
-              <div className="text-sm font-medium text-slate-900">
-                {breadcrumb.length === 0 ? 'Root' : breadcrumb.map((b) => b.name).join(' / ')}
+          <div className="bg-white border border-slate-200 rounded-xl p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <div className="text-xs uppercase text-slate-500">Drill Path</div>
+                <div className="text-sm font-medium text-slate-900">
+                  {breadcrumb.length === 0 
+                    ? 'Root' 
+                    : breadcrumb
+                        .filter((b, idx, arr) => idx === 0 || b.id !== arr[idx - 1].id) // Remove consecutive duplicates
+                        .map((b) => b.name)
+                        .join(' / ')}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {breadcrumb.length > 0 && (
+                  <button
+                    className="text-xs px-3 py-1 border rounded-lg text-slate-600 hover:bg-slate-100"
+                    onClick={() => {
+                      setBreadcrumb((prev) => {
+                        const next = [...prev];
+                        next.pop();
+                        const target = next[next.length - 1];
+                        setDisplayTree(target || null);
+                        setSelectionsAtLevel([]);
+                        setZoomLevel(1);
+                        setZoomCenter(null);
+                        return next;
+                      });
+                      onSelectNodeAction(null);
+                    }}
+                  >
+                    Back
+                  </button>
+                )}
+                {(breadcrumb.length > 0 || selectionsAtLevel.length > 0) && (
+                  <button
+                    className="text-xs px-3 py-1 border rounded-lg text-slate-600 hover:bg-slate-100"
+                    onClick={() => {
+                      setBreadcrumb([]);
+                      setDisplayTree(null);
+                      setSelectionsAtLevel([]);
+                      setZoomLevel(1);
+                      setZoomCenter(null);
+                      onSelectNodeAction(null);
+                    }}
+                  >
+                    Reset
+                  </button>
+                )}
               </div>
             </div>
-            <div className="flex gap-2">
-              {breadcrumb.length > 0 && (
-                <button
-                  className="text-xs px-3 py-1 border rounded-lg text-slate-600 hover:bg-slate-100"
-                  onClick={() => {
-                    setBreadcrumb((prev) => {
-                      const next = [...prev];
-                      next.pop();
-                      const target = next[next.length - 1];
-                      setDisplayTree(target || null);
-                      return next;
-                    });
-                  }}
-                >
-                  Back
-                </button>
-              )}
-              {breadcrumb.length > 0 && (
-                <button
-                  className="text-xs px-3 py-1 border rounded-lg text-slate-600 hover:bg-slate-100"
-                  onClick={() => {
-                    setBreadcrumb([]);
-                    setDisplayTree(null);
-                    onSelectNodeAction(null);
-                  }}
-                >
-                  Reset
-                </button>
-              )}
-            </div>
+            {selectionsAtLevel.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-slate-200">
+                <div className="text-xs uppercase text-slate-500 mb-1">Selections at this level</div>
+                <div className="flex flex-wrap gap-1">
+                  {selectionsAtLevel.map((name, idx) => (
+                    <span key={idx} className="text-xs px-2 py-1 bg-slate-100 rounded text-slate-700">
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
             {selectedNode ? (
@@ -401,22 +546,63 @@ export function CirclePackingSimpleECharts({
                     </div>
                   </div>
                 )}
-                {relatedEntities.length > 0 && (
-                  <div>
-                    <div className="text-xs font-medium text-slate-500">Related Entities</div>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {relatedEntities.map((entity) => (
-                        <button
-                          key={entity.id || entity.name}
-                          className="px-2 py-0.5 rounded-full bg-emerald-100 text-xs text-emerald-700 hover:bg-emerald-200 transition"
-                          onClick={() => onSelectNodeAction(entity.id || null)}
-                        >
-                          {entity.name}
-                        </button>
-                      ))}
+                {relatedEntities.length > 0 && (() => {
+                  // Group entities into main categories: stakeholders, projects, working groups
+                  const grouped = relatedEntities.reduce((acc, entity) => {
+                    const type = entity.type || 'other';
+                    let category: 'stakeholders' | 'projects' | 'working_groups' | 'other';
+                    
+                    if (type === 'project') {
+                      category = 'projects';
+                    } else if (type === 'working_group') {
+                      category = 'working_groups';
+                    } else if (['stakeholder', 'government', 'intermediary', 'industry', 'academia'].includes(type)) {
+                      category = 'stakeholders';
+                    } else {
+                      category = 'other';
+                    }
+                    
+                    if (!acc[category]) acc[category] = [];
+                    acc[category].push(entity);
+                    return acc;
+                  }, {} as Record<string, typeof relatedEntities>);
+
+                  // Category labels and order
+                  const categories = [
+                    { key: 'stakeholders', label: 'Stakeholders' },
+                    { key: 'projects', label: 'Projects' },
+                    { key: 'working_groups', label: 'Working Groups' },
+                    { key: 'other', label: 'Other' },
+                  ];
+
+                  return (
+                    <div>
+                      <div className="text-xs font-medium text-slate-500 mb-2">Related Entities</div>
+                      <div className="space-y-3">
+                        {categories
+                          .filter((cat) => grouped[cat.key] && grouped[cat.key].length > 0)
+                          .map((category) => (
+                            <div key={category.key}>
+                              <div className="text-xs font-semibold text-slate-600 mb-1.5">
+                                {category.label}
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {grouped[category.key].map((entity) => (
+                                  <button
+                                    key={entity.id || entity.name}
+                                    className="px-2 py-0.5 rounded-full bg-emerald-100 text-xs text-emerald-700 hover:bg-emerald-200 transition"
+                                    onClick={() => onSelectNodeAction(entity.id || null)}
+                                  >
+                                    {entity.name}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             ) : (
               <div className="text-sm text-slate-600">

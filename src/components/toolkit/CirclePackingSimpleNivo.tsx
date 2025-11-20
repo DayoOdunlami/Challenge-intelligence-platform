@@ -75,6 +75,7 @@ export function CirclePackingSimpleNivo({
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [displayNode, setDisplayNode] = useState<NivoNode | null>(null);
   const [breadcrumb, setBreadcrumb] = useState<NivoNode[]>([]);
+  const [zoomLevel, setZoomLevel] = useState(1);
 
   const nivoData = useMemo(() => toNivoNode(circlePackingData), []);
 
@@ -90,8 +91,24 @@ export function CirclePackingSimpleNivo({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col md:flex-row gap-4">
-        <div className="flex-1 min-h-[500px] bg-white rounded-xl shadow border border-slate-200">
-          <ResponsiveCirclePacking
+        <div 
+          className="flex-1 min-h-[500px] bg-white rounded-xl shadow border border-slate-200 relative overflow-hidden"
+          onWheel={(e) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            const newZoom = Math.max(0.5, Math.min(3, zoomLevel + delta));
+            setZoomLevel(newZoom);
+          }}
+        >
+          <div
+            style={{
+              transform: `scale(${zoomLevel})`,
+              transformOrigin: 'center center',
+              width: '100%',
+              height: '100%',
+            }}
+          >
+            <ResponsiveCirclePacking
             data={currentData}
             id="id"
             value="value"
@@ -116,6 +133,7 @@ export function CirclePackingSimpleNivo({
               if (nivoNode.children && nivoNode.children.length > 0) {
                 setDisplayNode(nivoNode);
                 setBreadcrumb((prev) => [...prev, nivoNode]);
+                setZoomLevel(1); // Reset zoom on drill down
               } else if (nivoNode.data && nivoNode.id) {
                 onSelectNodeAction(nivoNode.id);
               }
@@ -206,6 +224,7 @@ export function CirclePackingSimpleNivo({
               },
             ]}
           />
+          </div>
         </div>
         <div className="w-full md:w-80 flex flex-col gap-3">
           <div className="bg-white border border-slate-200 rounded-xl p-3 flex items-center justify-between">
@@ -224,6 +243,7 @@ export function CirclePackingSimpleNivo({
                       const next = [...prev];
                       next.pop();
                       setDisplayNode(next[next.length - 1] || null);
+                      setZoomLevel(1);
                       return next;
                     });
                   }}
@@ -237,6 +257,7 @@ export function CirclePackingSimpleNivo({
                   onClick={() => {
                     setBreadcrumb([]);
                     setDisplayNode(null);
+                    setZoomLevel(1);
                     onSelectNodeAction(null);
                   }}
               >
@@ -287,22 +308,63 @@ export function CirclePackingSimpleNivo({
                     </div>
                   </div>
                 )}
-                {relatedEntities.length > 0 && (
-                  <div>
-                    <div className="text-xs font-medium text-slate-500">Related Entities</div>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {relatedEntities.map((entity) => (
-                        <button
-                          key={entity.id || entity.name}
-                          className="px-2 py-0.5 rounded-full bg-emerald-100 text-xs text-emerald-700 hover:bg-emerald-200 transition"
-                          onClick={() => onSelectNodeAction(entity.id || null)}
-                        >
-                          {entity.name}
-                        </button>
-                      ))}
+                {relatedEntities.length > 0 && (() => {
+                  // Group entities into main categories: stakeholders, projects, working groups
+                  const grouped = relatedEntities.reduce((acc, entity) => {
+                    const type = entity.type || 'other';
+                    let category: 'stakeholders' | 'projects' | 'working_groups' | 'other';
+                    
+                    if (type === 'project') {
+                      category = 'projects';
+                    } else if (type === 'working_group') {
+                      category = 'working_groups';
+                    } else if (['stakeholder', 'government', 'intermediary', 'industry', 'academia'].includes(type)) {
+                      category = 'stakeholders';
+                    } else {
+                      category = 'other';
+                    }
+                    
+                    if (!acc[category]) acc[category] = [];
+                    acc[category].push(entity);
+                    return acc;
+                  }, {} as Record<string, typeof relatedEntities>);
+
+                  // Category labels and order
+                  const categories = [
+                    { key: 'stakeholders', label: 'Stakeholders' },
+                    { key: 'projects', label: 'Projects' },
+                    { key: 'working_groups', label: 'Working Groups' },
+                    { key: 'other', label: 'Other' },
+                  ];
+
+                  return (
+                    <div>
+                      <div className="text-xs font-medium text-slate-500 mb-2">Related Entities</div>
+                      <div className="space-y-3">
+                        {categories
+                          .filter((cat) => grouped[cat.key] && grouped[cat.key].length > 0)
+                          .map((category) => (
+                            <div key={category.key}>
+                              <div className="text-xs font-semibold text-slate-600 mb-1.5">
+                                {category.label}
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {grouped[category.key].map((entity) => (
+                                  <button
+                                    key={entity.id || entity.name}
+                                    className="px-2 py-0.5 rounded-full bg-emerald-100 text-xs text-emerald-700 hover:bg-emerald-200 transition"
+                                    onClick={() => onSelectNodeAction(entity.id || null)}
+                                  >
+                                    {entity.name}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             ) : (
               <div className="text-sm text-slate-600">
