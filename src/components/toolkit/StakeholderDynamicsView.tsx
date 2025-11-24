@@ -2,20 +2,13 @@
 
 import { useMemo, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ReactFlowNetworkView } from './ReactFlowNetworkView';
-import { ReactFlowNetworkViewEnhanced } from './ReactFlowNetworkViewEnhanced';
-import { EChartsGraphView } from './EChartsGraphView';
-import { InfographicView } from './InfographicView';
-import { CirclePackingSimpleNivo } from './CirclePackingSimpleNivo';
 import { CirclePackingSimpleECharts } from './CirclePackingSimpleECharts';
+import { EChartsGraphView } from './EChartsGraphView';
+import { D3NetworkGraphView } from './D3NetworkGraphView';
 import { buildCirclePackingMaps, getHighlightedIds } from '@/lib/circlePackingRelationships';
 
 export function StakeholderDynamicsView() {
-  const [view, setView] = useState<
-    'reactflow' | 'reactflow-enhanced' | 'infographic' | 'echarts' | 'circle-packing-nivo' | 'circle-packing-echarts'
-  >(
-    'reactflow-enhanced'
-  );
+  const [view, setView] = useState<'circle' | 'network' | 'network-d3'>('network-d3');
   const { nodeMap, adjacency } = useMemo(() => buildCirclePackingMaps(), []);
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const highlightedIds = useMemo(() => getHighlightedIds(selectedEntityId, adjacency), [selectedEntityId, adjacency]);
@@ -31,39 +24,15 @@ export function StakeholderDynamicsView() {
 
   return (
     <div className="w-full">
-      <Tabs
-        value={view}
-        onValueChange={(v) =>
-          setView(v as 'reactflow' | 'reactflow-enhanced' | 'infographic' | 'echarts' | 'circle-packing-nivo' | 'circle-packing-echarts')
-        }
-      >
-        <TabsList className="mb-4">
-          <TabsTrigger value="reactflow-enhanced">React Flow (Enhanced)</TabsTrigger>
-          <TabsTrigger value="reactflow">React Flow (Basic)</TabsTrigger>
-          <TabsTrigger value="infographic">Ecosystem Map</TabsTrigger>
-          <TabsTrigger value="echarts">ECharts Graph</TabsTrigger>
-          <TabsTrigger value="circle-packing-nivo">Circle Packing (Nivo - Simple)</TabsTrigger>
-          <TabsTrigger value="circle-packing-echarts">Circle Packing (ECharts - Simple)</TabsTrigger>
+      <Tabs value={view} onValueChange={(v) => setView(v as 'circle' | 'network')}>
+        <TabsList className="mb-4 flex flex-wrap gap-2">
+          <TabsTrigger value="circle">Stakeholder Circle</TabsTrigger>
+          <TabsTrigger value="network">Stakeholder Network (ECharts)</TabsTrigger>
+          <TabsTrigger value="network-d3">Stakeholder Network (D3)</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="reactflow-enhanced" className="mt-0">
-          <ReactFlowNetworkViewEnhanced />
-        </TabsContent>
-
-        <TabsContent value="reactflow" className="mt-0">
-          <ReactFlowNetworkView />
-        </TabsContent>
-
-        <TabsContent value="infographic" className="mt-0">
-          <InfographicView />
-        </TabsContent>
-
-        <TabsContent value="echarts" className="mt-0">
-          <EChartsGraphView />
-        </TabsContent>
-
-        <TabsContent value="circle-packing-nivo" className="mt-0">
-          <CirclePackingSimpleNivo
+        <TabsContent value="circle" className="mt-0">
+          <CirclePackingSimpleECharts
             selectedId={selectedEntityId}
             selectedNode={selectedNode}
             highlightedIds={highlightedIds}
@@ -72,8 +41,18 @@ export function StakeholderDynamicsView() {
           />
         </TabsContent>
 
-        <TabsContent value="circle-packing-echarts" className="mt-0">
-          <CirclePackingSimpleECharts
+        <TabsContent value="network" className="mt-0">
+          <EChartsGraphView
+            selectedId={selectedEntityId}
+            selectedNode={selectedNode}
+            highlightedIds={highlightedIds}
+            relatedEntities={relatedEntities}
+            onSelectNodeAction={setSelectedEntityId}
+          />
+        </TabsContent>
+
+        <TabsContent value="network-d3" className="mt-0">
+          <D3NetworkGraphView
             selectedId={selectedEntityId}
             selectedNode={selectedNode}
             highlightedIds={highlightedIds}

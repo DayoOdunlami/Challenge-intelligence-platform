@@ -37,6 +37,9 @@ const STORAGE_KEY = 'reactflow-network-enhanced';
 
 // Custom Stakeholder Node Component with Toolbar
 function StakeholderNode({ data, selected }: { data: any; selected?: boolean }) {
+  const isFocused = data?.isFocused;
+  const active = selected || isFocused;
+
   return (
     <>
       <NodeToolbar isVisible={selected} position={Position.Top}>
@@ -53,9 +56,14 @@ function StakeholderNode({ data, selected }: { data: any; selected?: boolean }) 
         className={`
           px-3 py-2 rounded-lg bg-white border-2 shadow-sm text-xs font-semibold text-center min-w-[80px] cursor-pointer
           transition-all duration-200
-          ${selected ? 'border-[#EF4444] border-4 shadow-lg scale-110 z-50' : 'border-gray-300 hover:border-[#006E51]'}
+          ${active ? 'border-[#EF4444] border-4 shadow-lg scale-110 z-50' : 'border-gray-300 hover:border-[#006E51]'}
         `}
-        style={{ borderColor: selected ? '#EF4444' : data.color }}
+        style={{ borderColor: active ? '#EF4444' : data.color }}
+        onClick={() => {
+          if (data?.onClickNode && data.id) {
+            data.onClickNode(data.id);
+          }
+        }}
       >
         <Handle type="target" position={Position.Top} style={{ background: '#555' }} />
         <div className="font-medium" style={{ color: data.color }}>
@@ -98,8 +106,36 @@ function CustomEdge({ data, label, style }: { data?: any; label?: string; style?
   );
 }
 
+// Background Venn-style circle node
+function VennCircleNode({ data }: { data: any }) {
+  const { label, color, showEdges, toggleEdges } = data;
+
+  return (
+    <div
+      className="flex items-center justify-center rounded-full shadow-inner cursor-pointer border-2 border-dashed"
+      style={{
+        width: 380,
+        height: 380,
+        backgroundColor: color,
+        opacity: 0.18,
+        borderColor: color,
+      }}
+      onClick={toggleEdges}
+      title="Click to show/hide arrows"
+    >
+      <div
+        className="px-3 py-1 rounded-full text-sm font-semibold bg-white/80 border"
+        style={{ borderColor: color, color }}
+      >
+        {label} {showEdges ? '(arrows on)' : '(arrows off)'}
+      </div>
+    </div>
+  );
+}
+
 const nodeTypes: NodeTypes = {
   stakeholder: StakeholderNode,
+  vennCircle: VennCircleNode,
 };
 
 const edgeTypes: EdgeTypes = {
@@ -123,6 +159,8 @@ function NetworkFlowContentEnhanced({
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const { fitView, getNodes, getEdges, deleteElements } = useReactFlow();
+  const [showEdges, setShowEdges] = useState(true);
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
 
   // Load saved config
   useEffect(() => {
@@ -162,33 +200,131 @@ function NetworkFlowContentEnhanced({
         intermediary: '#8b5cf6',
       };
 
-      // Simple grid layout for initial positioning
-      const cols = Math.ceil(Math.sqrt(stakeholdersData.length));
-      const spacing = 150;
+      const initialNodes: Node[] = [];
 
-      const initialNodes: Node[] = stakeholdersData.map((stakeholder, idx) => {
-        const row = Math.floor(idx / cols);
-        const col = idx % cols;
-        
-        return {
+      // Add three large background Venn circles as React Flow nodes
+      initialNodes.push(
+        {
+          id: 'circle-government',
+          type: 'vennCircle',
+          position: { x: 0, y: -50 },
+          draggable: true,
+          selectable: false,
+          data: {
+            label: 'Governmental body',
+            color: categoryColors.government,
+            showEdges,
+            toggleEdges: () => {
+              setFocusedNodeId(null);
+              setShowEdges((prev) => !prev);
+            },
+          },
+        },
+        {
+          id: 'circle-academia',
+          type: 'vennCircle',
+          position: { x: 420, y: -60 },
+          draggable: true,
+          selectable: false,
+          data: {
+            label: 'Academia / Research institutions',
+            color: categoryColors.academia,
+            showEdges,
+            toggleEdges: () => {
+              setFocusedNodeId(null);
+              setShowEdges((prev) => !prev);
+            },
+          },
+        },
+        {
+          id: 'circle-industry',
+          type: 'vennCircle',
+          position: { x: 210, y: 260 },
+          draggable: true,
+          selectable: false,
+          data: {
+            label: 'Industry',
+            color: categoryColors.industry,
+            showEdges,
+            toggleEdges: () => {
+              setFocusedNodeId(null);
+              setShowEdges((prev) => !prev);
+            },
+          },
+        }
+      );
+
+      // Position stakeholders roughly within circles based on category
+      const governmentPositions = [
+        { x: 140, y: 40 },
+        { x: 220, y: 20 },
+        { x: 260, y: 80 },
+        { x: 180, y: 100 },
+        { x: 80, y: 100 },
+      ];
+      const academiaPositions = [
+        { x: 520, y: 20 },
+        { x: 600, y: 40 },
+        { x: 680, y: 20 },
+        { x: 620, y: 90 },
+      ];
+      const industryPositions = [
+        { x: 380, y: 320 },
+        { x: 460, y: 360 },
+        { x: 540, y: 320 },
+      ];
+      const overlapGovAcad = [{ x: 340, y: 40 }]; // UKRI/EPSRC
+      const overlapAcadInd = [{ x: 460, y: 220 }]; // ATI
+
+      const govIndex = { value: 0 };
+      const acadIndex = { value: 0 };
+      const indIndex = { value: 0 };
+
+      const takePosition = (positions: { x: number; y: number }[], indexRef: { value: number }) => {
+        const pos = positions[indexRef.value % positions.length];
+        indexRef.value += 1;
+        return pos;
+      };
+
+      stakeholdersData.forEach((stakeholder) => {
+        let position;
+        if (stakeholder.id === 'ukri' || stakeholder.id === 'epsrc') {
+          position = overlapGovAcad[0];
+        } else if (stakeholder.id === 'ati') {
+          position = overlapAcadInd[0];
+        } else if (stakeholder.category === 'government') {
+          position = takePosition(governmentPositions, govIndex);
+        } else if (stakeholder.category === 'academia') {
+          position = takePosition(academiaPositions, acadIndex);
+        } else if (stakeholder.category === 'industry') {
+          position = takePosition(industryPositions, indIndex);
+        } else {
+          // intermediaries and others in the central overlap
+          position = { x: 340 + Math.random() * 80, y: 160 + Math.random() * 60 };
+        }
+
+        initialNodes.push({
           id: stakeholder.id,
           type: 'stakeholder',
-          position: {
-            x: col * spacing + 50,
-            y: row * spacing + 50,
-          },
+          position,
           data: {
+            id: stakeholder.id,
             label: stakeholder.shortName || stakeholder.name.split(' ')[0],
             category: stakeholder.category,
             color: categoryColors[stakeholder.category] || '#6b7280',
             fullName: stakeholder.name,
             connectionCount: connectionCounts[stakeholder.id] || 0,
+            isFocused: focusedNodeId === stakeholder.id,
+            onClickNode: (id: string) => {
+              setFocusedNodeId((prev) => (prev === id ? null : id));
+            },
           },
-        };
+        });
       });
+
       setNodes(initialNodes);
     }
-  }, [nodes.length, setNodes, connectionCounts]);
+  }, [nodes.length, setNodes, connectionCounts, showEdges, focusedNodeId]);
 
   // Update connection counts in nodes
   useEffect(() => {
@@ -361,10 +497,18 @@ function NetworkFlowContentEnhanced({
     console.log('Context menu for:', node.id);
   }, []);
 
+  const visibleEdges = useMemo(() => {
+    if (focusedNodeId) {
+      return edges.filter((e) => e.source === focusedNodeId || e.target === focusedNodeId);
+    }
+    if (showEdges) return edges;
+    return [];
+  }, [edges, focusedNodeId, showEdges]);
+
   return (
     <ReactFlow
       nodes={nodes}
-      edges={edges}
+      edges={visibleEdges}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onConnect={onConnect}

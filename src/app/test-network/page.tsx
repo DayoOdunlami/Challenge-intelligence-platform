@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { NetworkGraph } from '@/components/visualizations/NetworkGraph';
+import { NetworkGraphECharts } from '@/components/visualizations/NetworkGraphECharts';
+import { NetworkGraphD3 } from '@/components/visualizations/NetworkGraphD3';
 import { ChallengeFilters } from '@/components/filters/ChallengeFilters';
 import { AppProvider, useAppContext } from '@/contexts/AppContext';
 import ProfileFilterButton from '@/components/ui/ProfileFilterButton';
@@ -28,6 +30,7 @@ function TestNetworkContent() {
   const [detectedClusters, setDetectedClusters] = useState<ClusterInfo[]>([]);
   const [selectedCluster, setSelectedCluster] = useState<ClusterInfo | null>(null);
   const [viewMode, setViewMode] = useState<'network' | 'clusters'>('network');
+  const [graphEngine, setGraphEngine] = useState<'force' | 'echarts' | 'd3'>('force');
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -104,6 +107,44 @@ function TestNetworkContent() {
           </div>
         </div>
 
+        <div className="mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Graph engine:</span>
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setGraphEngine('force')}
+                className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                  graphEngine === 'force'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Force (React)
+              </button>
+              <button
+                onClick={() => setGraphEngine('echarts')}
+                className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                  graphEngine === 'echarts'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                ECharts
+              </button>
+              <button
+                onClick={() => setGraphEngine('d3')}
+                className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                  graphEngine === 'd3'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                D3
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Filters Sidebar */}
           <div className="lg:col-span-1">
@@ -116,14 +157,32 @@ function TestNetworkContent() {
           </div>
 
           {/* Main Content Area */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-4">
             {viewMode === 'network' ? (
-              <NetworkGraph
-                challenges={filteredChallenges}
-                selectedChallenge={selectedChallenge}
-                onChallengeSelect={setSelectedChallenge}
-                onClustersDetected={setDetectedClusters}
-              />
+              <>
+                {graphEngine === 'force' && (
+                  <NetworkGraph
+                    challenges={filteredChallenges}
+                    selectedChallenge={selectedChallenge}
+                    onChallengeSelect={setSelectedChallenge}
+                    onClustersDetected={setDetectedClusters}
+                  />
+                )}
+                {graphEngine === 'echarts' && (
+                  <NetworkGraphECharts
+                    challenges={filteredChallenges}
+                    selectedChallenge={selectedChallenge}
+                    onChallengeSelect={setSelectedChallenge}
+                  />
+                )}
+                {graphEngine === 'd3' && (
+                  <NetworkGraphD3
+                    challenges={filteredChallenges}
+                    selectedChallenge={selectedChallenge}
+                    onChallengeSelect={setSelectedChallenge}
+                  />
+                )}
+              </>
             ) : (
               <ClusterInsightsPanel
                 clusters={detectedClusters}

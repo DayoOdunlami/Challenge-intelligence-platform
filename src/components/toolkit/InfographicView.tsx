@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ToolkitStakeholder } from '@/data/toolkit/types';
 import { stakeholdersData } from '@/data/toolkit/stakeholders';
@@ -22,6 +22,10 @@ export function InfographicView() {
   const [customPositions, setCustomPositions] = useState<Record<string, { x: number; y: number }>>({});
   const [circlePositions, setCirclePositions] = useState<Record<string, { cx: number; cy: number }>>({});
   const [isDragging, setIsDragging] = useState<string | null>(null);
+
+  // Refs for layout elements used in drag calculations
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
 
   const selected = selectedStakeholder 
     ? stakeholders.find(s => s.id === selectedStakeholder)
@@ -92,34 +96,35 @@ export function InfographicView() {
   }, [circlePositions]);
 
   // Handle circle drag
-  const handleCircleDrag = useCallback((circleId: string, defaultCx: number, defaultCy: number, event: any, info: any) => {
-    const svg = event.currentTarget.closest('svg');
-    if (!svg) return;
-    
-    const svgRect = svg.getBoundingClientRect();
-    const viewBox = svg.viewBox.baseVal;
-    
-    // Get current position from the circle's center
-    const circle = event.currentTarget;
-    const circleRect = circle.getBoundingClientRect();
-    const centerX = circleRect.left + circleRect.width / 2;
-    const centerY = circleRect.top + circleRect.height / 2;
-    
-    // Convert to viewBox coordinates
-    const relativeX = centerX - svgRect.left;
-    const relativeY = centerY - svgRect.top;
-    const viewBoxX = (relativeX / svgRect.width) * viewBox.width;
-    const viewBoxY = (relativeY / svgRect.height) * viewBox.height;
-    
-    // Clamp to reasonable bounds
-    const clampedX = Math.max(100, Math.min(viewBox.width - 100, viewBoxX));
-    const clampedY = Math.max(100, Math.min(viewBox.height - 100, viewBoxY));
-    
-    setCirclePositions(prev => ({
-      ...prev,
-      [circleId]: { cx: clampedX, cy: clampedY }
-    }));
-  }, []);
+  const handleCircleDrag = useCallback(
+    (circleId: string, _defaultCx: number, _defaultCy: number, _event: any, info: any) => {
+      if (!info || !info.point) return;
+
+      const container = containerRef.current;
+      const svg = svgRef.current;
+      if (!container || !svg) return;
+
+      const containerRect = container.getBoundingClientRect();
+      const viewBox = svg.viewBox.baseVal;
+
+      // Use the drag point relative to the container, similar to stakeholders
+      const relativeX = info.point.x - containerRect.left;
+      const relativeY = info.point.y - containerRect.top;
+
+      const viewBoxX = (relativeX / containerRect.width) * viewBox.width;
+      const viewBoxY = (relativeY / containerRect.height) * viewBox.height;
+
+      // Clamp to reasonable bounds so circles stay mostly within the canvas
+      const clampedX = Math.max(100, Math.min(viewBox.width - 100, viewBoxX));
+      const clampedY = Math.max(100, Math.min(viewBox.height - 100, viewBoxY));
+
+      setCirclePositions(prev => ({
+        ...prev,
+        [circleId]: { cx: clampedX, cy: clampedY },
+      }));
+    },
+    []
+  );
 
   // Key connection paths to show (from image: DfT → EPSRC → ATI)
   // Recalculate when positions change
@@ -205,12 +210,22 @@ export function InfographicView() {
         </div>
       </div>
 
-      <div className="relative bg-gray-50 rounded-lg border border-gray-200" style={{ height: '700px', minHeight: '700px' }}>
+      <div
+        ref={containerRef}
+        className="relative bg-gray-50 rounded-lg border border-gray-200"
+        style={{ height: '700px', minHeight: '700px' }}
+      >
         {/* Venn Diagram Circles */}
-        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid meet">
+        <svg
+          ref={svgRef}
+          className="absolute inset-0 w-full h-full"
+          viewBox="0 0 1000 700"
+          preserveAspectRatio="xMidYMid meet"
+        >
           {/* Government Circle - Top Left */}
           {(() => {
-            const govPos = getCirclePosition('government', 300, 250);
+            // Government circle slightly larger and a bit lower, similar to original
+            const govPos = getCirclePosition('government', 320, 270);
             return (
               <g>
                 <motion.circle
@@ -250,7 +265,8 @@ export function InfographicView() {
 
           {/* Academia Circle - Top Right */}
           {(() => {
-            const acadPos = getCirclePosition('academia', 600, 200);
+            // Academia circle on the upper right, overlapping government
+            const acadPos = getCirclePosition('academia', 680, 260);
             return (
               <g>
                 <motion.circle
@@ -290,7 +306,8 @@ export function InfographicView() {
 
           {/* Industry Circle - Bottom */}
           {(() => {
-            const indPos = getCirclePosition('industry', 700, 450);
+            // Industry circle towards the bottom centre, overlapping both
+            const indPos = getCirclePosition('industry', 520, 470);
             return (
               <g>
                 <motion.circle
@@ -444,11 +461,13 @@ export function InfographicView() {
                 dragElastic={0}
                 dragConstraints={false}
                 onDragStart={() => setIsDragging(stakeholder.id)}
-                onDrag={(event, info) => {
+                onDrag={(_event, info) => {
                   // Update position in real-time during drag using info.point
                   if (editMode) {
-                    const container = event.currentTarget.closest('.relative');
-                    const svg = container?.querySelector('svg');
+                    if (!info || !info.point) return;
+
+                    const container = containerRef.current;
+                    const svg = svgRef.current;
                     if (!container || !svg) return;
                     
                     const containerRect = container.getBoundingClientRect();
