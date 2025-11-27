@@ -40,10 +40,10 @@ type HierarchyNode = {
 };
 
 interface TreemapSunburstExplorerProps {
-  fundingEvents: FundingEvent[];
-  stakeholders: Stakeholder[];
-  technologies: Technology[];
-  mode: TreemapViewMode;
+  fundingEvents?: FundingEvent[];
+  stakeholders?: Stakeholder[];
+  technologies?: Technology[];
+  mode?: TreemapViewMode;
   onModeChange?: (mode: TreemapViewMode) => void;
   className?: string;
   height?: number;
@@ -62,10 +62,10 @@ const formatMillions = (value: number) =>
   `£${value.toLocaleString(undefined, { maximumFractionDigits: 1 })}M`;
 
 export function TreemapSunburstExplorer({
-  fundingEvents,
-  stakeholders,
-  technologies,
-  mode,
+  fundingEvents = [],
+  stakeholders = [],
+  technologies = [],
+  mode = 'treemap',
   onModeChange,
   className = '',
   height = 600,

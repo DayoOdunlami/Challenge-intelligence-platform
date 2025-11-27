@@ -7,10 +7,12 @@ import { TopNavigation } from '@/components/ui/TopNavigation';
 import { UnifiedFloatingNav } from '@/components/ui/UnifiedFloatingNav';
 import { Wrench } from 'lucide-react';
 import { InnovationTrackerSankey } from '@/components/toolkit/InnovationTrackerSankey';
+import { EnhancedInnovationTracker } from '@/components/toolkit/InnovationTracker';
 import { StakeholderDynamicsView } from '@/components/toolkit/StakeholderDynamicsView';
 
 export default function ToolkitPage() {
   const [activeTool, setActiveTool] = useState<'stakeholder' | 'innovation'>('stakeholder');
+  const [trackerVersion, setTrackerVersion] = useState<'enhanced' | 'classic'>('enhanced');
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#CCE2DC]/20 via-white to-[#CCE2DC]/10">
@@ -51,13 +53,46 @@ export default function ToolkitPage() {
           <TabsContent value="innovation" className="mt-0">
             <Card>
               <CardHeader>
-                <CardTitle>Innovation Tracker</CardTitle>
-                <CardDescription>
-                  Track funding flows from public and private sources through intermediaries to innovation recipients
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Innovation Tracker</CardTitle>
+                    <CardDescription>
+                      Track funding flows from public and private sources through intermediaries to innovation recipients
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500">Version:</span>
+                    <div className="bg-gray-100 p-1 rounded-lg flex gap-1">
+                      <button
+                        onClick={() => setTrackerVersion('enhanced')}
+                        className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${
+                          trackerVersion === 'enhanced'
+                            ? 'bg-[#006E51] text-white shadow-sm'
+                            : 'text-gray-600 hover:text-gray-800 hover:bg-gray-200'
+                        }`}
+                      >
+                        Enhanced
+                      </button>
+                      <button
+                        onClick={() => setTrackerVersion('classic')}
+                        className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${
+                          trackerVersion === 'classic'
+                            ? 'bg-[#006E51] text-white shadow-sm'
+                            : 'text-gray-600 hover:text-gray-800 hover:bg-gray-200'
+                        }`}
+                      >
+                        Classic
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                <InnovationTrackerSankey />
+                {trackerVersion === 'enhanced' ? (
+                  <EnhancedInnovationTracker />
+                ) : (
+                  <InnovationTrackerSankey />
+                )}
               </CardContent>
             </Card>
           </TabsContent>

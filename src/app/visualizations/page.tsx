@@ -22,11 +22,14 @@ import { ChordDiagram } from "@/components/visualizations/ChordDiagram"
 import { ChordDiagramNavigate } from "@/components/visualizations/ChordDiagramNavigate"
 import { NetworkGraph } from "@/components/visualizations/NetworkGraph"
 import { NetworkGraphNavigate } from "@/components/visualizations/NetworkGraphNavigate"
+import { NetworkGraphNavigate3D } from "@/components/visualizations/NetworkGraphNavigate3D"
+import { UnifiedNetworkGraph } from "@/components/visualizations/UnifiedNetworkGraph"
 import { StreamGraphNavigate } from "@/components/visualizations/StreamGraphNavigate"
 import { ParallelCoordinatesNavigate } from "@/components/visualizations/ParallelCoordinatesNavigate"
 import { SwarmPlotNavigate } from "@/components/visualizations/SwarmPlotNavigate"
 import challenges from "@/data/challenges"
 import { stakeholders, technologies, projects, relationships, fundingEvents } from "@/data/navigate-dummy-data"
+import { unifiedEntities, unifiedRelationships } from "@/data/unified"
 import { Challenge } from "@/lib/types"
 import { AppProvider, useAppContext } from "@/contexts/AppContext"
 import { InsightsSummary } from "@/components/ui/InsightsSummary"
@@ -40,7 +43,7 @@ import { CreativeHero } from "@/components/ui/CreativeHero"
 
 // Note: Using custom panels instead of importing existing ones to avoid prop dependencies
 
-type VisualizationType = 'sankey' | 'heatmap' | 'network' | 'sunburst' | 'chord' | 'radar' | 'bar' | 'circle' | 'bump' | 'treemap' | 'stream' | 'parallel' | 'swarm'
+type VisualizationType = 'sankey' | 'heatmap' | 'network' | 'network3d' | 'unifiednetwork' | 'sunburst' | 'chord' | 'radar' | 'bar' | 'circle' | 'bump' | 'treemap' | 'stream' | 'parallel' | 'swarm'
 
 const visualizations = [
   {
@@ -98,6 +101,20 @@ const visualizations = [
     description: 'Connections and relationships',
     icon: Network,
     color: '#50C878'
+  },
+  {
+    id: 'network3d' as VisualizationType,
+    name: 'Network Graph 3D',
+    description: '3D interactive network visualization',
+    icon: Network,
+    color: '#006E51'
+  },
+  {
+    id: 'unifiednetwork' as VisualizationType,
+    name: 'Unified Network (2D)',
+    description: 'Cross-domain network from unified schema',
+    icon: Network,
+    color: '#10B981'
   },
   {
     id: 'sunburst' as VisualizationType,
@@ -231,7 +248,7 @@ function VisualizationsContent() {
 
   // Auto-enable NAVIGATE data for NAVIGATE-only visualizations
   useEffect(() => {
-    const navigateOnlyVisualizations: VisualizationType[] = ['stream', 'parallel', 'swarm', 'radar', 'bar', 'circle', 'bump', 'treemap', 'heatmap', 'chord'];
+    const navigateOnlyVisualizations: VisualizationType[] = ['stream', 'parallel', 'swarm', 'radar', 'bar', 'circle', 'bump', 'treemap', 'heatmap', 'chord', 'network3d'];
     if (navigateOnlyVisualizations.includes(activeViz) && !useNavigateData) {
       setUseNavigateData(true);
     }
@@ -301,6 +318,8 @@ function VisualizationsContent() {
           return 'min-h-[70vh] max-h-[750px]' // 70% viewport, max 750px (circular)
         case 'network':
           return 'min-h-[75vh] max-h-[800px]' // Network graph
+        case 'network3d':
+          return 'min-h-[75vh] max-h-[800px]' // Network graph 3D
         default:
           return 'min-h-[65vh] max-h-[700px]' // Default: 65% viewport, max 700px
       }
@@ -536,6 +555,46 @@ function VisualizationsContent() {
                 selectedCluster={selectedCluster}
                 className="w-full min-h-full"
               />
+            )}
+          </div>
+        )
+      case 'network3d':
+        return (
+          <div className={containerClass}>
+            {useNavigateData ? (
+              <NetworkGraphNavigate3D 
+                stakeholders={stakeholders}
+                technologies={filteredTechnologies}
+                projects={projects}
+                relationships={relationships}
+                selectedEntityId={selectedEntity?.id || null}
+                onEntitySelect={(id) => {
+                  // Try to find entity in stakeholders, technologies, or projects
+                  const stakeholder = stakeholders.find(s => s.id === id);
+                  const technology = filteredTechnologies.find(t => t.id === id);
+                  const project = projects.find(p => p.id === id);
+                  
+                  if (stakeholder) {
+                    setSelectedEntity({ type: 'stakeholder', id: stakeholder.id, data: stakeholder });
+                  } else if (technology) {
+                    setSelectedEntity({ type: 'technology', id: technology.id, data: technology });
+                  } else if (project) {
+                    setSelectedEntity({ type: 'project', id: project.id, data: project });
+                  }
+                }}
+                className="w-full min-h-full"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full bg-gradient-to-br from-[#CCE2DC]/10 to-[#006E51]/5 rounded-xl">
+                <div className="text-center p-8">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-[#006E51] rounded-full flex items-center justify-center">
+                    <Network className="h-8 w-8 text-white" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-[#006E51] mb-2">Network Graph 3D</h3>
+                  <p className="text-gray-600 mb-4">Available for NAVIGATE data only</p>
+                  <p className="text-sm text-gray-500">Switch to NAVIGATE Data in Controls to view the 3D network visualization</p>
+                </div>
+              </div>
             )}
           </div>
         )

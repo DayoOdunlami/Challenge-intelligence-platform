@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev --turbopack -p 3001",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint"
@@ -27,6 +27,7 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@types/d3": "^7.4.3",
+    "@types/three": "^0.181.0",
     "@xyflow/react": "^12.9.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -40,10 +41,13 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-force-graph-2d": "^1.29.0",
+    "react-force-graph-3d": "^1.29.0",
     "react-markdown": "^10.1.0",
     "tailwind-merge": "^3.3.1",
+    "three": "^0.181.2",
     "vis-data": "^8.0.3",
-    "vis-timeline": "^8.4.0"
+    "vis-timeline": "^8.4.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

@@ -9,6 +9,7 @@ export type VisualizationType =
   | 'sankey'
   | 'heatmap'
   | 'network'
+  | 'network-toolkit'
   | 'sunburst'
   | 'chord'
   | 'radar'

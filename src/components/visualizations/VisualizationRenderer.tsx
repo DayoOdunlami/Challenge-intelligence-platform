@@ -6,7 +6,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { SankeyChart } from './SankeyChart';
 import { SankeyChartNavigate } from './SankeyChartNavigate';
 import { RadarChartNavigate } from './RadarChartNavigate';
@@ -21,17 +21,36 @@ import { ChordDiagram } from './ChordDiagram';
 import { ChordDiagramNavigate } from './ChordDiagramNavigate';
 import { NetworkGraph } from './NetworkGraph';
 import { NetworkGraphNavigate } from './NetworkGraphNavigate';
+import { NetworkGraphNavigate3D } from './NetworkGraphNavigate3D';
 import { StreamGraphNavigate } from './StreamGraphNavigate';
 import { ParallelCoordinatesNavigate } from './ParallelCoordinatesNavigate';
 import { SwarmPlotNavigate } from './SwarmPlotNavigate';
 import { TimelineNavigate } from './TimelineNavigate';
 import { BubbleScatterNavigate } from './BubbleScatterNavigate';
 import { BarChart3, Zap, Sun, Network } from 'lucide-react';
+import { D3NetworkGraphToolkit } from './D3NetworkGraphToolkit';
 import { Challenge, Stakeholder, Technology, Project, Relationship, FundingEvent, TechnologyCategory } from '@/lib/navigate-types';
 import { ClusterInfo } from '@/lib/cluster-analysis';
 import { TreemapViewMode } from '@/types/visualization-controls';
 
-type VisualizationType = 'sankey' | 'heatmap' | 'network' | 'sunburst' | 'chord' | 'radar' | 'bar' | 'circle' | 'bump' | 'treemap' | 'stream' | 'parallel' | 'swarm' | 'timeline' | 'bubble-scatter';
+type VisualizationType =
+  | 'sankey'
+  | 'heatmap'
+  | 'network'
+  | 'network3d'
+  | 'network-toolkit'
+  | 'sunburst'
+  | 'chord'
+  | 'radar'
+  | 'bar'
+  | 'circle'
+  | 'bump'
+  | 'treemap'
+  | 'stream'
+  | 'parallel'
+  | 'swarm'
+  | 'timeline'
+  | 'bubble-scatter';
 
 interface VisualizationRendererProps {
   activeViz: VisualizationType;
@@ -102,7 +121,12 @@ interface VisualizationRendererProps {
   onCellClick?: (sector: any, problemType: string) => void;
   onEntitySelect?: (entity: { type: 'stakeholder' | 'technology' | 'project' | 'funding'; id: string; data: any }) => void;
   onTechnologySelect?: (techId: string) => void;
-  
+  onExternalControlsChange?: (controls: React.ReactNode | null) => void;
+  inlineInsightsLocked?: boolean;
+  defaultInlineInsights?: boolean;
+  inlineInsightsLocked?: boolean;
+  defaultInlineInsights?: boolean;
+
   className?: string;
 }
 
@@ -163,6 +187,9 @@ export function VisualizationRenderer({
   onCellClick,
   onEntitySelect,
   onTechnologySelect,
+  onExternalControlsChange,
+  inlineInsightsLocked,
+  defaultInlineInsights = true,
   className = ''
 }: VisualizationRendererProps) {
   
@@ -192,6 +219,8 @@ export function VisualizationRenderer({
       case 'chord':
         return 'min-h-[70vh] max-h-[750px]'
       case 'network':
+      case 'network3d':
+      case 'network-toolkit':
         return 'min-h-[75vh] max-h-[800px]'
       case 'stream':
         return 'min-h-[70vh] max-h-[750px]'
@@ -413,6 +442,17 @@ export function VisualizationRenderer({
           )}
         </div>
       )
+    case 'network-toolkit':
+      return (
+        <div className={containerClass}>
+          <D3NetworkGraphToolkit
+            onExternalControlsChange={onExternalControlsChange}
+            onEntitySelect={onEntitySelect}
+            inlineInsightsLocked={inlineInsightsLocked}
+            defaultInlineInsights={defaultInlineInsights}
+          />
+        </div>
+      )
     case 'sunburst':
       return (
         <div className={containerClass}>
@@ -564,7 +604,7 @@ export function VisualizationRenderer({
           )}
         </div>
       )
-    case 'bubble-scatter':
+      case 'bubble-scatter':
       return (
         <div className={containerClass}>
           {useNavigateData ? (
@@ -588,6 +628,48 @@ export function VisualizationRenderer({
             <div className="flex items-center justify-center h-full bg-gradient-to-br from-[#CCE2DC]/10 to-[#006E51]/5 rounded-xl">
               <div className="text-center p-8">
                 <p className="text-gray-600">Bubble Scatter is only available with NAVIGATE data</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )
+    case 'network3d':
+      return (
+        <div className={containerClass}>
+          {useNavigateData ? (
+            <NetworkGraphNavigate3D 
+              stakeholders={stakeholders}
+              technologies={technologies}
+              projects={projects}
+              relationships={relationships}
+              selectedEntityId={onEntitySelect ? (onEntitySelect as any).selectedEntityId : undefined}
+              onEntitySelect={(entityId) => {
+                // Try to find entity in stakeholders, technologies, or projects
+                const stakeholder = stakeholders?.find(s => s.id === entityId);
+                const technology = technologies?.find(t => t.id === entityId);
+                const project = projects?.find(p => p.id === entityId);
+                
+                if (onEntitySelect) {
+                  if (stakeholder) {
+                    onEntitySelect({ type: 'stakeholder', id: stakeholder.id, data: stakeholder });
+                  } else if (technology) {
+                    onEntitySelect({ type: 'technology', id: technology.id, data: technology });
+                  } else if (project) {
+                    onEntitySelect({ type: 'project', id: project.id, data: project });
+                  }
+                }
+              }}
+              className="w-full min-h-full"
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full bg-gradient-to-br from-[#CCE2DC]/10 to-[#006E51]/5 rounded-xl">
+              <div className="text-center p-8">
+                <div className="w-16 h-16 mx-auto mb-4 bg-[#006E51] rounded-full flex items-center justify-center">
+                  <Network className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-xl font-semibold text-[#006E51] mb-2">Network Graph 3D</h3>
+                <p className="text-gray-600 mb-4">Available for NAVIGATE data only</p>
+                <p className="text-sm text-gray-500">Switch to NAVIGATE Data in Controls to view the 3D network visualization</p>
               </div>
             </div>
           )}

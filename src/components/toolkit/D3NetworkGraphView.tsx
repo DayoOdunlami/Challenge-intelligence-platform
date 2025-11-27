@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback, ReactNode } from 'react';
 import * as d3 from 'd3';
 import { CirclePackingNode } from '@/data/toolkit/circlePackingData';
 import {
@@ -16,6 +16,12 @@ type D3NetworkGraphViewProps = {
   selectedNode: CirclePackingNode | null;
   relatedEntities: CirclePackingNode[];
   onSelectNodeAction: (id: string | null) => void;
+  showEmbeddedControls?: boolean;
+  showEmbeddedInsights?: boolean;
+  onControlsRender?: ((renderControls: (() => ReactNode) | null) => void) | null;
+  onControlsVisibilityChange?: (visible: boolean) => void;
+  onInsightsVisibilityChange?: (visible: boolean) => void;
+  insightsToggleEnabled?: boolean;
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -33,18 +39,47 @@ const GROUP_COLORS: Record<string, string> = {
   working_group: '#264653',
 };
 
+type GraphNode = NetworkNode & d3.SimulationNodeDatum & { key: string };
+type GraphLink = Omit<NetworkLink, 'source' | 'target'> & d3.SimulationLinkDatum<GraphNode>;
+
+const buildCirclePath = (cx: number, cy: number, radius: number) =>
+  `M ${cx},${cy} m -${radius},0 a ${radius},${radius} 0 1,0 ${radius * 2},0 a ${radius},${radius} 0 1,0 -${radius * 2},0`;
+
+const computePodPath = (points: Array<{ x: number; y: number }>): string => {
+  if (!points.length) return '';
+  if (points.length === 1) {
+    return buildCirclePath(points[0].x, points[0].y, 50);
+  }
+
+  const cx = d3.mean(points, (p) => p.x) ?? 0;
+  const cy = d3.mean(points, (p) => p.y) ?? 0;
+  const maxDistance = d3.max(points, (p) => Math.hypot(p.x - cx, p.y - cy)) ?? 0;
+  const radius = Math.max(60, maxDistance + 50);
+  return buildCirclePath(cx, cy, radius);
+};
+
+const resolveNodeId = (value: GraphNode | string | number) =>
+  typeof value === 'object' ? value.id : String(value);
+
 export function D3NetworkGraphView({
   selectedId,
   highlightedIds,
   selectedNode,
   relatedEntities,
   onSelectNodeAction,
+  showEmbeddedControls = true,
+  showEmbeddedInsights = true,
+  onControlsRender = null,
+  onControlsVisibilityChange,
+  onInsightsVisibilityChange,
+  insightsToggleEnabled = true,
 }: D3NetworkGraphViewProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
-  const simulationRef = useRef<d3.Simulation<NetworkNode, NetworkLink> | null>(null);
-  const particlesRef = useRef<Map<string, { progress: number; link: NetworkLink }>>(new Map());
+  const simulationRef = useRef<d3.Simulation<GraphNode, GraphLink> | null>(null);
+  const particlesRef = useRef<Map<string, { progress: number; link: GraphLink }>>(new Map());
+  const lastSearchZoomRef = useRef<string>('');
   const [dimensions, setDimensions] = useState({ width: 800, height: 700 });
   const [groupingMode, setGroupingMode] = useState<'entity_type' | 'stakeholder_category' | 'random'>('stakeholder_category');
   const [forceRepulsion, setForceRepulsion] = useState(600);
@@ -55,21 +90,24 @@ export function D3NetworkGraphView({
   const [animatePaths, setAnimatePaths] = useState(true);
   const [animateLinkFlow, setAnimateLinkFlow] = useState(false);
   const [highlightSearchResults, setHighlightSearchResults] = useState(true);
+  const [searchFiltersResults, setSearchFiltersResults] = useState(false);
+  const [zoomToSearchResults, setZoomToSearchResults] = useState(true);
 
   const baseNetwork = useMemo(() => buildNetworkFromCircleData(), []);
   const [activeCategories, setActiveCategories] = useState<Set<string>>(
     () => new Set(baseNetwork.categories.map((category) => category.key))
   );
 
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+
   const filteredNetwork = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
     let nodes = baseNetwork.nodes;
 
-    if (query) {
+    if (normalizedSearchQuery && searchFiltersResults) {
       nodes = nodes.filter((node) => {
         const name = node.name.toLowerCase();
         const description = node.fullData.description?.toLowerCase() || '';
-        return name.includes(query) || description.includes(query);
+        return name.includes(normalizedSearchQuery) || description.includes(normalizedSearchQuery);
       });
     }
 
@@ -85,7 +123,20 @@ export function D3NetworkGraphView({
     );
 
     return { nodes, links };
-  }, [baseNetwork, searchQuery, activeCategories]);
+  }, [baseNetwork, normalizedSearchQuery, searchFiltersResults, activeCategories]);
+
+  const searchMatchedIds = useMemo(() => {
+    if (!normalizedSearchQuery) return new Set<string>();
+    const matches = new Set<string>();
+    baseNetwork.nodes.forEach((node) => {
+      const name = node.name.toLowerCase();
+      const description = node.fullData.description?.toLowerCase() || '';
+      if (name.includes(normalizedSearchQuery) || description.includes(normalizedSearchQuery)) {
+        matches.add(node.id);
+      }
+    });
+    return matches;
+  }, [baseNetwork, normalizedSearchQuery]);
 
   // Update dimensions on resize
   useEffect(() => {
@@ -102,23 +153,6 @@ export function D3NetworkGraphView({
     window.addEventListener('resize', updateDimensions);
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
-
-  const buildCirclePath = (cx: number, cy: number, radius: number) =>
-    `M ${cx},${cy} m -${radius},0 a ${radius},${radius} 0 1,0 ${radius * 2},0 a ${radius},${radius} 0 1,0 -${radius * 2},0`;
-
-  // Compute radial pod path for a group of nodes
-  const computePodPath = (points: Array<{ x: number; y: number }>): string => {
-    if (!points.length) return '';
-    if (points.length === 1) {
-      return buildCirclePath(points[0].x, points[0].y, 50);
-    }
-
-    const cx = d3.mean(points, (p) => p.x) ?? 0;
-    const cy = d3.mean(points, (p) => p.y) ?? 0;
-    const maxDistance = d3.max(points, (p) => Math.hypot(p.x - cx, p.y - cy)) ?? 0;
-    const radius = Math.max(60, maxDistance + 50);
-    return buildCirclePath(cx, cy, radius);
-  };
 
   // Main D3 rendering
   useEffect(() => {
@@ -147,11 +181,54 @@ export function D3NetworkGraphView({
     
     // Set initial zoom to show more of the graph (zoom out)
     const initialZoom = d3.zoomIdentity.scale(0.65).translate(width * 0.15, height * 0.15);
-    svg.call(zoomBehavior.transform as any, initialZoom);
+    const applyZoomTransform = (transform: d3.ZoomTransform) => {
+      svg.call(zoomBehavior.transform, transform);
+    };
+    svg.call(zoomBehavior);
+    svg.call(zoomBehavior.transform, initialZoom);
     zoomRef.current = zoomBehavior;
+    if (!zoomToSearchResults) {
+      lastSearchZoomRef.current = '';
+    }
+
+    const focusOnNodes = (targetNodes: typeof nodes, animate = true) => {
+      if (!targetNodes.length) return;
+      const xs = targetNodes.map((node) => node.x ?? 0);
+      const ys = targetNodes.map((node) => node.y ?? 0);
+      const minX = d3.min(xs) ?? 0;
+      const maxX = d3.max(xs) ?? 0;
+      const minY = d3.min(ys) ?? 0;
+      const maxY = d3.max(ys) ?? 0;
+      const padding = 150;
+      const nodesWidth = Math.max(1, maxX - minX);
+      const nodesHeight = Math.max(1, maxY - minY);
+      const scale = Math.min(
+        2.5,
+        Math.max(
+          0.4,
+          Math.min(width / (nodesWidth + padding), height / (nodesHeight + padding))
+        )
+      );
+      const translateX = width / 2 - scale * (minX + nodesWidth / 2);
+      const translateY = height / 2 - scale * (minY + nodesHeight / 2);
+      const transform = d3.zoomIdentity.translate(translateX, translateY).scale(scale);
+      if (animate) {
+        svg.transition().duration(450).call(zoomBehavior.transform, transform);
+      } else {
+        applyZoomTransform(transform);
+      }
+    };
+    const resetToInitialView = () => {
+      onSelectNodeAction(null);
+      if (normalizedSearchQuery) {
+        setSearchQuery('');
+      }
+      lastSearchZoomRef.current = '';
+      focusOnNodes(nodes, false);
+    };
 
     // Prepare nodes with initial positions based on grouping
-    const nodes = filteredNetwork.nodes.map((node) => {
+    const nodes: GraphNode[] = filteredNetwork.nodes.map((node) => {
       const key = groupingMode === 'entity_type' ? node.group : node.type;
       return {
         ...node,
@@ -159,6 +236,8 @@ export function D3NetworkGraphView({
         y: centerY + (Math.random() - 0.5) * 200,
         vx: 0,
         vy: 0,
+        fx: undefined,
+        fy: undefined,
         key,
       };
     });
@@ -189,11 +268,11 @@ export function D3NetworkGraphView({
       });
     }
 
-    // Create links
-    const links = filteredNetwork.links.map((link) => ({
+    // Create links (preserve line style metadata)
+    const links: GraphLink[] = filteredNetwork.links.map((link) => ({
+      ...link,
       source: nodes.find((n) => n.id === link.source) || link.source,
       target: nodes.find((n) => n.id === link.target) || link.target,
-      value: link.value,
     }));
 
     // Custom force to pull nodes toward their group centroid (from Stack Overflow article approach)
@@ -203,7 +282,7 @@ export function D3NetworkGraphView({
       
       const force = (alpha: number) => {
         // Calculate centroids for each group
-        const groups = new Map<string, { nodes: NetworkNode[]; cx: number; cy: number }>();
+        const groups = new Map<string, { nodes: GraphNode[]; cx: number; cy: number }>();
         
         nodes.forEach((node) => {
           const key = groupingMode === 'entity_type' ? node.group : node.type;
@@ -247,23 +326,23 @@ export function D3NetworkGraphView({
 
     // Create force simulation
     const simulation = d3
-      .forceSimulation<NetworkNode>(nodes)
+      .forceSimulation<GraphNode>(nodes)
       .force(
         'link',
         d3
-          .forceLink<NetworkNode, NetworkLink>(links)
+          .forceLink<GraphNode, GraphLink>(links)
           .id((d) => d.id)
           .distance((d) => {
-            const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
-            const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+            const sourceId = resolveNodeId(d.source);
+            const targetId = resolveNodeId(d.target);
             const link = filteredNetwork.links.find(
               (l) => l.source === sourceId && l.target === targetId
             );
             return link ? edgeLength * (link.value || 1) : edgeLength;
           })
           .strength((d) => {
-            const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
-            const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+            const sourceId = resolveNodeId(d.source);
+            const targetId = resolveNodeId(d.target);
             const sourceNode = typeof d.source === 'object' ? d.source : nodes.find((n) => n.id === sourceId);
             const targetNode = typeof d.target === 'object' ? d.target : nodes.find((n) => n.id === targetId);
             
@@ -277,9 +356,9 @@ export function D3NetworkGraphView({
             return 0.5;
           })
       )
-      .force('charge', d3.forceManyBody().strength(-forceRepulsion))
+      .force('charge', d3.forceManyBody<GraphNode>().strength(-forceRepulsion))
       .force('center', d3.forceCenter(centerX, centerY))
-      .force('collision', d3.forceCollide().radius((d) => (d.symbolSize || 20) + 5));
+      .force('collision', d3.forceCollide<GraphNode>().radius((d) => (d.symbolSize || 20) + 5));
 
     // Add custom group centroid force (applied in tick handler instead of as a force)
     const applyGroupCentroidForce = groupCentroidForce();
@@ -288,7 +367,7 @@ export function D3NetworkGraphView({
 
     // Create arrow markers for directional links
     const defs = svg.append('defs');
-    const arrowMarker = defs
+    defs
       .append('marker')
       .attr('id', 'arrowhead')
       .attr('viewBox', '0 -5 10 10')
@@ -300,116 +379,90 @@ export function D3NetworkGraphView({
       .append('path')
       .attr('d', 'M0,-5L10,0L0,5')
       .attr('fill', 'rgba(148,163,184,0.6)');
+    const glowFilter = defs
+      .append('filter')
+      .attr('id', 'selected-glow')
+      .attr('x', '-50%')
+      .attr('y', '-50%')
+      .attr('width', '200%')
+      .attr('height', '200%');
+    glowFilter.append('feGaussianBlur').attr('stdDeviation', 6).attr('result', 'blur');
+    const merge = glowFilter.append('feMerge');
+    merge.append('feMergeNode').attr('in', 'blur');
+    merge.append('feMergeNode').attr('in', 'SourceGraphic');
 
-    // Get search-matched node IDs for highlighting
-    const searchMatchedIds = new Set<string>();
-    if (searchQuery.trim() && highlightSearchResults) {
-      const query = searchQuery.trim().toLowerCase();
-      filteredNetwork.nodes.forEach((node) => {
-        const name = node.name.toLowerCase();
-        const description = node.fullData.description?.toLowerCase() || '';
-        if (name.includes(query) || description.includes(query)) {
-          searchMatchedIds.add(node.id);
-        }
-      });
-    }
+    const shouldHighlightSearch = highlightSearchResults && normalizedSearchQuery.length > 0;
 
 
     // Draw links
     const link = linkGroup
-      .selectAll<SVGLineElement, NetworkLink>('line')
+      .selectAll<SVGLineElement, GraphLink>('line')
       .data(links)
       .enter()
       .append('line')
-      .attr('stroke', 'rgba(148,163,184,0.4)')
-      .attr('stroke-width', 1.5)
+      .attr('stroke', (d) => d.lineStyle?.color || 'rgba(148,163,184,0.6)')
+      .attr('stroke-width', (d) => d.lineStyle?.width || 1.5)
       .attr('marker-end', showLinkDirection ? 'url(#arrowhead)' : null)
       .attr('opacity', (d) => {
-        if (!selectedId || !highlightedIds) return 0.4;
-        const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
-        const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+        const baseOpacity = d.lineStyle?.opacity ?? 0.65;
+        if (!selectedId || !highlightedIds || highlightedIds.size === 0) return baseOpacity;
+        const sourceId = resolveNodeId(d.source);
+        const targetId = resolveNodeId(d.target);
         const isHighlighted = highlightedIds.has(sourceId) && highlightedIds.has(targetId);
-        
         if (animatePaths && selectedId) {
-          // Animate path reveal: fade in from selected node
           const isFromSelected = sourceId === selectedId || targetId === selectedId;
-          return isHighlighted ? 0.9 : isFromSelected ? 0.6 : 0.1;
+          return isHighlighted ? Math.min(1, baseOpacity + 0.35) : isFromSelected ? 0.55 : 0.15;
         }
-        return isHighlighted ? 0.8 : 0.1;
+        return isHighlighted ? Math.min(1, baseOpacity + 0.25) : 0.2;
       })
       .attr('stroke-width', (d) => {
-        if (!selectedId || !highlightedIds) return 1.5;
-        const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
-        const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+        const baseWidth = d.lineStyle?.width || 1.5;
+        if (!selectedId || !highlightedIds || highlightedIds.size === 0) return baseWidth;
+        const sourceId = resolveNodeId(d.source);
+        const targetId = resolveNodeId(d.target);
         const isHighlighted = highlightedIds.has(sourceId) && highlightedIds.has(targetId);
-        return isHighlighted ? 2.5 : 1;
+        return isHighlighted ? baseWidth * 1.6 : Math.max(1, baseWidth * 0.6);
+      })
+      .on('click', (event) => {
+        event.stopPropagation();
       });
 
 
     // Draw nodes
     const node = nodeGroup
-      .selectAll<SVGCircleElement, NetworkNode>('circle')
+      .selectAll<SVGCircleElement, GraphNode>('circle')
       .data(nodes)
       .enter()
       .append('circle')
       .attr('r', (d) => d.symbolSize || 20)
-      .attr('fill', (d) => d.itemStyle.color)
+      .attr('fill', (d) => TYPE_COLORS[d.type] || d.itemStyle.color)
       .attr('stroke', (d) => {
-        if (d.id === selectedId) return '#f59e0b';
-        if (highlightSearchResults && searchMatchedIds.has(d.id)) return '#10b981';
+        if (d.id === selectedId) return '#fbbf24';
+        if (shouldHighlightSearch && searchMatchedIds.has(d.id)) return '#10b981';
         return highlightedIds?.has(d.id) ? '#6366f1' : '#ffffff';
       })
       .attr('stroke-width', (d) => {
-        if (d.id === selectedId) return 3;
-        if (highlightSearchResults && searchMatchedIds.has(d.id)) return 2.5;
+        if (d.id === selectedId) return 4;
+        if (shouldHighlightSearch && searchMatchedIds.has(d.id)) return 2.5;
         return highlightedIds?.has(d.id) ? 2 : 1;
       })
+      .attr('filter', (d) => (d.id === selectedId ? 'url(#selected-glow)' : null))
       .attr('opacity', (d) => {
         if (!selectedId || !highlightedIds) {
-          // Pulse animation for search results
-          if (highlightSearchResults && searchMatchedIds.has(d.id)) return 1;
+          if (shouldHighlightSearch && searchMatchedIds.has(d.id)) return 1;
           return 1;
         }
         return highlightedIds.has(d.id) ? 1 : 0.25;
       })
       .style('cursor', 'pointer')
-      .on('click', (_, d) => {
+      .on('click', (event, d) => {
+        event.stopPropagation();
         onSelectNodeAction(d.id === selectedId ? null : d.id);
       });
 
-    // Add pulse animation for search results
-    if (highlightSearchResults && searchMatchedIds.size > 0) {
-      node
-        .filter((d) => searchMatchedIds.has(d.id))
-        .attr('class', 'search-highlight')
-        .each(function () {
-          d3.select(this)
-            .transition()
-            .duration(1000)
-            .ease(d3.easeSinInOut)
-            .attr('r', (d: NetworkNode) => (d.symbolSize || 20) + 3)
-            .transition()
-            .duration(1000)
-            .ease(d3.easeSinInOut)
-            .attr('r', (d: NetworkNode) => d.symbolSize || 20)
-            .on('end', function repeat() {
-              d3.select(this)
-                .transition()
-                .duration(1000)
-                .ease(d3.easeSinInOut)
-                .attr('r', (d: NetworkNode) => (d.symbolSize || 20) + 3)
-                .transition()
-                .duration(1000)
-                .ease(d3.easeSinInOut)
-                .attr('r', (d: NetworkNode) => d.symbolSize || 20)
-                .on('end', repeat);
-            });
-        });
-    }
-
     // Drag behaviour
     const dragBehaviour = d3
-      .drag<SVGCircleElement, NetworkNode>()
+      .drag<SVGCircleElement, GraphNode>()
       .on('start', (event, d) => {
         if (!event.active && simulationRef.current) {
           simulationRef.current.alphaTarget(0.3).restart();
@@ -428,11 +481,11 @@ export function D3NetworkGraphView({
         d.fx = null;
         d.fy = null;
       });
-    node.call(dragBehaviour as any);
+    node.call(dragBehaviour);
 
     // Add labels
     const label = nodeGroup
-      .selectAll<SVGTextElement, NetworkNode>('text')
+      .selectAll<SVGTextElement, GraphNode>('text')
       .data(nodes)
       .enter()
       .append('text')
@@ -446,8 +499,13 @@ export function D3NetworkGraphView({
         return highlightedIds.has(d.id) ? 1 : 0.25;
       });
 
+    svg.on('click', () => {
+      resetToInitialView();
+    });
+
     // Particle animation for link flow
     const particleGroup = linkGroup.append('g').attr('class', 'particles');
+    const particleMap = particlesRef.current;
     let particleIdCounter = 0;
     let animationFrameId: number | null = null;
 
@@ -472,27 +530,47 @@ export function D3NetworkGraphView({
           .duration(200)
           .ease(d3.easeCubicOut)
           .attr('opacity', (d) => {
-            const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
-            const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+            const sourceId = resolveNodeId(d.source);
+            const targetId = resolveNodeId(d.target);
             const isHighlighted = highlightedIds?.has(sourceId) && highlightedIds?.has(targetId);
             const isFromSelected = sourceId === selectedId || targetId === selectedId;
-            return isHighlighted ? 0.9 : isFromSelected ? 0.6 : 0.1;
+            const baseOpacity = d.lineStyle?.opacity ?? 0.65;
+            return isHighlighted ? Math.min(1, baseOpacity + 0.35) : isFromSelected ? 0.55 : 0.15;
           })
           .attr('stroke-width', (d) => {
-            const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
-            const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+            const sourceId = resolveNodeId(d.source);
+            const targetId = resolveNodeId(d.target);
             const isHighlighted = highlightedIds?.has(sourceId) && highlightedIds?.has(targetId);
-            return isHighlighted ? 2.5 : 1;
+            const baseWidth = d.lineStyle?.width || 1.5;
+            return isHighlighted ? baseWidth * 1.6 : Math.max(1, baseWidth * 0.6);
           });
       }
 
       node.attr('cx', (d) => d.x!).attr('cy', (d) => d.y!);
       label.attr('x', (d) => d.x!).attr('y', (d) => d.y!);
 
+      if (zoomToSearchResults) {
+        if (normalizedSearchQuery && searchMatchedIds.size > 0 && lastSearchZoomRef.current !== normalizedSearchQuery) {
+          const matchedNodes = nodes.filter(
+            (node) => searchMatchedIds.has(node.id) && node.x !== undefined && node.y !== undefined
+          );
+          if (matchedNodes.length) {
+            focusOnNodes(matchedNodes);
+            lastSearchZoomRef.current = normalizedSearchQuery;
+          }
+        } else if (normalizedSearchQuery && searchMatchedIds.size === 0 && lastSearchZoomRef.current) {
+          lastSearchZoomRef.current = '';
+          applyZoomTransform(initialZoom);
+        } else if (!normalizedSearchQuery && lastSearchZoomRef.current) {
+          lastSearchZoomRef.current = '';
+          applyZoomTransform(initialZoom);
+        }
+      }
+
       // Animate link flow particles (handled via animation frame for smoother performance)
       if (!animateLinkFlow) {
         particleGroup.selectAll('*').remove();
-        particlesRef.current.clear();
+        particleMap.clear();
         if (animationFrameId !== null) {
           cancelAnimationFrame(animationFrameId);
           animationFrameId = null;
@@ -526,7 +604,8 @@ export function D3NetworkGraphView({
             .attr('fill-opacity', 0.1)
             .attr('stroke', color)
             .attr('stroke-width', 2)
-            .attr('stroke-opacity', 0.3);
+            .attr('stroke-opacity', 0.3)
+            .attr('pointer-events', 'none');
         });
       }
     });
@@ -540,8 +619,8 @@ export function D3NetworkGraphView({
       // Spawn new particles occasionally (only on highlighted links when selected)
       const activeLinks = selectedId && highlightedIds
         ? links.filter((l) => {
-            const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
-            const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+            const sourceId = resolveNodeId(l.source);
+            const targetId = resolveNodeId(l.target);
             return highlightedIds.has(sourceId) && highlightedIds.has(targetId);
           })
         : links;
@@ -550,24 +629,27 @@ export function D3NetworkGraphView({
         const randomLink = activeLinks[Math.floor(Math.random() * activeLinks.length)];
         if (randomLink) {
           const id = `particle-${particleIdCounter++}`;
-          particlesRef.current.set(id, { progress: 0, link: randomLink });
+          particleMap.set(id, { progress: 0, link: randomLink });
         }
       }
 
       // Update and draw particles
-      const particleKeys = Array.from(particlesRef.current.keys());
+      const particleKeys = Array.from(particleMap.keys());
       const particles = particleGroup.selectAll<SVGCircleElement, string>('circle.particle').data(particleKeys);
+      const typedParticles = particles as d3.Selection<SVGCircleElement, string, SVGGElement, unknown>;
       
-      particles
+      const particleSelection = particles
         .enter()
         .append('circle')
         .attr('class', 'particle')
         .attr('r', 2.5)
         .attr('fill', '#3b82f6')
         .attr('opacity', 0.8)
-        .merge(particles as any)
+        .merge(typedParticles);
+      
+      particleSelection
         .each(function (id) {
-          const particle = particlesRef.current.get(id);
+          const particle = particleMap.get(id);
           if (!particle) {
             d3.select(this).remove();
             return;
@@ -575,13 +657,13 @@ export function D3NetworkGraphView({
           
           const { link: linkData, progress } = particle;
           // Find nodes from the simulation
-          const sourceId = typeof linkData.source === 'object' ? linkData.source.id : linkData.source;
-          const targetId = typeof linkData.target === 'object' ? linkData.target.id : linkData.target;
+          const sourceId = resolveNodeId(linkData.source);
+          const targetId = resolveNodeId(linkData.target);
           const source = nodes.find((n) => n.id === sourceId);
           const target = nodes.find((n) => n.id === targetId);
           
           if (!source || !target || source.x === undefined || source.y === undefined || target.x === undefined || target.y === undefined) {
-            particlesRef.current.delete(id);
+            particleMap.delete(id);
             d3.select(this).remove();
             return;
           }
@@ -593,7 +675,7 @@ export function D3NetworkGraphView({
           
           particle.progress += 0.015;
           if (particle.progress >= 1) {
-            particlesRef.current.delete(id);
+            particleMap.delete(id);
             d3.select(this).remove();
           }
         });
@@ -610,11 +692,12 @@ export function D3NetworkGraphView({
 
     // Cleanup
     return () => {
+      svg.on('click', null);
       simulation.stop();
       if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId);
       }
-      particlesRef.current.clear();
+      particleMap.clear();
     };
   }, [
     filteredNetwork,
@@ -629,12 +712,14 @@ export function D3NetworkGraphView({
     animatePaths,
     animateLinkFlow,
     highlightSearchResults,
-    searchQuery,
+    searchMatchedIds,
+    zoomToSearchResults,
+    normalizedSearchQuery,
     onSelectNodeAction,
   ]);
 
-  return (
-    <div className="flex flex-col gap-4">
+  const renderControls = useCallback(() => (
+    <>
       <div className="flex flex-wrap gap-4 px-4">
         <div className="flex items-center gap-2 text-sm">
           <label className="text-xs text-slate-600 whitespace-nowrap">Group by:</label>
@@ -679,14 +764,36 @@ export function D3NetworkGraphView({
           )}
         </div>
       </div>
+      <div className="px-4 flex flex-wrap gap-4 text-sm">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={searchFiltersResults}
+            onChange={(e) => setSearchFiltersResults(e.target.checked)}
+            className="rounded"
+          />
+          <span className="text-xs text-slate-700">Filter graph when searching</span>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={zoomToSearchResults}
+            onChange={(e) => {
+              setZoomToSearchResults(e.target.checked);
+              if (!e.target.checked) {
+                lastSearchZoomRef.current = '';
+              }
+            }}
+            className="rounded"
+          />
+          <span className="text-xs text-slate-700">Zoom to search results</span>
+        </label>
+      </div>
 
       <div className="px-4 flex flex-wrap gap-2 text-sm">
         {baseNetwork.categories.map((category) => {
           const active = activeCategories.has(category.key);
-          const color =
-            TYPE_COLORS[category.key] ||
-            category.color ||
-            '#64748b';
+          const color = TYPE_COLORS[category.key] || '#64748b';
           return (
             <label
               key={category.key}
@@ -789,8 +896,55 @@ export function D3NetworkGraphView({
           <span className="text-xs text-slate-700">Highlight Search Results</span>
         </label>
       </div>
+    </>
+  ), [
+    groupingMode,
+    showGroupPods,
+    searchQuery,
+    searchFiltersResults,
+    zoomToSearchResults,
+    baseNetwork,
+    activeCategories,
+    forceRepulsion,
+    edgeLength,
+    showLinkDirection,
+    animatePaths,
+    animateLinkFlow,
+    highlightSearchResults,
+  ]);
 
-      <div className="flex flex-col lg:flex-row gap-4">
+  useEffect(() => {
+    if (!onControlsRender) return;
+    onControlsRender(renderControls);
+    return () => {
+      onControlsRender(null);
+    };
+  }, [onControlsRender, renderControls]);
+
+  return (
+    <div className="flex flex-col gap-4">
+      {showEmbeddedControls ? (
+        <div className="relative flex flex-col gap-4 bg-white/70 rounded-xl border border-slate-200 py-2">
+          <button
+            className="self-end mr-4 inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 transition-colors"
+            onClick={() => onControlsVisibilityChange?.(false)}
+          >
+            Hide inline controls
+          </button>
+          {renderControls()}
+        </div>
+      ) : (
+        <div className="flex justify-end px-4 -mb-2">
+          <button
+            className="text-xs px-3 py-1 rounded-full border border-slate-300 text-slate-600 hover:bg-slate-100 transition-colors"
+            onClick={() => onControlsVisibilityChange?.(true)}
+          >
+            Show inline controls
+          </button>
+        </div>
+      )}
+
+      <div className={`flex flex-col ${showEmbeddedInsights ? 'lg:flex-row' : ''} gap-4`}>
         <div
           ref={containerRef}
           className="flex-1 bg-white rounded-xl shadow border border-slate-200"
@@ -798,14 +952,34 @@ export function D3NetworkGraphView({
         >
           <svg ref={svgRef} width={dimensions.width} height={dimensions.height} />
         </div>
-        <div className="w-full lg:w-80 bg-slate-50 border border-slate-200 rounded-xl p-4">
-          <StakeholderInsightPanel
-            selectedNode={selectedNode}
-            relatedEntities={relatedEntities}
-            onSelectNodeAction={onSelectNodeAction}
-            emptyState="Click any node in the graph to view its details, connections, and related entities."
-          />
-        </div>
+        {showEmbeddedInsights ? (
+          <div className="w-full lg:w-80 bg-slate-50 border border-slate-200 rounded-xl p-4 relative">
+            {insightsToggleEnabled && (
+              <button
+                className="absolute top-2 right-2 text-[10px] text-slate-500 hover:text-slate-700 transition-colors"
+                onClick={() => onInsightsVisibilityChange?.(false)}
+              >
+                Hide
+              </button>
+            )}
+            <StakeholderInsightPanel
+              selectedNode={selectedNode}
+              relatedEntities={relatedEntities}
+              onSelectNodeAction={onSelectNodeAction}
+              emptyState="Click any node in the graph to view its details, connections, and related entities."
+            />
+          </div>
+        ) : (
+          insightsToggleEnabled && (
+          <div className="flex justify-end px-4">
+            <button
+              className="text-xs px-3 py-1 rounded-full border border-slate-300 text-slate-600 hover:bg-slate-100 transition-colors"
+              onClick={() => onInsightsVisibilityChange?.(true)}
+            >
+              Show inline insights
+            </button>
+          </div>
+        ))}
       </div>
     </div>
   );

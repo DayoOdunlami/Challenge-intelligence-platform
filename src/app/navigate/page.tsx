@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, Suspense } from "react"
+import { useState, useEffect, useMemo, Suspense, ReactNode } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { BarChart3, Network, Zap, Sun, GitBranch, MessageCircle, Maximize2, TrendingUp, DollarSign, Cpu, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -17,15 +17,40 @@ import { ClusterInfo } from "@/lib/cluster-analysis"
 import { AIChatPanel } from "@/components/layouts/AIChatPanel"
 import { TimelineTrack, BarSortOrder, BarValueMode, HeatmapColorMode, TreemapViewMode } from "@/types/visualization-controls"
 import { TechnologyCategory, StakeholderType } from "@/lib/navigate-types"
+import { VisualLibrarySection } from "@/components/visualizations/VisualLibrarySection"
+import challenges from "@/data/challenges"
+import { NetworkGraph } from "@/components/visualizations/NetworkGraph"
+import { NetworkGraphNavigate, NetworkRelationshipControls } from "@/components/visualizations/NetworkGraphNavigate"
+import { NetworkGraphNavigate3D } from "@/components/visualizations/NetworkGraphNavigate3D"
+import { NetworkGraphD3 } from "@/components/visualizations/NetworkGraphD3"
+import { NetworkGraphECharts } from "@/components/visualizations/NetworkGraphECharts"
+import { SankeyChart } from "@/components/visualizations/SankeyChart"
+import { SankeyChartNavigate } from "@/components/visualizations/SankeyChartNavigate"
+import { HeatmapChart } from "@/components/visualizations/HeatmapChart"
+import { HeatmapNavigate } from "@/components/visualizations/HeatmapNavigate"
+import { SunburstChart } from "@/components/visualizations/SunburstChart"
+import { CirclePackingNavigate } from "@/components/visualizations/CirclePackingNavigate"
+import { TreemapNavigate } from "@/components/visualizations/TreemapNavigate"
+import { TreemapSunburstExplorer } from "@/components/visualizations/TreemapSunburstExplorer"
+import { ChordDiagram } from "@/components/visualizations/ChordDiagram"
+import { ChordDiagramNavigate } from "@/components/visualizations/ChordDiagramNavigate"
+import { RadarChartNavigate } from "@/components/visualizations/RadarChartNavigate"
+import { BarChartNavigate } from "@/components/visualizations/BarChartNavigate"
+import { BumpChartNavigate } from "@/components/visualizations/BumpChartNavigate"
+import { StreamGraphNavigate } from "@/components/visualizations/StreamGraphNavigate"
+import { ParallelCoordinatesNavigate } from "@/components/visualizations/ParallelCoordinatesNavigate"
+import { SwarmPlotNavigate } from "@/components/visualizations/SwarmPlotNavigate"
+import { UnifiedInsightsPanel } from "@/components/visualizations/UnifiedInsightsPanel"
+import { CirclePackingNode } from "@/data/toolkit/circlePackingData"
 
-type VisualizationType = 'sankey' | 'heatmap' | 'network' | 'sunburst' | 'chord' | 'radar' | 'bar' | 'circle' | 'bump' | 'treemap' | 'stream' | 'parallel' | 'swarm' | 'timeline' | 'bubble-scatter'
+type VisualizationType = 'sankey' | 'heatmap' | 'network' | 'network3d' | 'network-toolkit' | 'sunburst' | 'chord' | 'radar' | 'bar' | 'circle' | 'bump' | 'treemap' | 'stream' | 'parallel' | 'swarm' | 'timeline' | 'bubble-scatter'
 
 type ViewCategory = 'all' | 'network' | 'funding' | 'technology' | 'dashboard'
 
 // Visualization categories mapping
 const visualizationCategories: Record<ViewCategory, VisualizationType[]> = {
-  all: ['sankey', 'heatmap', 'network', 'sunburst', 'chord', 'radar', 'bar', 'circle', 'bump', 'treemap', 'stream', 'parallel', 'swarm', 'timeline', 'bubble-scatter'],
-  network: ['network', 'circle'],
+  all: ['sankey', 'heatmap', 'network', 'network3d', 'network-toolkit', 'sunburst', 'chord', 'radar', 'bar', 'circle', 'bump', 'treemap', 'stream', 'parallel', 'swarm', 'timeline', 'bubble-scatter'],
+  network: ['network', 'network3d', 'network-toolkit', 'circle', 'chord'],
   funding: ['sankey', 'treemap', 'stream'],
   technology: ['radar', 'bump', 'timeline', 'parallel', 'swarm', 'bubble-scatter'],
   dashboard: ['bar', 'heatmap', 'bubble-scatter']
@@ -113,6 +138,22 @@ const visualizations = [
     category: 'network' as ViewCategory
   },
   {
+    id: 'network3d' as VisualizationType,
+    name: 'Network Graph 3D',
+    description: '3D interactive network visualization',
+    icon: Network,
+    color: '#006E51',
+    category: 'network' as ViewCategory
+  },
+  {
+    id: 'network-toolkit' as VisualizationType,
+    name: 'Toolkit Network (D3)',
+    description: 'Toolkit force-directed network with advanced grouping & pods',
+    icon: Network,
+    color: '#0EA5E9',
+    category: 'network' as ViewCategory
+  },
+  {
     id: 'sunburst' as VisualizationType,
     name: 'Hierarchical View',
     description: 'Multi-level challenge breakdown',
@@ -159,18 +200,18 @@ const categoryNavItems = [
   {
     id: 'all' as ViewCategory,
     name: 'All Visualizations',
-    description: 'View all 13 visualizations',
+    description: `View all ${visualizationCategories.all.length} visualizations`,
     icon: BarChart3,
     color: '#006E51',
-    count: 13
+    count: visualizationCategories.all.length
   },
   {
     id: 'network' as ViewCategory,
     name: 'Network Analysis',
-    description: 'Network Graph, Circle Packing, Relationship Matrix',
+    description: 'Network Graphs, Circle Packing, Relationship Matrix',
     icon: Network,
     color: '#50C878',
-    count: 3
+    count: visualizationCategories.network.length
   },
   {
     id: 'funding' as ViewCategory,
@@ -178,7 +219,7 @@ const categoryNavItems = [
     description: 'Flow Analysis, Funding Breakdown, Funding Trends',
     icon: DollarSign,
     color: '#F5A623',
-    count: 3
+    count: visualizationCategories.funding.length
   },
   {
     id: 'technology' as ViewCategory,
@@ -186,7 +227,7 @@ const categoryNavItems = [
     description: 'Radar, TRL Progression, Parallel Coordinates, Distribution',
     icon: Cpu,
     color: '#8b5cf6',
-    count: 4
+    count: visualizationCategories.technology.length
   },
   {
     id: 'dashboard' as ViewCategory,
@@ -194,7 +235,7 @@ const categoryNavItems = [
     description: 'Bar Charts, Heatmaps, Hierarchical Views',
     icon: TrendingUp,
     color: '#4A90E2',
-    count: 3
+    count: visualizationCategories.dashboard.length
   }
 ]
 
@@ -233,6 +274,7 @@ function NavigateContent() {
   const [controlsCollapseTimeout, setControlsCollapseTimeout] = useState<NodeJS.Timeout | null>(null)
   const [currentLayout, setCurrentLayout] = useState<LayoutOption>('option2')
   const [categoriesCollapsed, setCategoriesCollapsed] = useState(true) // Start minimized
+  const [externalControlsContent, setExternalControlsContent] = useState<ReactNode | null>(null)
   
   // All the same state variables as visualizations page...
   const [circlePackingView, setCirclePackingView] = useState<'by_stakeholder_type' | 'by_technology_category' | 'by_funding'>('by_stakeholder_type')
@@ -264,6 +306,17 @@ function NavigateContent() {
     government_funding_multiplier: 100,
     private_funding_multiplier: 200 // Default accelerated: double private funding
   })
+  const [libraryRelationshipFilters, setLibraryRelationshipFilters] = useState({
+    funds: true,
+    collaborates_with: true,
+    researches: true,
+    advances: true,
+    participates_in: true,
+  })
+  const [libraryHideIsolated, setLibraryHideIsolated] = useState(false)
+  const [libraryNodeSpacing, setLibraryNodeSpacing] = useState(0.5)
+  const [libraryShowSpacingControl, setLibraryShowSpacingControl] = useState(true)
+  const [showInlineLibraryNetworkControls, setShowInlineLibraryNetworkControls] = useState(true)
   const [timelineTracks, setTimelineTracks] = useState<Record<TimelineTrack, boolean>>({
     technology: true,
     infrastructure: true,
@@ -283,6 +336,12 @@ function NavigateContent() {
       return { ...prev, [track]: !isEnabled }
     })
   }
+
+  useEffect(() => {
+    if (activeViz !== 'network-toolkit' && externalControlsContent) {
+      setExternalControlsContent(null)
+    }
+  }, [activeViz, externalControlsContent])
   const [barSortOrder, setBarSortOrder] = useState<BarSortOrder>('desc')
   const [barValueMode, setBarValueMode] = useState<BarValueMode>('absolute')
   const [heatmapColorMode, setHeatmapColorMode] = useState<HeatmapColorMode>('absolute')
@@ -654,7 +713,7 @@ function NavigateContent() {
   
   // Auto-enable NAVIGATE data for NAVIGATE-only visualizations
   useEffect(() => {
-    const navigateOnlyVisualizations: VisualizationType[] = ['stream', 'parallel', 'swarm', 'radar', 'bar', 'circle', 'bump', 'treemap', 'heatmap', 'chord'];
+    const navigateOnlyVisualizations: VisualizationType[] = ['stream', 'parallel', 'swarm', 'radar', 'bar', 'circle', 'bump', 'treemap', 'heatmap', 'chord', 'network3d'];
     if (navigateOnlyVisualizations.includes(activeViz) && !useNavigateData) {
       setUseNavigateData(true);
     }
@@ -945,10 +1004,16 @@ function NavigateContent() {
                   availableCount={filteredTechnologies.length}
                   totalTechnologyCount={technologies.length}
                 >
-              <VisualizationControlSections
-                activeViz={activeViz}
-                context={controlContext}
-              />
+              {activeViz === 'network-toolkit'
+                ? (externalControlsContent ?? (
+                    <div className="p-4 text-sm text-gray-500">Toolkit network controls loading…</div>
+                  ))
+                : (
+                  <VisualizationControlSections
+                    activeViz={activeViz}
+                    context={controlContext}
+                  />
+                )}
                 </GlobalControlsPanel>
               </div>
             </>
@@ -1020,63 +1085,29 @@ function NavigateContent() {
                 }
               }}
               highlightedEntityIds={highlightedEntityIds}
+              onExternalControlsChange={setExternalControlsContent}
+              inlineInsightsLocked={currentLayout === 'option3'}
+              defaultInlineInsights={currentLayout !== 'option3'}
             />
             </div>
           }
           insightsPanel={
             showInsights ? (
-              <div className="p-6 bg-white/80 backdrop-blur-sm rounded-xl border border-[#CCE2DC]/50">
-                <h3 className="text-lg font-semibold text-[#006E51] mb-4">Insights</h3>
-                <div className="space-y-4">
-                    {selectedEntity ? (
-                      <div className="p-4 bg-[#CCE2DC]/20 rounded-lg">
-                        <h4 className="font-medium text-[#006E51] mb-2 capitalize">
-                          {selectedEntity.type} Details
-                        </h4>
-                        <h5 className="font-semibold mb-1">{selectedEntity.data.name}</h5>
-                        {selectedEntity.data.description && (
-                          <p className="text-sm text-gray-600 mb-2">{selectedEntity.data.description}</p>
-                        )}
-                        <button
-                          onClick={() => setSelectedEntity(null)}
-                          className="text-xs text-[#006E51] hover:underline"
-                        >
-                          Clear selection
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="p-4 bg-[#CCE2DC]/20 rounded-lg">
-                        <h4 className="font-medium text-[#006E51] mb-2">Overview</h4>
-                        <p className="text-sm text-gray-600">
-                          Click on visualization elements to see detailed insights here.
-                        </p>
-                      </div>
-                    )}
-                    
-                    {/* Quick Stats */}
-                    <div className="p-4 bg-white rounded-lg border border-gray-200">
-                      <h4 className="font-medium text-[#006E51] mb-3">Quick Stats</h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Total Funding</span>
-                          <span className="font-medium">£{(totalFunding / 1000000).toFixed(0)}M</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Stakeholders</span>
-                          <span className="font-medium">{totalStakeholders}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Technologies</span>
-                          <span className="font-medium">{totalTechnologies}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Projects</span>
-                          <span className="font-medium">{totalProjects}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              <UnifiedInsightsPanel
+                selectedEntity={selectedEntity}
+                relatedEntities={
+                  selectedEntity?.data?.relatedEntities as CirclePackingNode[] | undefined
+                }
+                onEntitySelect={(entity) => setSelectedEntity(entity)}
+                onClearSelection={() => setSelectedEntity(null)}
+                showQuickStats={true}
+                quickStats={{
+                  totalFunding,
+                  totalStakeholders,
+                  totalTechnologies,
+                  totalProjects,
+                }}
+              />
             ) : (
               <div className="p-6 bg-white/80 backdrop-blur-sm rounded-xl border border-[#CCE2DC]/50">
                 <p className="text-sm text-gray-600">Insights panel hidden</p>
@@ -1146,6 +1177,481 @@ function NavigateContent() {
           quickStats={null}
         />
       </div>
+
+        {/* Toolkit Network Gold Standard */}
+        <section className="mt-24 space-y-6" id="library-network">
+          <div className="text-center space-y-3">
+            <div className="inline-block">
+              <div className="relative px-4 py-2 text-sm font-medium rounded-full bg-[#CCE2DC]/50 backdrop-blur-sm border border-[#006E51]/20 mb-4">
+                <span className="relative z-10 text-[#006E51]">Gold Standard</span>
+              </div>
+            </div>
+            <h2 className="text-3xl font-bold text-[#2E2D2B]">Toolkit Network Diagram</h2>
+            <p className="text-gray-600 max-w-3xl mx-auto">
+              Toolkit force-directed graph using real NAVIGATE relationships. Compare inline controls with a persistent side-panel view.
+            </p>
+            <Button
+              variant="outline"
+              className="inline-flex items-center gap-2 text-sm"
+              onClick={() => setShowInlineLibraryNetworkControls((prev) => !prev)}
+            >
+              {showInlineLibraryNetworkControls ? 'Hide Inline Controls' : 'Show Inline Controls'}
+            </Button>
+          </div>
+
+          <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6">
+            <NetworkGraphNavigate
+              stakeholders={stakeholders}
+              technologies={technologies}
+              projects={projects}
+              relationships={relationships}
+              className="border-none shadow-none"
+              showControls={showInlineLibraryNetworkControls}
+              relationshipFilters={libraryRelationshipFilters}
+              onRelationshipFiltersChange={setLibraryRelationshipFilters}
+              hideIsolatedNodes={libraryHideIsolated}
+              onHideIsolatedNodesChange={setLibraryHideIsolated}
+              nodeSpacing={libraryNodeSpacing}
+              onNodeSpacingChange={setLibraryNodeSpacing}
+              showSpacingControl={libraryShowSpacingControl}
+              onShowSpacingControlChange={setLibraryShowSpacingControl}
+            />
+
+            <div className="bg-white/80 backdrop-blur-sm border border-[#CCE2DC]/60 rounded-xl p-6">
+              <NetworkRelationshipControls
+                relationshipFilters={libraryRelationshipFilters}
+                onRelationshipFiltersChange={setLibraryRelationshipFilters}
+                hideIsolatedNodes={libraryHideIsolated}
+                onHideIsolatedNodesChange={setLibraryHideIsolated}
+                nodeSpacing={libraryNodeSpacing}
+                onNodeSpacingChange={setLibraryNodeSpacing}
+                showSpacingControl={libraryShowSpacingControl}
+                onShowSpacingControlChange={setLibraryShowSpacingControl}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Visualization Library Sections */}
+        <div className="mt-24 space-y-16">
+          <div className="text-center space-y-3">
+            <div className="inline-block">
+              <div className="relative px-4 py-2 text-sm font-medium rounded-full bg-[#CCE2DC]/50 backdrop-blur-sm border border-[#006E51]/20 mb-4">
+                <span className="relative z-10 text-[#006E51]">Visualization Library</span>
+              </div>
+            </div>
+            <h2 className="text-4xl font-bold text-[#2E2D2B]">Compare Atlas, NAVIGATE & Toolkit Visuals</h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Review every visualization, understand control layouts, and mark gold standards for future harmonisation.
+            </p>
+          </div>
+
+          {/* Network Diagrams */}
+          <VisualLibrarySection
+            sectionId="network-diagrams"
+            title="Network Diagrams"
+            description="Force-directed graphs showing relationships between entities. Compare implementations to identify the gold standard."
+            badge="Library"
+            visuals={[
+              {
+                id: "atlas-network",
+                title: "Atlas Challenge Network",
+                description: "Similarity-based network graph using challenge keywords & sectors.",
+                origin: "Atlas",
+                status: "experimental",
+                layout: "slideout",
+                controls: "Orbit toggle, cluster highlight, similarity slider",
+                insights: "Cluster insights + challenge detail cards",
+                render: () => (
+                  <NetworkGraph
+                    challenges={challenges}
+                    showControls={false}
+                    className="border-none shadow-none"
+                  />
+                ),
+              },
+              {
+                id: "toolkit-network-navigate",
+                title: "Toolkit Network Graph (Navigate)",
+                description: "NAVIGATE version using Stakeholder, Technology, Project, and Relationship entities with REAL relationships.",
+                origin: "Toolkit",
+                status: "gold",
+                layout: "panel",
+                controls: "Entity selection, filter presets, relationship highlighting",
+                insights: "Entity details, relationship paths, TRL overlays",
+                render: () => (
+                  <NetworkGraphNavigate
+                    stakeholders={stakeholders}
+                    technologies={technologies}
+                    projects={projects}
+                    relationships={relationships}
+                    showControls={false}
+                    className="border-none shadow-none"
+                  />
+                ),
+              },
+              {
+                id: "toolkit-network-d3",
+                title: "Network Graph (D3 Variant)",
+                description: "D3.js-based network visualization variant.",
+                origin: "Toolkit",
+                status: "experimental",
+                layout: "inline",
+                controls: "Basic D3 interactions",
+                render: () => (
+                  <div className="p-6 bg-gradient-to-br from-[#CCE2DC]/50 to-white rounded-2xl min-h-[300px] flex flex-col justify-center">
+                    <p className="text-xs tracking-[0.4em] uppercase text-[#006E51] mb-4">D3 Variant</p>
+                    <p className="text-gray-600">NetworkGraphD3 component - needs data props</p>
+                  </div>
+                ),
+              },
+              {
+                id: "toolkit-network-echarts",
+                title: "Network Graph (ECharts Variant)",
+                description: "ECharts-based network visualization variant.",
+                origin: "Toolkit",
+                status: "experimental",
+                layout: "inline",
+                controls: "ECharts interactions",
+                render: () => (
+                  <div className="p-6 bg-gradient-to-br from-[#CCE2DC]/50 to-white rounded-2xl min-h-[300px] flex flex-col justify-center">
+                    <p className="text-xs tracking-[0.4em] uppercase text-[#006E51] mb-4">ECharts Variant</p>
+                    <p className="text-gray-600">NetworkGraphECharts component - needs data props</p>
+                  </div>
+                ),
+              },
+            ]}
+            visualType="Network"
+            showHarmonization={true}
+          />
+
+          {/* Sankey Diagrams */}
+          <VisualLibrarySection
+            sectionId="sankey-diagrams"
+            title="Sankey Flow Diagrams"
+            description="Flow visualizations showing resource movement through systems. Compare Atlas challenge flows with Navigate funding flows."
+            badge="Library"
+            visuals={[
+              {
+                id: "atlas-sankey",
+                title: "Challenge Flow Analysis",
+                description: "Atlas sector → problem type → urgency Sankey used for Flow Analysis demos.",
+                origin: "Atlas",
+                status: "gold",
+                layout: "panel",
+                controls: "Node click filtering, shared filter bar (planned)",
+                insights: "Feeds Flow Analysis insight cards & dataset overview",
+                render: () => (
+                  <SankeyChart challenges={challenges} className="border-none shadow-none" />
+                ),
+              },
+              {
+                id: "toolkit-sankey-navigate",
+                title: "Funding Flow (Navigate)",
+                description: "NAVIGATE funding flows: Source → Intermediary → Recipient → Technology.",
+                origin: "Toolkit",
+                status: "experimental",
+                layout: "panel",
+                controls: "Funding type filters, date range, amount thresholds",
+                insights: "Funding gap narratives, flow patterns",
+                render: () => (
+                  <SankeyChartNavigate
+                    stakeholders={stakeholders}
+                    technologies={technologies}
+                    fundingEvents={fundingEvents}
+                    relationships={relationships}
+                    className="border-none shadow-none"
+                  />
+                ),
+              },
+            ]}
+            visualType="Sankey"
+            showHarmonization={true}
+          />
+
+          {/* Heatmaps */}
+          <VisualLibrarySection
+            sectionId="heatmaps"
+            title="Heatmap Visualizations"
+            description="Intensity maps showing density and patterns. Compare Atlas challenge intensity with Navigate-specific heatmaps."
+            badge="Library"
+            visuals={[
+              {
+                id: "atlas-heatmap",
+                title: "Challenge Intensity Heatmap",
+                description: "Sector × problem-type intensity view from the Atlas Intensity Map.",
+                origin: "Atlas",
+                status: "gold",
+                layout: "panel",
+                controls: "Cell selection, preset filters",
+                insights: "Heatmap cell analysis + sector summaries",
+                render: () => (
+                  <HeatmapChart challenges={challenges} className="border-none shadow-none" />
+                ),
+              },
+              {
+                id: "toolkit-heatmap-navigate",
+                title: "Navigate Heatmap",
+                description: "NAVIGATE-specific heatmap showing TRL vs category, tech vs stakeholder, or funding vs status.",
+                origin: "Toolkit",
+                status: "experimental",
+                layout: "panel",
+                controls: "View mode selector, dimension filters",
+                insights: "Cell analysis, dimension summaries",
+                render: () => (
+                  <HeatmapNavigate
+                    stakeholders={stakeholders}
+                    technologies={technologies}
+                    fundingEvents={fundingEvents}
+                    className="border-none shadow-none"
+                  />
+                ),
+              },
+            ]}
+            visualType="Heatmap"
+            showHarmonization={true}
+          />
+
+          {/* Hierarchical Visualizations */}
+          <VisualLibrarySection
+            sectionId="hierarchical"
+            title="Hierarchical Visualizations"
+            description="Sunburst, treemap, and circle packing views showing nested relationships. Compare different hierarchical approaches."
+            badge="Library"
+            visuals={[
+              {
+                id: "atlas-sunburst",
+                title: "Hierarchical Sunburst",
+                description: "Toolkit layout prototype showing sector hierarchy with Atlas challenge data.",
+                origin: "Atlas",
+                status: "experimental",
+                layout: "panel",
+                controls: "Global dataset selector (planned)",
+                insights: "Pairs with hierarchical insight cards",
+                render: () => (
+                  <SunburstChart challenges={challenges} className="border-none shadow-none" />
+                ),
+              },
+              {
+                id: "toolkit-circle-packing",
+                title: "Circle Packing (Navigate)",
+                description: "Hierarchical stakeholder and technology relationships using circle packing.",
+                origin: "Toolkit",
+                status: "experimental",
+                layout: "panel",
+                controls: "View mode (by stakeholder type, tech category, funding)",
+                insights: "Hierarchical breakdown, relationship paths",
+                render: () => (
+                  <CirclePackingNavigate
+                    stakeholders={stakeholders}
+                    technologies={technologies}
+                    projects={projects}
+                    fundingEvents={fundingEvents}
+                    relationships={relationships}
+                    className="border-none shadow-none"
+                  />
+                ),
+              },
+              {
+                id: "toolkit-treemap",
+                title: "Treemap (Navigate)",
+                description: "Funding distribution treemap showing hierarchical funding breakdown.",
+                origin: "Toolkit",
+                status: "experimental",
+                layout: "panel",
+                controls: "View mode toggle, category filters",
+                insights: "Funding breakdown by category",
+                render: () => (
+                  <TreemapNavigate
+                    stakeholders={stakeholders}
+                    fundingEvents={fundingEvents}
+                    technologies={technologies}
+                    projects={projects}
+                    className="border-none shadow-none"
+                  />
+                ),
+              },
+              {
+                id: "toolkit-treemap-sunburst-explorer",
+                title: "Treemap/Sunburst Explorer",
+                description: "Combined treemap and sunburst explorer with view mode toggle.",
+                origin: "Toolkit",
+                status: "experimental",
+                layout: "panel",
+                controls: "View mode toggle (treemap/sunburst), category filters",
+                insights: "Hierarchical exploration insights",
+                render: () => (
+                  <TreemapSunburstExplorer
+                    stakeholders={stakeholders}
+                    fundingEvents={fundingEvents}
+                    technologies={technologies}
+                    projects={projects}
+                    relationships={relationships}
+                    className="border-none shadow-none"
+                  />
+                ),
+              },
+            ]}
+            visualType="Hierarchical"
+            showHarmonization={true}
+          />
+
+          {/* Relationship Visualizations */}
+          <VisualLibrarySection
+            sectionId="relationship"
+            title="Relationship Matrix Visualizations"
+            description="Chord diagrams showing cross-sector and cross-entity relationships. Compare Atlas and Navigate implementations."
+            badge="Library"
+            visuals={[
+              {
+                id: "atlas-chord",
+                title: "Relationship Matrix (Chord)",
+                description: "Cross-sector dependency chord diagram currently used in toolkit explorations.",
+                origin: "Atlas",
+                status: "legacy",
+                layout: "inline",
+                controls: "Hover interactions only",
+                insights: "Feeds qualitative dependency notes",
+                render: () => (
+                  <ChordDiagram challenges={challenges} className="border-none shadow-none" />
+                ),
+              },
+              {
+                id: "toolkit-chord-navigate",
+                title: "Chord Diagram (Navigate)",
+                description: "NAVIGATE relationship chord diagram showing stakeholder type, tech category, or funding flow relationships.",
+                origin: "Toolkit",
+                status: "experimental",
+                layout: "inline",
+                controls: "View mode selector, hover interactions",
+                insights: "Relationship strength, connection patterns",
+                render: () => (
+                  <ChordDiagramNavigate
+                    stakeholders={stakeholders}
+                    technologies={technologies}
+                    relationships={relationships}
+                    className="border-none shadow-none"
+                  />
+                ),
+              },
+            ]}
+            visualType="Relationship"
+            showHarmonization={true}
+          />
+
+          {/* Analysis Charts */}
+          <VisualLibrarySection
+            sectionId="analysis-charts"
+            title="Analysis Charts"
+            description="Radar, bar, bump, stream, parallel coordinates, and swarm plots for multi-dimensional analysis."
+            badge="Library"
+            visuals={[
+              {
+                id: "toolkit-radar",
+                title: "Tech Maturity Radar",
+                description: "Compare technology readiness across multiple dimensions (TRL, Market Readiness, Regulatory Status, etc.).",
+                origin: "Toolkit",
+                status: "gold",
+                layout: "panel",
+                controls: "Dimension selector, technology multi-select, comparison mode",
+                insights: "Technology comparison insights, maturity gaps",
+                render: () => (
+                  <RadarChartNavigate
+                    technologies={technologies}
+                    className="border-none shadow-none"
+                  />
+                ),
+              },
+              {
+                id: "toolkit-bar",
+                title: "Bar Chart Analysis",
+                description: "Funding, projects, and technology breakdowns by various dimensions.",
+                origin: "Toolkit",
+                status: "gold",
+                layout: "panel",
+                controls: "View mode (funding by stakeholder, funding by tech, projects by status, tech by TRL)",
+                insights: "Breakdown summaries, top performers",
+                render: () => (
+                  <BarChartNavigate
+                    stakeholders={stakeholders}
+                    technologies={technologies}
+                    fundingEvents={fundingEvents}
+                    projects={projects}
+                    className="border-none shadow-none"
+                  />
+                ),
+              },
+              {
+                id: "toolkit-bump",
+                title: "TRL Progression (Bump Chart)",
+                description: "Technology readiness level advancement over time showing acceleration/stagnation.",
+                origin: "Toolkit",
+                status: "experimental",
+                layout: "panel",
+                controls: "View mode (all technologies, by category, top advancing), category filters",
+                insights: "TRL progression patterns, acceleration analysis",
+                render: () => (
+                  <BumpChartNavigate
+                    technologies={technologies}
+                    className="border-none shadow-none"
+                  />
+                ),
+              },
+              {
+                id: "toolkit-stream",
+                title: "Funding Trends (Stream Graph)",
+                description: "Temporal funding streams showing funding flows over time by stakeholder type, tech category, or funding type.",
+                origin: "Toolkit",
+                status: "experimental",
+                layout: "panel",
+                controls: "View mode selector, date range, category filters",
+                insights: "Temporal patterns, trend analysis",
+                render: () => (
+                  <StreamGraphNavigate
+                    fundingEvents={fundingEvents}
+                    stakeholders={stakeholders}
+                    technologies={technologies}
+                    className="border-none shadow-none"
+                  />
+                ),
+              },
+              {
+                id: "toolkit-parallel",
+                title: "Parallel Coordinates",
+                description: "Multi-dimensional technology comparison across TRL, Funding, Market Readiness, Regulatory Status, and 2030 Maturity.",
+                origin: "Toolkit",
+                status: "experimental",
+                layout: "panel",
+                controls: "Dimension selector, technology multi-select, brush selection",
+                insights: "Multi-dimensional patterns, outlier detection",
+                render: () => (
+                  <ParallelCoordinatesNavigate
+                    technologies={technologies}
+                    className="border-none shadow-none"
+                  />
+                ),
+              },
+              {
+                id: "toolkit-swarm",
+                title: "Technology Distribution (Swarm Plot)",
+                description: "TRL and category distribution showing technology clustering and patterns.",
+                origin: "Toolkit",
+                status: "experimental",
+                layout: "panel",
+                controls: "View mode (by TRL, by category), filters",
+                insights: "Distribution patterns, clustering analysis",
+                render: () => (
+                  <SwarmPlotNavigate
+                    technologies={technologies}
+                    className="border-none shadow-none"
+                  />
+                ),
+              },
+            ]}
+            visualType="Analysis"
+            showHarmonization={true}
+          />
+        </div>
     </div>
   )
 }

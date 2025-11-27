@@ -14,13 +14,23 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { Stakeholder, Technology, Project, Relationship } from '@/lib/navigate-types';
 import { NetworkNode, NetworkLink } from '@/lib/types';
 import { toNetworkGraphFromNavigate } from '@/lib/navigate-adapters';
-import NetworkControlsPanel from '@/components/ui/NetworkControlsPanel';
 
 // Dynamically import ForceGraph2D to avoid SSR issues
 const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), {
   ssr: false,
   loading: () => <div className="flex items-center justify-center h-96">Loading graph...</div>
 });
+
+type RelationshipFilterState = {
+  funds: boolean;
+  collaborates_with: boolean;
+  researches: boolean;
+  advances: boolean;
+  participates_in: boolean;
+};
+
+const RELATIONSHIP_KEYS = ['funds', 'collaborates_with', 'researches', 'advances', 'participates_in'] as const;
+type RelationshipKey = typeof RELATIONSHIP_KEYS[number];
 
 interface NetworkGraphNavigateProps {
   stakeholders: Stakeholder[];
@@ -31,6 +41,14 @@ interface NetworkGraphNavigateProps {
   onEntitySelect?: (entityId: string) => void;
   className?: string;
   showControls?: boolean;
+  relationshipFilters?: RelationshipFilterState;
+  onRelationshipFiltersChange?: (filters: RelationshipFilterState) => void;
+  hideIsolatedNodes?: boolean;
+  onHideIsolatedNodesChange?: (value: boolean) => void;
+  nodeSpacing?: number;
+  onNodeSpacingChange?: (value: number) => void;
+  showSpacingControl?: boolean;
+  onShowSpacingControlChange?: (value: boolean) => void;
 }
 
 // Store relationships for link rendering
@@ -44,7 +62,15 @@ export function NetworkGraphNavigate({
   selectedEntityId,
   onEntitySelect,
   className = '',
-  showControls = true
+  showControls = true,
+  relationshipFilters: controlledRelationshipFilters,
+  onRelationshipFiltersChange,
+  hideIsolatedNodes: controlledHideIsolatedNodes,
+  onHideIsolatedNodesChange,
+  nodeSpacing: controlledNodeSpacing,
+  onNodeSpacingChange,
+  showSpacingControl: controlledShowSpacingControl,
+  onShowSpacingControlChange,
 }: NetworkGraphNavigateProps) {
   
   const fgRef = useRef<any>(null);
@@ -58,22 +84,40 @@ export function NetworkGraphNavigate({
   const [dimensions, setDimensions] = useState({ width: 600, height: 500 });
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Relationship type filtering
-  const [relationshipFilters, setRelationshipFilters] = useState({
+  const [internalRelationshipFilters, setInternalRelationshipFilters] = useState<RelationshipFilterState>({
     funds: true,
     collaborates_with: true,
     researches: true,
     advances: true,
-    participates_in: true
+    participates_in: true,
   });
+  const relationshipFilters = controlledRelationshipFilters ?? internalRelationshipFilters;
+  const updateRelationshipFilters = (next: RelationshipFilterState) => {
+    if (onRelationshipFiltersChange) onRelationshipFiltersChange(next);
+    else setInternalRelationshipFilters(next);
+  };
+  const [spacingDebug, setSpacingDebug] = useState<string | null>(null);
   
-  // Hide isolated nodes (nodes with no connections)
-  const [hideIsolatedNodes, setHideIsolatedNodes] = useState(false);
+  const [internalHideIsolatedNodes, setInternalHideIsolatedNodes] = useState(false);
+  const hideIsolatedNodes = controlledHideIsolatedNodes ?? internalHideIsolatedNodes;
+  const updateHideIsolatedNodes = (value: boolean) => {
+    if (onHideIsolatedNodesChange) onHideIsolatedNodesChange(value);
+    else setInternalHideIsolatedNodes(value);
+  };
   
-  // Node spacing control (admin/adjustable)
-  const [nodeSpacing, setNodeSpacing] = useState(0.5); // Multiplier: 0.5x = default (240-640px, -400 charge)
-  const [showSpacingControl, setShowSpacingControl] = useState(true); // Show by default so user can test
-  const [spacingDebug, setSpacingDebug] = useState<string>(''); // Debug info
+  const [internalNodeSpacing, setInternalNodeSpacing] = useState(0.5);
+  const nodeSpacing = controlledNodeSpacing ?? internalNodeSpacing;
+  const updateNodeSpacing = (value: number) => {
+    if (onNodeSpacingChange) onNodeSpacingChange(value);
+    else setInternalNodeSpacing(value);
+  };
+  
+  const [internalShowSpacingControl, setInternalShowSpacingControl] = useState(true);
+  const showSpacingControl = controlledShowSpacingControl ?? internalShowSpacingControl;
+  const updateShowSpacingControl = (value: boolean) => {
+    if (onShowSpacingControlChange) onShowSpacingControlChange(value);
+    else setInternalShowSpacingControl(value);
+  };
   
   // Animation state for links
   const [animationFrame, setAnimationFrame] = useState(0);
@@ -427,176 +471,20 @@ export function NetworkGraphNavigate({
           <p className="text-sm text-gray-500 mt-1">
             Showing {graphData.nodes.length} entities with {graphData.links.length} relationships
           </p>
-          {/* Relationship Type Filters */}
-          <div className="mt-3 space-y-2">
-            <div className="text-xs font-medium text-gray-700 mb-2">Filter Relationship Types:</div>
-            <div className="flex flex-wrap gap-3 text-xs">
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={relationshipFilters.funds}
-                  onChange={(e) => setRelationshipFilters(prev => ({ ...prev, funds: e.target.checked }))}
-                  className="w-3 h-3 text-[#006E51] rounded focus:ring-[#006E51]"
-                />
-                <div className="w-4 h-0.5 bg-[#006E51]"></div>
-                <span className="text-gray-600">Funds</span>
-              </label>
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={relationshipFilters.collaborates_with}
-                  onChange={(e) => setRelationshipFilters(prev => ({ ...prev, collaborates_with: e.target.checked }))}
-                  className="w-3 h-3 text-[#4A90E2] rounded focus:ring-[#4A90E2]"
-                />
-                <div className="w-4 h-0.5 bg-[#4A90E2]"></div>
-                <span className="text-gray-600">Collaborates</span>
-              </label>
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={relationshipFilters.researches}
-                  onChange={(e) => setRelationshipFilters(prev => ({ ...prev, researches: e.target.checked }))}
-                  className="w-3 h-3 text-[#F5A623] rounded focus:ring-[#F5A623]"
-                />
-                <div className="w-4 h-0.5 bg-[#F5A623]"></div>
-                <span className="text-gray-600">Researches</span>
-              </label>
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={relationshipFilters.advances}
-                  onChange={(e) => setRelationshipFilters(prev => ({ ...prev, advances: e.target.checked }))}
-                  className="w-3 h-3 text-[#EC4899] rounded focus:ring-[#EC4899]"
-                />
-                <div className="w-4 h-0.5 bg-[#EC4899]"></div>
-                <span className="text-gray-600">Advances</span>
-              </label>
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={relationshipFilters.participates_in}
-                  onChange={(e) => setRelationshipFilters(prev => ({ ...prev, participates_in: e.target.checked }))}
-                  className="w-3 h-3 text-[#8B5CF6] rounded focus:ring-[#8B5CF6]"
-                />
-                <div className="w-4 h-0.5 bg-[#8B5CF6]"></div>
-                <span className="text-gray-600">Participates</span>
-              </label>
-            </div>
-            <div className="flex gap-2 mt-2">
-              <button
-                onClick={() => setRelationshipFilters({
-                  funds: true,
-                  collaborates_with: true,
-                  researches: true,
-                  advances: true,
-                  participates_in: true
-                })}
-                className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-700"
-              >
-                Show All
-              </button>
-              <button
-                onClick={() => setRelationshipFilters({
-                  funds: false,
-                  collaborates_with: false,
-                  researches: false,
-                  advances: false,
-                  participates_in: false
-                })}
-                className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-700"
-              >
-                Hide All
-              </button>
-            </div>
-            
-            {/* Hide Isolated Nodes Option */}
-            <div className="mt-3 pt-3 border-t border-gray-200">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={hideIsolatedNodes}
-                  onChange={(e) => setHideIsolatedNodes(e.target.checked)}
-                  className="w-3 h-3 text-[#006E51] rounded focus:ring-[#006E51]"
-                />
-                <span className="text-xs text-gray-700">Hide isolated nodes (no connections)</span>
-              </label>
-              <p className="text-xs text-gray-500 mt-1 ml-5">
-                {hideIsolatedNodes 
-                  ? `Showing ${filteredGraphData.nodes.length} connected nodes`
-                  : `Showing all ${graphDataMemo.nodes.length} nodes (${graphDataMemo.nodes.length - filteredGraphData.nodes.length} isolated)`}
-              </p>
-            </div>
-            
-            {/* Node Spacing Control (Admin/Advanced) */}
-            <div className="mt-3 pt-3 border-t border-gray-200">
-              <div className="flex items-center justify-between mb-2">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={showSpacingControl}
-                    onChange={(e) => setShowSpacingControl(e.target.checked)}
-                    className="w-3 h-3 text-[#006E51] rounded focus:ring-[#006E51]"
-                  />
-                  <span className="text-xs text-gray-700">Show spacing control</span>
-                </label>
-              </div>
-              {showSpacingControl && (
-                <div className="ml-5 space-y-2">
-                  <div className="flex items-center gap-3">
-                    <label className="text-xs text-gray-600 min-w-[80px]">
-                      Spacing: {nodeSpacing.toFixed(1)}x
-                    </label>
-                    <input
-                      type="range"
-                      min="0.5"
-                      max="4.0"
-                      step="0.1"
-                      value={nodeSpacing}
-                      onChange={(e) => setNodeSpacing(parseFloat(e.target.value))}
-                      className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#006E51]"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setNodeSpacing(1.0)}
-                      className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-700"
-                    >
-                      1x
-                    </button>
-                    <button
-                      onClick={() => setNodeSpacing(0.5)}
-                      className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-700"
-                    >
-                      Default (0.5x)
-                    </button>
-                    <button
-                      onClick={() => setNodeSpacing(2.0)}
-                      className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-700"
-                    >
-                      Double (2x)
-                    </button>
-                    <button
-                      onClick={() => setNodeSpacing(3.0)}
-                      className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-700"
-                    >
-                      Triple (3x)
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    Current distance: ~{Math.round((480 + 400) * nodeSpacing)}-{Math.round((480 + 800) * nodeSpacing)}px
-                  </p>
-                  {spacingDebug && (
-                    <p className="text-xs text-blue-600 font-medium mt-1 font-mono bg-blue-50 p-1 rounded">
-                      {spacingDebug}
-                    </p>
-                  )}
-                  <p className="text-xs text-gray-400 mt-1 italic">
-                    {nodeSpacing !== 0.5 ? `⚠️ Adjusting spacing...` : '✓ Default (0.5x)'}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
+          <NetworkRelationshipControls
+            relationshipFilters={relationshipFilters}
+            onRelationshipFiltersChange={updateRelationshipFilters}
+            hideIsolatedNodes={hideIsolatedNodes}
+            onHideIsolatedNodesChange={updateHideIsolatedNodes}
+            nodeSpacing={nodeSpacing}
+            onNodeSpacingChange={updateNodeSpacing}
+            showSpacingControl={showSpacingControl}
+            onShowSpacingControlChange={updateShowSpacingControl}
+            totalNodes={graphDataMemo.nodes.length}
+            filteredNodes={filteredGraphData.nodes.length}
+            filteredLinks={filteredGraphData.links.length}
+            totalLinks={graphDataMemo.links.length}
+          />
         </CardHeader>
         <CardContent className="p-0">
           <div 
@@ -683,3 +571,192 @@ export function NetworkGraphNavigate({
   );
 }
 
+export interface NetworkRelationshipControlsProps {
+  relationshipFilters: RelationshipFilterState;
+  onRelationshipFiltersChange: (filters: RelationshipFilterState) => void;
+  hideIsolatedNodes: boolean;
+  onHideIsolatedNodesChange: (value: boolean) => void;
+  nodeSpacing: number;
+  onNodeSpacingChange: (value: number) => void;
+  showSpacingControl: boolean;
+  onShowSpacingControlChange: (value: boolean) => void;
+  totalNodes?: number;
+  filteredNodes?: number;
+  totalLinks?: number;
+  filteredLinks?: number;
+}
+
+export function NetworkRelationshipControls({
+  relationshipFilters,
+  onRelationshipFiltersChange,
+  hideIsolatedNodes,
+  onHideIsolatedNodesChange,
+  nodeSpacing,
+  onNodeSpacingChange,
+  showSpacingControl,
+  onShowSpacingControlChange,
+  totalNodes,
+  filteredNodes,
+  totalLinks,
+  filteredLinks,
+}: NetworkRelationshipControlsProps) {
+  return (
+    <div className="mt-3 space-y-2">
+      <div className="text-xs font-medium text-gray-700 mb-2">Filter Relationship Types:</div>
+      <div className="flex flex-wrap gap-3 text-xs">
+        {RELATIONSHIP_KEYS.map((key) => {
+          const colorMap: Record<RelationshipKey, string> = {
+            funds: '#006E51',
+            collaborates_with: '#4A90E2',
+            researches: '#F5A623',
+            advances: '#EC4899',
+            participates_in: '#8B5CF6',
+          };
+          const labels: Record<RelationshipKey, string> = {
+            funds: 'Funds',
+            collaborates_with: 'Collaborates',
+            researches: 'Researches',
+            advances: 'Advances',
+            participates_in: 'Participates',
+          };
+          return (
+            <label key={key} className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={relationshipFilters[key]}
+                onChange={(e) =>
+                  onRelationshipFiltersChange({
+                    ...relationshipFilters,
+                    [key]: e.target.checked,
+                  })
+                }
+                className="w-3 h-3 rounded focus:ring-[#006E51]"
+                style={{ accentColor: colorMap[key] }}
+              />
+              <div className="w-4 h-0.5" style={{ background: colorMap[key] }}></div>
+              <span className="text-gray-600">{labels[key]}</span>
+            </label>
+          );
+        })}
+      </div>
+      <div className="flex gap-2 mt-2">
+        <button
+          onClick={() =>
+            onRelationshipFiltersChange({
+              funds: true,
+              collaborates_with: true,
+              researches: true,
+              advances: true,
+              participates_in: true,
+            })
+          }
+          className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-700"
+        >
+          Show All
+        </button>
+        <button
+          onClick={() =>
+            onRelationshipFiltersChange({
+              funds: false,
+              collaborates_with: false,
+              researches: false,
+              advances: false,
+              participates_in: false,
+            })
+          }
+          className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-700"
+        >
+          Hide All
+        </button>
+      </div>
+
+      <div className="mt-3 pt-3 border-t border-gray-200">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={hideIsolatedNodes}
+            onChange={(e) => onHideIsolatedNodesChange(e.target.checked)}
+            className="w-3 h-3 text-[#006E51] rounded focus:ring-[#006E51]"
+          />
+          <span className="text-xs text-gray-700">Hide isolated nodes (no connections)</span>
+        </label>
+        {typeof totalNodes === 'number' && typeof filteredNodes === 'number' && (
+          <p className="text-xs text-gray-500 mt-1 ml-5">
+            {hideIsolatedNodes
+              ? `Showing ${filteredNodes} connected nodes`
+              : `Showing all ${totalNodes} nodes (${totalNodes - filteredNodes} isolated)`}
+          </p>
+        )}
+        {typeof totalLinks === 'number' && typeof filteredLinks === 'number' && (
+          <p className="text-xs text-gray-400 ml-5">
+            {filteredLinks} / {totalLinks} links visible
+          </p>
+        )}
+      </div>
+
+      <div className="mt-3 pt-3 border-t border-gray-200">
+        <div className="flex items-center justify-between mb-2">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showSpacingControl}
+              onChange={(e) => onShowSpacingControlChange(e.target.checked)}
+              className="w-3 h-3 text-[#006E51] rounded focus:ring-[#006E51]"
+            />
+            <span className="text-xs text-gray-700">Show spacing control</span>
+          </label>
+        </div>
+        {showSpacingControl && (
+          <div className="ml-5 space-y-2">
+            <div className="flex items-center gap-3">
+              <label className="text-xs text-gray-600 min-w-[80px]">
+                Spacing: {nodeSpacing.toFixed(1)}x
+              </label>
+              <input
+                type="range"
+                min="0.5"
+                max="4.0"
+                step="0.1"
+                value={nodeSpacing}
+                onChange={(e) => onNodeSpacingChange(parseFloat(e.target.value))}
+                className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#006E51]"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => onNodeSpacingChange(1.0)}
+                className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-700"
+              >
+                1x
+              </button>
+              <button
+                onClick={() => onNodeSpacingChange(0.5)}
+                className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-700"
+              >
+                Default (0.5x)
+              </button>
+              <button
+                onClick={() => onNodeSpacingChange(2.0)}
+                className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-700"
+              >
+                Double (2x)
+              </button>
+              <button
+                onClick={() => onNodeSpacingChange(3.0)}
+                className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-700"
+              >
+                Triple (3x)
+              </button>
+            </div>
+            <p className="text-xs text-gray-500">
+              Current distance: ~{Math.round((480 + 400) * nodeSpacing)}-{Math.round((480 + 800) * nodeSpacing)}px
+            </p>
+            <p className="text-xs text-gray-400 mt-1 italic">
+              {nodeSpacing !== 0.5 ? `⚠️ Adjusting spacing...` : '✓ Default (0.5x)'}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

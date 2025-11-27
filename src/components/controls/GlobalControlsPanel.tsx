@@ -2,7 +2,7 @@
 
 import { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
-import { Settings } from 'lucide-react';
+import { Pin } from 'lucide-react';
 
 export interface GlobalControlsPanelProps {
   title?: string;
@@ -55,7 +55,7 @@ export function GlobalControlsPanel({
             }`}
             title={pinned ? 'Unpin controls' : 'Pin controls'}
           >
-            <Settings className="h-4 w-4" />
+            <Pin className={`h-4 w-4 ${pinned ? 'fill-current' : ''}`} />
           </button>
         )}
       </div>
@@ -71,7 +71,7 @@ export function GlobalControlsPanel({
                 className={`flex-1 ${!useNavigateData ? 'bg-[#006E51] text-white hover:bg-[#00573f]' : 'bg-white/60 text-gray-700 hover:bg-white/80'}`}
                 variant="secondary"
               >
-                Challenge Data
+                Challenge
               </Button>
               <Button
                 type="button"
@@ -79,7 +79,7 @@ export function GlobalControlsPanel({
                 className={`flex-1 ${useNavigateData ? 'bg-[#006E51] text-white hover:bg-[#00573f]' : 'bg-white/60 text-gray-700 hover:bg-white/80'}`}
                 variant="secondary"
               >
-                NAVIGATE Data
+                Navigate
               </Button>
             </div>
           </section>
