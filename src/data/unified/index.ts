@@ -13,6 +13,7 @@
 import challenges from '@/data/challenges';
 import { navigateDummyData } from '@/data/navigate-dummy-data';
 import { cpcSeedEntities, cpcSeedRelationships } from '@/data/cpc-internal-seed';
+import { cpcDomainEntities, cpcDomainRelationships } from '@/data/cpc-domain-entities';
 
 import type { BaseEntity, EntityType, UniversalRelationship, Domain } from '@/lib/base-entity';
 import {
@@ -120,6 +121,31 @@ const navigateRelationships: UniversalRelationship[] = relationshipsToUniversal(
 );
 
 // ----------------------------------------------------------------------------
+// CPC Domain (Focus Areas, Milestones, Stages) → BaseEntity / Relationships
+// ----------------------------------------------------------------------------
+
+// Convert CPC domain relationships to UniversalRelationship format
+const cpcDomainUniversalRelationships: UniversalRelationship[] = cpcDomainRelationships.map((rel, idx) => ({
+  id: `cpc-rel-${idx}`,
+  source: rel.source,
+  target: rel.target,
+  sourceType: getCPCEntityType(rel.source, cpcDomainEntities),
+  targetType: getCPCEntityType(rel.target, cpcDomainEntities),
+  type: rel.type,
+  strength: rel.strength,
+  derivation: 'explicit',
+  metadata: {
+    confidence: rel.strength,
+  },
+}));
+
+// Helper to get entity type for CPC entities
+function getCPCEntityType(entityId: string, entities: BaseEntity[]): EntityType {
+  const entity = entities.find(e => e.id === entityId);
+  return entity?.entityType || 'focus_area'; // Default fallback
+}
+
+// ----------------------------------------------------------------------------
 // Unified exports
 // ----------------------------------------------------------------------------
 
@@ -127,12 +153,14 @@ export const unifiedEntities: BaseEntity[] = [
   ...atlasEntities,
   ...navigateEntities,
   ...cpcSeedEntities,
+  ...cpcDomainEntities, // Add CPC domain entities
 ];
 
 export const unifiedRelationships: UniversalRelationship[] = [
   ...atlasRelationships,
   ...navigateRelationships,
   ...cpcSeedRelationships,
+  ...cpcDomainUniversalRelationships, // Add CPC domain relationships
 ];
 
 // ----------------------------------------------------------------------------

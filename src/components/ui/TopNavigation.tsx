@@ -33,6 +33,12 @@ const navigationItems = [
     description: "Interactive data visualizations"
   },
   {
+    name: "Visual Library",
+    href: "/visualisations",
+    icon: BarChart3,
+    description: "Sparkworks visualization library"
+  },
+  {
     name: "For Reviewers",
     href: "/for-reviewers-v2",
     icon: FileText,

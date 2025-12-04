@@ -1,0 +1,121 @@
+{
+  "metadata": {
+    "domain": "cpc_internal",
+    "entity_type": "framework",
+    "source": "Focus Area Stages_copy.docx",
+    "extracted_date": "2025-01-28",
+    "version": "1.0"
+  },
+  "stages": [
+    {
+      "id": "stage-001",
+      "name": "Validation",
+      "stage_number": 1,
+      "purpose": "Build the case for larger CPC investment by evidencing opportunity, need, and strategic fit. Validation stage initiatives establish the foundation for assessing strategic opportunities and alignment before further investment is made towards development.",
+      "description": "Exploring new branches of innovation that grow from mature markets. Validation stage activities strengthen CPC's position as a trusted market actor.",
+      "typical_outputs": [
+        "Technical reports that build evidence for challenges & innovative solutions",
+        "Business cases evaluating the viability of interventions",
+        "Market insights gained by convening cross-sector"
+      ],
+      "validation_questions": [
+        "What is the vision? Are there compelling future scenarios? (Futures)",
+        "How do trends and market forces help or hinder? (Foresight)",
+        "What emerging technologies might change the landscape? (EmTech)",
+        "Where are the white spaces between policy, funding, and capability? (Gaps)",
+        "What are the most impactful use cases? (Benefits)",
+        "What are the most viable use cases? (Analysis)",
+        "How do use cases map onto a benefit/barrier matrix? (Prioritisation)",
+        "Who are the buyers, and what gives them confidence? (Stakeholders)",
+        "Who must be involved to make change happen? (Convening)",
+        "What are the barriers to innovation? (Barriers)",
+        "What is the roadmap and cost to address barriers? (Roadmaps)",
+        "What regulations or standards must be addressed? (Policy/Standards)",
+        "Where has similar innovation succeeded? (Case Studies)",
+        "What are potential funding sources? (Funding Landscape)",
+        "Who is investing in this innovation? (Investor Landscape)",
+        "What capabilities does CPC need to build? (Operational Readiness)",
+        "Where are opportunities for trials or demonstrators? (Services)",
+        "What is CPC's thought leadership position? (Narrative & Influence)"
+      ],
+      "logic_model_alignment": ["Identifying regulatory, market, and funding barriers", "Build buyer confidence"],
+      "cpc_strategy_link": "Grow Demand - Continue to address market barrier with our interventions",
+      "decision_gate": "Continue, reshape, or stop funding based on evidence",
+      "embedding_text": "Stage 1 Validation: Build case for CPC investment by evidencing opportunity need strategic fit. Exploring new branches of innovation from mature markets. Technical reports business cases market insights. Answering questions on futures foresight emerging technologies gaps benefits stakeholders barriers roadmaps policy funding. Logic model alignment: identifying barriers, building buyer confidence. Decision gate: continue reshape or stop funding."
+    },
+    {
+      "id": "stage-002",
+      "name": "Development",
+      "stage_number": 2,
+      "purpose": "Translate validated opportunities into tangible assets that can be delivered to the market yielding both innovation outcomes, impact, and/or commercial revenues.",
+      "description": "Invest and create assets that support innovation that we intend to commercialise.",
+      "typical_outputs": [
+        "People are asset - commercialise experience gained through project delivery",
+        "Ideas are assets - commercialise playbooks, frameworks, strategic insights",
+        "Products are assets - databases, software, digital sandboxes",
+        "Consortia are assets - commercialise their capacity, capability, credibility",
+        "Innovation Zones (trials and demonstrators) - commercialise testbeds, audiences, insights"
+      ],
+      "development_activities": [
+        "Assembly of multi-stakeholder consortia",
+        "Creation of L&D Courses that build market confidence in novel innovation",
+        "Building of frameworks and methods to support adoption and procurement",
+        "Establishment of innovation assets e.g. discrete trials, innovation zones",
+        "Prototypes of software and digital twins that the market can't or won't invest in"
+      ],
+      "logic_model_alignment": ["New routes to market", "Strengthening SME capability", "Delivering confidence to public and private sector buyers"],
+      "cpc_strategy_link": "Convening the market - forming consortia to develop research and other assets",
+      "decision_gate": "Asset readiness for commercialisation",
+      "embedding_text": "Stage 2 Development: Translate validated opportunities into tangible assets for market delivery. Creating innovation assets: people experience, ideas playbooks frameworks, products databases software digital twins, consortia capacity capability, innovation zones testbeds. Activities: multi-stakeholder consortia, L&D courses, frameworks for adoption procurement, trials innovation zones, prototypes. Logic model: new routes to market, strengthening SME capability, buyer confidence."
+    },
+    {
+      "id": "stage-003",
+      "name": "Value Realisation",
+      "stage_number": 3,
+      "purpose": "Leverage developed assets to produce commercial revenue, measurable innovation outcomes, and/or impact.",
+      "description": "Generate revenues from assets and service offerings that contribute to (and extend) our impact. Target: 4:1 Revenue to Core Grant Funding.",
+      "typical_outputs": [
+        "Fees for professional services",
+        "Access to trailing environments",
+        "Participation in communities of practice",
+        "Learning and development",
+        "Exclusive publications",
+        "Events"
+      ],
+      "commercialisation_activities": [
+        "Content creation and dissemination by multi-stakeholder consortia",
+        "Enrolment fees for L&D courses and/or training",
+        "Innovation consulting services leveraging frameworks",
+        "Fees and sponsorship of trials and innovation zones",
+        "Spinout of software prototypes and data sharing agreements"
+      ],
+      "logic_model_alignment": ["All defined metrics can be increased while producing surplus revenues through commercial activities"],
+      "cpc_strategy_link": "Strengthening Supply - growing SME capacity and capability",
+      "revenue_target": "4:1 Revenue to Core Grant Funding",
+      "decision_gate": "Revenue generation and impact metrics",
+      "embedding_text": "Stage 3 Value Realisation: Leverage developed assets for commercial revenue measurable innovation outcomes impact. Revenue target 4:1 to Core Grant Funding. Commercial activities: professional services fees, trailing environments access, communities of practice, L&D, publications, events. Commercialisation: consortia content, L&D enrolment fees, consulting services, trial sponsorship, software spinouts. Logic model: increasing metrics while producing surplus revenues."
+    }
+  ],
+  "assessment_criteria": {
+    "business_growth_scale": {
+      "1": "Limited direct business growth potential",
+      "2": "Moderate business growth potential",
+      "3": "Strong business growth potential with SME engagement",
+      "4": "High business growth with significant commercial opportunity"
+    },
+    "is_alignment_categories": [
+      "Digital and data",
+      "Smart Data in transport",
+      "Defence",
+      "Clean Energy Industries",
+      "Advanced Manufacturing",
+      "Life Sciences"
+    ],
+    "assessment_options": {
+      "Increase": "Expanded on as clear case for CPC involvement and strong alignment",
+      "Continue": "Defendable case for CPC involvement and alignment",
+      "Re-assess": "Either weak case or lack of alignment - flag if live work, contracted commitment, or hypothetical"
+    }
+  }
+}
+

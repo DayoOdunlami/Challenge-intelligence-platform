@@ -1,0 +1,268 @@
+{
+  "metadata": {
+    "domain": "cpc_internal",
+    "entity_type": "stakeholder",
+    "source": "StakeholderList.xlsx",
+    "extracted_date": "2025-01-28"
+  },
+  "stakeholders": [
+    {
+      "id": "sh-001",
+      "name": "GBRx",
+      "type": "Network owner and manager",
+      "mode": "Rail",
+      "raci": null,
+      "strategic_theme": null,
+      "focus_area": null
+    },
+    {
+      "id": "sh-002",
+      "name": "HS2",
+      "type": "Government Agency",
+      "mode": "Rail",
+      "raci": "Responsible",
+      "strategic_theme": "Decarbonisation",
+      "focus_area": "Rail- Rail Technology Advancement"
+    },
+    {
+      "id": "sh-003",
+      "name": "Network Rail",
+      "type": "Network owner and manager",
+      "mode": "Rail",
+      "raci": "Accountable",
+      "strategic_theme": "People Experience",
+      "focus_area": "Rail- Transport Hubs & Multimodal Integration"
+    },
+    {
+      "id": "sh-004",
+      "name": "TfL",
+      "type": "Transport Authority",
+      "mode": "Rail",
+      "raci": "Accountable",
+      "strategic_theme": "People Experience",
+      "focus_area": "Rail- Transport Hubs & Multimodal Integration"
+    },
+    {
+      "id": "sh-005",
+      "name": "Bristol Temple Meads Station",
+      "type": "Other",
+      "mode": "Rail",
+      "raci": "Responsible",
+      "strategic_theme": "Hubs and Clusters",
+      "focus_area": "Rail- Transport Hubs & Multimodal Integration"
+    },
+    {
+      "id": "sh-006",
+      "name": "Department for Transport (DfT)",
+      "type": "Government department",
+      "mode": "Aviation",
+      "raci": "Consult",
+      "strategic_theme": "Decarbonisation",
+      "focus_area": "Aviation - Sustainable Aviation"
+    },
+    {
+      "id": "sh-007",
+      "name": "CAA (Civil Aviation Authority)",
+      "type": "Regulator",
+      "mode": "Aviation",
+      "raci": "Consult",
+      "strategic_theme": "Autonomy",
+      "focus_area": "Aviation - Advanced Air Mobility"
+    },
+    {
+      "id": "sh-008",
+      "name": "Aircraft Tech Institution (ATI)",
+      "type": "Innovation Organisations",
+      "mode": "Aviation",
+      "raci": "Consult",
+      "strategic_theme": "Autonomy",
+      "focus_area": "Aviation - Advanced Air Mobility"
+    },
+    {
+      "id": "sh-009",
+      "name": "Department for Business & Trade (DBT)",
+      "type": "Government Agency",
+      "mode": "Aviation",
+      "raci": "Consult",
+      "strategic_theme": "Autonomy",
+      "focus_area": "Aviation - Advanced Air Mobility"
+    },
+    {
+      "id": "sh-010",
+      "name": "Glasgow Airport",
+      "type": "Other",
+      "mode": "Aviation",
+      "raci": "Responsible",
+      "strategic_theme": "Autonomy",
+      "focus_area": "Aviation - Advanced Air Mobility"
+    },
+    {
+      "id": "sh-011",
+      "name": "UK SHORE",
+      "type": "Government Agency",
+      "mode": "Maritime",
+      "raci": "Consult",
+      "strategic_theme": "Decarbonisation",
+      "focus_area": "Maritime - Future Fuels"
+    },
+    {
+      "id": "sh-012",
+      "name": "Peel Port Liverpool",
+      "type": "Industry",
+      "mode": "Maritime",
+      "raci": "Responsible",
+      "strategic_theme": "Planning and Operation",
+      "focus_area": "Maritime - Autonomy of Ports"
+    },
+    {
+      "id": "sh-013",
+      "name": "National Physical Laboratory (NPL)",
+      "type": "Research & Innovation",
+      "mode": "Maritime",
+      "raci": "Consult",
+      "strategic_theme": "Autonomy",
+      "focus_area": "Maritime - MASS Survey"
+    },
+    {
+      "id": "sh-014",
+      "name": "National Shipbuilding Office (NSO)",
+      "type": "Government Agency",
+      "mode": "Maritime",
+      "raci": "Consult",
+      "strategic_theme": "Autonomy",
+      "focus_area": "Maritime - Autonomy of Ports"
+    },
+    {
+      "id": "sh-015",
+      "name": "Ministry of Defence (MoD)",
+      "type": "Government Agency",
+      "mode": "Maritime",
+      "raci": "Consult",
+      "strategic_theme": "Autonomy",
+      "focus_area": "Maritime - Autonomy of Ports"
+    },
+    {
+      "id": "sh-016",
+      "name": "DSIT",
+      "type": "Government Agency",
+      "mode": "Maritime",
+      "raci": "Consult",
+      "strategic_theme": "Autonomy",
+      "focus_area": "Maritime - Autonomy of Ports"
+    },
+    {
+      "id": "sh-017",
+      "name": "Crown Estate",
+      "type": "Other",
+      "mode": "Maritime",
+      "raci": "Responsible",
+      "strategic_theme": "Autonomy",
+      "focus_area": "Maritime - Offshore Wind"
+    },
+    {
+      "id": "sh-018",
+      "name": "Transport for Greater Manchester",
+      "type": "Transport Authority",
+      "mode": "Integrated Transport",
+      "raci": "Responsible",
+      "strategic_theme": "Decarbonisation",
+      "focus_area": "HIT - Integrated Freight"
+    },
+    {
+      "id": "sh-019",
+      "name": "Liverpool City Region Combined Authority",
+      "type": "Transport Authority",
+      "mode": "Integrated Transport",
+      "raci": "Responsible",
+      "strategic_theme": "Decarbonisation",
+      "focus_area": "HIT - Integrated Freight"
+    },
+    {
+      "id": "sh-020",
+      "name": "Transport for West Midlands",
+      "type": "Transport Authority",
+      "mode": "Integrated Transport",
+      "raci": "Responsible",
+      "strategic_theme": "Planning and Operation",
+      "focus_area": "HIT - Integrated Micromobility"
+    },
+    {
+      "id": "sh-021",
+      "name": "South Yorkshire Mayoral Combined Authority",
+      "type": "Local & Regional",
+      "mode": "Integrated Transport",
+      "raci": "Responsible",
+      "strategic_theme": "People Experience",
+      "focus_area": "HIT - Integrated Micromobility"
+    },
+    {
+      "id": "sh-022",
+      "name": "Nexus (Tyne and Wear)",
+      "type": "Local & Regional",
+      "mode": "Integrated Transport",
+      "raci": "Responsible",
+      "strategic_theme": "People Experience",
+      "focus_area": "HIT - Integrated Micromobility"
+    },
+    {
+      "id": "sh-023",
+      "name": "Metro (West Yorkshire)",
+      "type": "Local & Regional",
+      "mode": "Integrated Transport",
+      "raci": "Responsible",
+      "strategic_theme": "People Experience",
+      "focus_area": "HIT - Integrated Micromobility"
+    },
+    {
+      "id": "sh-024",
+      "name": "Bus Operators (Arriva, First, Stagecoach)",
+      "type": "Industry",
+      "mode": "Integrated Transport",
+      "raci": "Consult",
+      "strategic_theme": "People Experience",
+      "focus_area": "HIT - Mode Change Places"
+    },
+    {
+      "id": "sh-025",
+      "name": "Train Operating Companies",
+      "type": "Industry",
+      "mode": "Rail",
+      "raci": "Consult",
+      "strategic_theme": "Autonomy",
+      "focus_area": "Rail - Technology Advancement"
+    },
+    {
+      "id": "sh-026",
+      "name": "ITS (Intelligent Transport Systems)",
+      "type": "Professional Institutions",
+      "mode": "Highways",
+      "raci": "Consult",
+      "strategic_theme": "Planning and Operation",
+      "focus_area": "HIT - Integrated Ticketing"
+    },
+    {
+      "id": "sh-027",
+      "name": "National Highways",
+      "type": "Network owner and manager",
+      "mode": "Highways",
+      "raci": "Responsible",
+      "strategic_theme": "People Experience",
+      "focus_area": "HIT - Connected Highways"
+    }
+  ],
+  "type_taxonomy": [
+    "Government Agency",
+    "Government department",
+    "Regulator",
+    "Network owner and manager",
+    "Transport Authority",
+    "Local & Regional",
+    "Industry",
+    "Research & Innovation",
+    "Innovation Organisations",
+    "Professional Institutions",
+    "Other"
+  ],
+  "raci_types": ["Responsible", "Accountable", "Consult", "Inform"]
+}
+

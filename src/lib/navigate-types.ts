@@ -5,7 +5,7 @@
 // Core Entity Types
 // ============================================================================
 
-export type StakeholderType = 'Government' | 'Research' | 'Industry' | 'Intermediary';
+export type StakeholderType = 'Government' | 'Research' | 'Industry' | 'Intermediary' | 'Working Group';
 export type TechnologyCategory = 'H2Production' | 'H2Storage' | 'FuelCells' | 'Aircraft' | 'Infrastructure';
 export type FundingType = 'Public' | 'Private' | 'Mixed';
 export type ProjectStatus = 'Active' | 'Completed' | 'Planned';

@@ -18,7 +18,7 @@ interface NavItem {
 }
 
 interface UnifiedFloatingNavProps {
-  currentPage: 'home' | 'navigate' | 'toolkit' | 'visualizations' | 'reviewer' | 'innovator-profile' | 'owner-profile';
+  currentPage: 'home' | 'navigate' | 'toolkit' | 'visualizations' | 'visualisations' | 'reviewer' | 'innovator-profile' | 'owner-profile';
   // For reviewer page - section navigation
   sections?: Array<{
     id: string;
@@ -72,6 +72,13 @@ export function UnifiedFloatingNav({
       icon: BarChart3, 
       description: "Interactive challenge explorer",
       current: currentPage === 'visualizations'
+    },
+    { 
+      name: "Visual Library", 
+      href: "/visualisations", 
+      icon: BarChart3, 
+      description: "Sparkworks visualization library",
+      current: currentPage === 'visualisations'
     },
     { 
       name: "For Reviewers", 

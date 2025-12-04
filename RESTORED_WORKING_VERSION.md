@@ -131,3 +131,4 @@ Create `/test-unified` page to test without affecting main visualizations.
 ✅ **Unified version available** - Can test separately when ready  
 ✅ **All BaseEntity code preserved** - Ready for future integration
 
+

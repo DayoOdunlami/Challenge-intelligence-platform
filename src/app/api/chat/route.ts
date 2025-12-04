@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { getGuardrails } from '@/config/ai-guardrails';
 import { searchKnowledgeBase, formatKnowledgeBaseForContext } from '@/lib/knowledge-base-search';
-import { AI_FUNCTION_DEFINITIONS, formatAICapabilities } from '@/lib/ai-functions';
+import { getAIFunctionDefinitions, formatAICapabilities } from '@/lib/ai-functions';
+import { getVectorStore } from '@/lib/ai/vector-store-json';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -39,10 +40,57 @@ export async function POST(request: NextRequest) {
       ? parseFloat(requestTemperature.toString())
       : (guardrails.temperature ?? parseFloat(process.env.OPENAI_TEMPERATURE || '0.7'));
 
-    // Search knowledge base for relevant context
+    // Search knowledge base for relevant context (keyword-based fallback)
     const lastUserMessage = messages[messages.length - 1]?.content || '';
     const kbResults = searchKnowledgeBase(lastUserMessage);
     const kbContext = formatKnowledgeBaseForContext(kbResults.slice(0, 3), 3000);
+
+    // Search platform entities using vector store (semantic search)
+    let entityResults: Array<{ entity: any; similarity: number; similarityPercent: number }> = [];
+    let similarEntitiesContext = '';
+    
+    try {
+      const vectorStore = getVectorStore();
+      
+      // Search entities semantically
+      const semanticResults = await vectorStore.hybridSearch(lastUserMessage, {
+        topK: 5,
+        threshold: 0.5,
+      });
+      
+      entityResults = semanticResults.map(r => ({
+        entity: r.entity,
+        similarity: r.similarity,
+        similarityPercent: Math.round(r.similarity * 100),
+      }));
+      
+      // If user seems to be asking about a specific entity (high similarity match),
+      // find similar entities for cross-domain discovery
+      const topMatch = entityResults[0];
+      if (topMatch && topMatch.similarity > 0.75) {
+        try {
+          const similar = await vectorStore.findSimilar(topMatch.entity.id, { 
+            topK: 3,
+            threshold: 0.5,
+          });
+          
+          if (similar.length > 0) {
+            similarEntitiesContext = '\n\n## Similar Entities\n';
+            similarEntitiesContext += `The user is asking about "${topMatch.entity.name}". Here are related entities they might find interesting:\n\n`;
+            similar.forEach(s => {
+              similarEntitiesContext += `- **${s.entity.name}** (${s.entity.entityType}, ${s.entity.domain}) - ${Math.round(s.similarity * 100)}% similar\n`;
+              similarEntitiesContext += `  ${s.entity.description?.substring(0, 150) || ''}...\n\n`;
+            });
+          }
+        } catch (error) {
+          // Ignore errors finding similar entities (entity might not be in store)
+          console.warn('Could not find similar entities:', error);
+        }
+      }
+    } catch (error) {
+      // If vector store fails, continue without entity search (graceful degradation)
+      console.warn('Vector store search failed, continuing with keyword search only:', error);
+    }
 
     // Build system prompt with context
     let systemPrompt = guardrails.systemPrompt;
@@ -50,9 +98,29 @@ export async function POST(request: NextRequest) {
     // Add AI capabilities (available visualizations and controls)
     systemPrompt += `\n\n${formatAICapabilities()}`;
 
-    // Add knowledge base context if available
+    // Add knowledge base context if available (keyword-based, always available)
     if (kbContext) {
       systemPrompt += `\n\n## Relevant Knowledge Base Content\n\n${kbContext}\n\nUse this information to provide accurate, cited responses.`;
+    }
+    
+    // Add entity search results (semantic search, if available)
+    if (entityResults.length > 0) {
+      systemPrompt += `\n\n## Relevant Platform Entities\n\n`;
+      systemPrompt += `The following entities in the platform are relevant to the user's query:\n\n`;
+      entityResults.forEach(result => {
+        systemPrompt += `- **${result.entity.name}** (${result.entity.entityType}, ${result.entity.domain}) - ${result.similarityPercent}% match\n`;
+        if (result.entity.description) {
+          systemPrompt += `  ${result.entity.description.substring(0, 200)}${result.entity.description.length > 200 ? '...' : ''}\n`;
+        }
+        systemPrompt += `\n`;
+      });
+      systemPrompt += `Use this information when answering questions about these entities. You can reference specific entities by name when relevant.\n`;
+    }
+    
+    // Add similar entities context (cross-domain discovery)
+    if (similarEntitiesContext) {
+      systemPrompt += similarEntitiesContext;
+      systemPrompt += `\nUse this to suggest cross-domain connections or related entities the user might want to explore.\n`;
     }
 
     // Add current visualization context if provided
@@ -87,7 +155,7 @@ export async function POST(request: NextRequest) {
       messages: openaiMessages,
       temperature: temperature,
       stream: true,
-      tools: AI_FUNCTION_DEFINITIONS.map(def => ({
+      tools: getAIFunctionDefinitions().map(def => ({
         type: 'function' as const,
         function: def,
       })),

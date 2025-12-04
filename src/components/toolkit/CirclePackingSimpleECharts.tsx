@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, ReactNode, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { hierarchy, HierarchyNode, pack } from 'd3-hierarchy';
 import { circlePackingData, CirclePackingNode } from '@/data/toolkit/circlePackingData';
@@ -103,6 +103,10 @@ type CirclePackingSimpleEChartsProps = {
   highlightedIds: Set<string> | null;
   relatedEntities: CirclePackingNode[];
   onSelectNodeAction: (id: string | null) => void;
+  // Props for external control/insights integration
+  showEmbeddedControls?: boolean;
+  showEmbeddedInsights?: boolean;
+  onControlsRender?: ((renderControls: (() => ReactNode) | null) => void) | null;
 };
 
 export function CirclePackingSimpleECharts({
@@ -111,6 +115,9 @@ export function CirclePackingSimpleECharts({
   highlightedIds,
   relatedEntities,
   onSelectNodeAction,
+  showEmbeddedControls = true,
+  showEmbeddedInsights = true,
+  onControlsRender = null,
 }: CirclePackingSimpleEChartsProps) {
   const [displayTree, setDisplayTree] = useState<SimpleNode | null>(null);
   const [breadcrumb, setBreadcrumb] = useState<SimpleNode[]>([]);
@@ -122,6 +129,84 @@ export function CirclePackingSimpleECharts({
 
   const currentTree = displayTree || tree;
   type ClickEvent = { data?: { id: string } };
+
+  // Provide controls renderer to parent if requested
+  useEffect(() => {
+    if (onControlsRender) {
+      onControlsRender(() => (
+        <div className="space-y-4">
+          <div>
+            <div className="text-xs uppercase text-slate-500 mb-2">Drill Path</div>
+            <div className="text-sm font-medium text-slate-900 mb-2">
+              {breadcrumb.length === 0 
+                ? 'Root' 
+                : breadcrumb
+                    .filter((b, idx, arr) => idx === 0 || b.id !== arr[idx - 1].id)
+                    .map((b) => b.name)
+                    .join(' / ')}
+            </div>
+            <div className="flex gap-2">
+              {breadcrumb.length > 0 && (
+                <button
+                  className="text-xs px-3 py-1.5 border rounded-lg text-slate-600 hover:bg-slate-100"
+                  onClick={() => {
+                    setBreadcrumb((prev) => {
+                      const next = [...prev];
+                      next.pop();
+                      const target = next[next.length - 1];
+                      setDisplayTree(target || null);
+                      setSelectionsAtLevel([]);
+                      setZoomLevel(1);
+                      setZoomCenter(null);
+                      return next;
+                    });
+                    onSelectNodeAction(null);
+                  }}
+                >
+                  Back
+                </button>
+              )}
+              {(breadcrumb.length > 0 || selectionsAtLevel.length > 0) && (
+                <button
+                  className="text-xs px-3 py-1.5 border rounded-lg text-slate-600 hover:bg-slate-100"
+                  onClick={() => {
+                    setBreadcrumb([]);
+                    setDisplayTree(null);
+                    setSelectionsAtLevel([]);
+                    setZoomLevel(1);
+                    setZoomCenter(null);
+                    onSelectNodeAction(null);
+                  }}
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+          </div>
+          {selectionsAtLevel.length > 0 && (
+            <div className="pt-3 border-t border-slate-200">
+              <div className="text-xs uppercase text-slate-500 mb-2">Selections at this level</div>
+              <div className="flex flex-wrap gap-1">
+                {selectionsAtLevel.map((name, idx) => (
+                  <span key={idx} className="text-xs px-2 py-1 bg-slate-100 rounded text-slate-700">
+                    {name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="pt-3 border-t border-slate-200">
+            <div className="text-xs uppercase text-slate-500 mb-2">Zoom</div>
+            <div className="text-sm text-slate-700">{Math.round(zoomLevel * 100)}%</div>
+            <p className="text-xs text-slate-400 mt-1">Use scroll wheel to zoom</p>
+          </div>
+        </div>
+      ));
+      return () => {
+        onControlsRender(null);
+      };
+    }
+  }, [onControlsRender, breadcrumb, selectionsAtLevel, zoomLevel, onSelectNodeAction]);
 
   const option = useMemo(() => {
     if (!currentTree) return {};
@@ -340,11 +425,64 @@ export function CirclePackingSimpleECharts({
     };
   }, [currentTree, rows, maxDepth, meta, highlightedIds, selectedId, relatedEntities, zoomLevel, zoomCenter]);
 
+  const handleChartClick = (params: ClickEvent) => {
+    const dataId = params.data?.id;
+    if (!dataId) {
+      // Click outside any circle: go back a level
+      if (breadcrumb.length > 0) {
+        setBreadcrumb((prev) => {
+          const next = [...prev];
+          next.pop();
+          const target = next[next.length - 1];
+          setDisplayTree(target || null);
+          setSelectionsAtLevel([]);
+          onSelectNodeAction(null);
+          return next;
+        });
+      }
+      return;
+    }
+    const nodeMeta = meta[dataId];
+    const simpleNode = findSimpleNode(currentTree, dataId);
+    if (simpleNode?.children && simpleNode.children.length > 0) {
+      // Drill down: add to breadcrumb path only if not already there
+      setDisplayTree(simpleNode);
+      setBreadcrumb((prev) => {
+        // Check if this node is already the last item in breadcrumb
+        const lastItem = prev[prev.length - 1];
+        if (lastItem && lastItem.id === simpleNode.id) {
+          return prev; // Don't duplicate
+        }
+        return [...prev, simpleNode];
+      });
+      setSelectionsAtLevel([]);
+      setZoomLevel(1); // Reset zoom on drill down
+      setZoomCenter(null);
+      onSelectNodeAction(null);
+    } else if (nodeMeta) {
+      // Selection at current level: add to selections list
+      const nodeName = nodeMeta.name || simpleNode?.name || dataId;
+      setSelectionsAtLevel((prev) => {
+        if (!prev.includes(nodeName)) {
+          return [...prev, nodeName];
+        }
+        return prev;
+      });
+      onSelectNodeAction(nodeMeta.id ?? null);
+    }
+  };
+
+  // Show embedded side panel or external mode (full-width chart)
+  const showSidePanel = showEmbeddedControls || showEmbeddedInsights;
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col md:flex-row gap-4">
+    <div className={showSidePanel ? "flex flex-col gap-4" : "w-full h-full"}>
+      <div className={showSidePanel ? "flex flex-col md:flex-row gap-4" : "w-full h-full"}>
         <div 
-          className="flex-1 min-h-[500px] bg-white rounded-xl shadow border border-slate-200 relative"
+          className={showSidePanel 
+            ? "flex-1 min-h-[500px] bg-white rounded-xl shadow border border-slate-200 relative"
+            : "w-full h-full relative"
+          }
           onClick={(e) => {
             // If clicking directly on the container (not the chart), go back a level
             if (e.target === e.currentTarget && breadcrumb.length > 0) {
@@ -376,135 +514,95 @@ export function CirclePackingSimpleECharts({
         >
           <ReactECharts
             option={option}
-            style={{ height: '500px', width: '100%' }}
+            style={{ height: showSidePanel ? '500px' : '100%', width: '100%' }}
             onEvents={{
-              click: (params: ClickEvent) => {
-                const dataId = params.data?.id;
-                if (!dataId) {
-                  // Click outside any circle: go back a level
-                  if (breadcrumb.length > 0) {
-                    setBreadcrumb((prev) => {
-                      const next = [...prev];
-                      next.pop();
-                      const target = next[next.length - 1];
-                      setDisplayTree(target || null);
-                      setSelectionsAtLevel([]);
-                      onSelectNodeAction(null);
-                      return next;
-                    });
-                  }
-                  return;
-                }
-                const nodeMeta = meta[dataId];
-                const simpleNode = findSimpleNode(currentTree, dataId);
-                if (simpleNode?.children && simpleNode.children.length > 0) {
-                  // Drill down: add to breadcrumb path only if not already there
-                  setDisplayTree(simpleNode);
-                  setBreadcrumb((prev) => {
-                    // Check if this node is already the last item in breadcrumb
-                    const lastItem = prev[prev.length - 1];
-                    if (lastItem && lastItem.id === simpleNode.id) {
-                      return prev; // Don't duplicate
-                    }
-                    return [...prev, simpleNode];
-                  });
-                  setSelectionsAtLevel([]);
-                  setZoomLevel(1); // Reset zoom on drill down
-                  setZoomCenter(null);
-                  onSelectNodeAction(null);
-                } else if (nodeMeta) {
-                  // Selection at current level: add to selections list
-                  const nodeName = nodeMeta.name || simpleNode?.name || dataId;
-                  setSelectionsAtLevel((prev) => {
-                    if (!prev.includes(nodeName)) {
-                      return [...prev, nodeName];
-                    }
-                    return prev;
-                  });
-                  onSelectNodeAction(nodeMeta.id ?? null);
-                }
-              },
+              click: handleChartClick,
             }}
             notMerge
             lazyUpdate
           />
         </div>
-        <div className="w-full md:w-80 flex flex-col gap-3">
-          <div className="bg-white border border-slate-200 rounded-xl p-3">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <div className="text-xs uppercase text-slate-500">Drill Path</div>
-                <div className="text-sm font-medium text-slate-900">
-                  {breadcrumb.length === 0 
-                    ? 'Root' 
-                    : breadcrumb
-                        .filter((b, idx, arr) => idx === 0 || b.id !== arr[idx - 1].id) // Remove consecutive duplicates
-                        .map((b) => b.name)
-                        .join(' / ')}
+        {showSidePanel && (
+          <div className="w-full md:w-80 flex flex-col gap-3">
+            {showEmbeddedControls && (
+              <div className="bg-white border border-slate-200 rounded-xl p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <div className="text-xs uppercase text-slate-500">Drill Path</div>
+                    <div className="text-sm font-medium text-slate-900">
+                      {breadcrumb.length === 0 
+                        ? 'Root' 
+                        : breadcrumb
+                            .filter((b, idx, arr) => idx === 0 || b.id !== arr[idx - 1].id) // Remove consecutive duplicates
+                            .map((b) => b.name)
+                            .join(' / ')}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    {breadcrumb.length > 0 && (
+                      <button
+                        className="text-xs px-3 py-1 border rounded-lg text-slate-600 hover:bg-slate-100"
+                        onClick={() => {
+                          setBreadcrumb((prev) => {
+                            const next = [...prev];
+                            next.pop();
+                            const target = next[next.length - 1];
+                            setDisplayTree(target || null);
+                            setSelectionsAtLevel([]);
+                            setZoomLevel(1);
+                            setZoomCenter(null);
+                            return next;
+                          });
+                          onSelectNodeAction(null);
+                        }}
+                      >
+                        Back
+                      </button>
+                    )}
+                    {(breadcrumb.length > 0 || selectionsAtLevel.length > 0) && (
+                      <button
+                        className="text-xs px-3 py-1 border rounded-lg text-slate-600 hover:bg-slate-100"
+                        onClick={() => {
+                          setBreadcrumb([]);
+                          setDisplayTree(null);
+                          setSelectionsAtLevel([]);
+                          setZoomLevel(1);
+                          setZoomCenter(null);
+                          onSelectNodeAction(null);
+                        }}
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="flex gap-2">
-                {breadcrumb.length > 0 && (
-                  <button
-                    className="text-xs px-3 py-1 border rounded-lg text-slate-600 hover:bg-slate-100"
-                    onClick={() => {
-                      setBreadcrumb((prev) => {
-                        const next = [...prev];
-                        next.pop();
-                        const target = next[next.length - 1];
-                        setDisplayTree(target || null);
-                        setSelectionsAtLevel([]);
-                        setZoomLevel(1);
-                        setZoomCenter(null);
-                        return next;
-                      });
-                      onSelectNodeAction(null);
-                    }}
-                  >
-                    Back
-                  </button>
-                )}
-                {(breadcrumb.length > 0 || selectionsAtLevel.length > 0) && (
-                  <button
-                    className="text-xs px-3 py-1 border rounded-lg text-slate-600 hover:bg-slate-100"
-                    onClick={() => {
-                      setBreadcrumb([]);
-                      setDisplayTree(null);
-                      setSelectionsAtLevel([]);
-                      setZoomLevel(1);
-                      setZoomCenter(null);
-                      onSelectNodeAction(null);
-                    }}
-                  >
-                    Reset
-                  </button>
+                {selectionsAtLevel.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-slate-200">
+                    <div className="text-xs uppercase text-slate-500 mb-1">Selections at this level</div>
+                    <div className="flex flex-wrap gap-1">
+                      {selectionsAtLevel.map((name, idx) => (
+                        <span key={idx} className="text-xs px-2 py-1 bg-slate-100 rounded text-slate-700">
+                          {name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
-            </div>
-            {selectionsAtLevel.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-slate-200">
-                <div className="text-xs uppercase text-slate-500 mb-1">Selections at this level</div>
-                <div className="flex flex-wrap gap-1">
-                  {selectionsAtLevel.map((name, idx) => (
-                    <span key={idx} className="text-xs px-2 py-1 bg-slate-100 rounded text-slate-700">
-                      {name}
-                    </span>
-                  ))}
-                </div>
+            )}
+            {showEmbeddedInsights && (
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <StakeholderInsightPanel
+                  selectedNode={selectedNode}
+                  relatedEntities={relatedEntities}
+                  onSelectNodeAction={onSelectNodeAction}
+                  emptyState="Click any circle to view details. This is ECharts circle packing using the full stakeholder dataset."
+                />
               </div>
             )}
           </div>
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-            <StakeholderInsightPanel
-              selectedNode={selectedNode}
-              relatedEntities={relatedEntities}
-              onSelectNodeAction={onSelectNodeAction}
-              emptyState="Click any circle to view details. This is ECharts circle packing using the full stakeholder dataset."
-            />
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
 }
-

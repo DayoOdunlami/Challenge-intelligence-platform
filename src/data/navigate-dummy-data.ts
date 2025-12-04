@@ -295,6 +295,53 @@ ZeroAvia is an aviation technology company focused on developing hydrogen-electr
     created_at: twoYearsAgo,
     updated_at: now
   },
+  // Working Groups / Alliances
+  {
+    id: 'wg-jet-zero-taskforce',
+    name: 'Jet Zero Taskforce',
+    type: 'Working Group',
+    sector: 'Transport',
+    funding_capacity: 'Medium',
+    location: { city: 'London', region: 'London', country: 'UK' },
+    contact: { website: 'https://www.gov.uk/government/groups/jet-zero-council' },
+    description:
+      'Cross-government and industry taskforce coordinating aviation decarbonisation delivery following the Jet Zero Council transition.',
+    tags: ['working-group', 'policy', 'aviation', 'hydrogen'],
+    data_quality: { confidence: 'verified', last_verified: now },
+    capacity_scenarios: { optimistic: 50000000, conservative: 20000000, current: 30000000 },
+    created_at: lastYear,
+    updated_at: now
+  },
+  {
+    id: 'wg-hydrogen-aviation-alliance',
+    name: 'Hydrogen in Aviation Alliance',
+    type: 'Working Group',
+    sector: 'Aerospace',
+    funding_capacity: 'Medium',
+    location: { city: 'Bristol', region: 'South West', country: 'UK' },
+    contact: { website: 'https://www.hydrogeninaviation.co.uk' },
+    description:
+      'Industry alliance (easyJet, Rolls-Royce, Airbus, GKN, ZeroAvia, airports) accelerating hydrogen flight infrastructure and regulation.',
+    tags: ['hydrogen', 'infrastructure', 'industry-alliance'],
+    data_quality: { confidence: 'verified', last_verified: now },
+    created_at: lastYear,
+    updated_at: now
+  },
+  {
+    id: 'wg-hydrogen-working-group',
+    name: 'Hydrogen Working Group',
+    type: 'Working Group',
+    sector: 'Energy',
+    funding_capacity: 'Low',
+    location: { city: 'Cranfield', region: 'East of England', country: 'UK' },
+    contact: { website: 'https://www.ati.org.uk' },
+    description:
+      'Specialist working group convened by ATI to coordinate standards and technology pathways for hydrogen propulsion.',
+    tags: ['hydrogen', 'standards', 'technology'],
+    data_quality: { confidence: 'verified', last_verified: now },
+    created_at: twoYearsAgo,
+    updated_at: now
+  },
   {
     id: 'org-itm-power-001',
     name: 'ITM Power',

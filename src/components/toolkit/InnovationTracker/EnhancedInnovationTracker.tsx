@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import * as echarts from 'echarts/core';
 import {
@@ -31,7 +31,20 @@ echarts.use([
   CanvasRenderer,
 ]);
 
-export function EnhancedInnovationTracker() {
+type EnhancedInnovationTrackerProps = {
+  // Props for external control/insights integration
+  showEmbeddedControls?: boolean;
+  showEmbeddedInsights?: boolean;
+  onControlsRender?: ((renderControls: (() => ReactNode) | null) => void) | null;
+  onInsightsRender?: ((renderInsights: (() => ReactNode) | null) => void) | null;
+};
+
+export function EnhancedInnovationTracker({
+  showEmbeddedControls = true,
+  showEmbeddedInsights = true,
+  onControlsRender = null,
+  onInsightsRender = null,
+}: EnhancedInnovationTrackerProps) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedLink, setSelectedLink] = useState<FundingFlowLink | null>(null);
   const [activeView, setActiveView] = useState<'sankey' | 'waterfall' | 'breakdown' | 'insights'>('sankey');
@@ -41,6 +54,10 @@ export function EnhancedInnovationTracker() {
     showDetailedProjects: false,
     scenarioAdjustments: {},
   });
+
+  // Check if using external controls/insights
+  const usingExternalControls = Boolean(onControlsRender);
+  const usingExternalInsights = Boolean(onInsightsRender);
 
   // Apply filters and scenario adjustments to data
   const filteredData = useMemo(() => {
@@ -116,6 +133,93 @@ export function EnhancedInnovationTracker() {
     return undefined;
   }, [selectedNodeId]);
 
+  // Provide controls renderer to parent if requested
+  useEffect(() => {
+    if (onControlsRender) {
+      onControlsRender(() => (
+        <div className="space-y-4">
+          <InnovationTrackerControls
+            filters={filters}
+            onFiltersChange={setFilters}
+          />
+          {/* View selector tabs for external mode */}
+          <div className="pt-3 border-t border-slate-200">
+            <div className="text-xs uppercase text-slate-500 mb-2">View</div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setActiveView('sankey')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+                  activeView === 'sankey' 
+                    ? 'bg-[#006E51] text-white border-[#006E51]' 
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <TrendingUp className="w-3.5 h-3.5" />
+                Sankey
+              </button>
+              <button
+                onClick={() => setActiveView('waterfall')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+                  activeView === 'waterfall' 
+                    ? 'bg-[#006E51] text-white border-[#006E51]' 
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <BarChart3 className="w-3.5 h-3.5" />
+                Waterfall
+              </button>
+              <button
+                onClick={() => setActiveView('breakdown')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+                  activeView === 'breakdown' 
+                    ? 'bg-[#006E51] text-white border-[#006E51]' 
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <PieChart className="w-3.5 h-3.5" />
+                Breakdown
+              </button>
+              <button
+                onClick={() => setActiveView('insights')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+                  activeView === 'insights' 
+                    ? 'bg-[#006E51] text-white border-[#006E51]' 
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <ScatterChart className="w-3.5 h-3.5" />
+                Mix
+              </button>
+            </div>
+          </div>
+        </div>
+      ));
+      return () => {
+        onControlsRender(null);
+      };
+    }
+  }, [onControlsRender, filters, activeView]);
+
+  // Provide insights renderer to parent if requested
+  useEffect(() => {
+    if (onInsightsRender) {
+      onInsightsRender(() => (
+        <InnovationTrackerInsightPanel
+          selectedNodeId={selectedNodeId}
+          selectedLink={selectedLink}
+          entity={selectedEntity}
+          onClose={() => {
+            setSelectedNodeId(null);
+            setSelectedLink(null);
+          }}
+        />
+      ));
+      return () => {
+        onInsightsRender(null);
+      };
+    }
+  }, [onInsightsRender, selectedNodeId, selectedLink, selectedEntity]);
+
   // Build ECharts option with harmonized colors
   const echartsOption = useMemo(() => {
     const nodes = filteredData.nodes.map(node => {
@@ -157,7 +261,7 @@ export function EnhancedInnovationTracker() {
     });
 
     return {
-      title: {
+      title: usingExternalControls ? undefined : {
         text: 'Zero emission aviation funding distribution FY24',
         left: 'center',
         top: 10,
@@ -214,7 +318,7 @@ export function EnhancedInnovationTracker() {
         },
       ],
     };
-  }, [filteredData]);
+  }, [filteredData, usingExternalControls]);
 
   const handleNodeClick = (params: any) => {
     if (params.dataType === 'node') {
@@ -252,13 +356,80 @@ export function EnhancedInnovationTracker() {
     }
   };
 
+  // Render visualization content (shared between embedded and external modes)
+  const renderVisualizationContent = () => (
+    <>
+      {activeView === 'sankey' && (
+        <div className="w-full h-full min-h-[500px]">
+          <ReactECharts
+            echarts={echarts}
+            option={echartsOption}
+            style={{ height: '100%', width: '100%' }}
+            onEvents={{
+              click: (params: any) => {
+                if (params.dataType === 'node') {
+                  handleNodeClick(params);
+                } else if (params.dataType === 'edge') {
+                  handleLinkClick(params);
+                }
+              },
+            }}
+            notMerge={true}
+            lazyUpdate={false}
+          />
+        </div>
+      )}
+      {activeView === 'waterfall' && (
+        <InnovationTrackerWaterfall
+          filters={filters}
+          selectedEntityId={selectedNodeId}
+          onEntityClick={(entityId) => {
+            setSelectedNodeId(entityId);
+            setSelectedLink(null);
+          }}
+        />
+      )}
+      {activeView === 'breakdown' && (
+        <InnovationTrackerFundingBreakdown
+          nodes={filteredData.nodes}
+          links={filteredData.links}
+          onNodeSelect={(entityId) => {
+            setSelectedNodeId(entityId);
+            setSelectedLink(null);
+          }}
+        />
+      )}
+      {activeView === 'insights' && (
+        <InnovationTrackerFundingInsights
+          links={filteredData.links}
+          onLinkSelect={(link) => {
+            setSelectedLink(link);
+            setSelectedNodeId(null);
+          }}
+        />
+      )}
+    </>
+  );
+
+  // External mode: just render the visualization, controls/insights handled externally
+  if (usingExternalControls || usingExternalInsights) {
+    return (
+      <div className="w-full h-full">
+        {renderVisualizationContent()}
+      </div>
+    );
+  }
+
+  // Embedded mode: original layout with controls and insights
   return (
     <div className="w-full space-y-4">
       {/* Controls Panel at Top */}
-      <InnovationTrackerControls
-        filters={filters}
-        onFiltersChange={setFilters}
-      />
+      {showEmbeddedControls && (
+        <InnovationTrackerControls
+          filters={filters}
+          onFiltersChange={setFilters}
+        />
+      )}
 
       {/* Visualization Selector Tabs at Top */}
       <Tabs value={activeView} onValueChange={(v) => setActiveView(v as typeof activeView)}>
@@ -282,9 +453,9 @@ export function EnhancedInnovationTracker() {
         </TabsList>
 
         {/* Main Content Area: Visualization + Insights */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <div className={`grid grid-cols-1 ${showEmbeddedInsights ? 'lg:grid-cols-4' : ''} gap-4`}>
           {/* Main Visualization Area */}
-          <div className="lg:col-span-3">
+          <div className={showEmbeddedInsights ? "lg:col-span-3" : ""}>
             <div className="bg-white rounded-lg border p-4">
               <TabsContent value="sankey" className="mt-0">
                 <div 
@@ -345,20 +516,21 @@ export function EnhancedInnovationTracker() {
           </div>
 
           {/* Insight Panel on Right */}
-          <div className="lg:col-span-1">
-            <InnovationTrackerInsightPanel
-              selectedNodeId={selectedNodeId}
-              selectedLink={selectedLink}
-              entity={selectedEntity}
-              onClose={() => {
-                setSelectedNodeId(null);
-                setSelectedLink(null);
-              }}
-            />
-          </div>
+          {showEmbeddedInsights && (
+            <div className="lg:col-span-1">
+              <InnovationTrackerInsightPanel
+                selectedNodeId={selectedNodeId}
+                selectedLink={selectedLink}
+                entity={selectedEntity}
+                onClose={() => {
+                  setSelectedNodeId(null);
+                  setSelectedLink(null);
+                }}
+              />
+            </div>
+          )}
         </div>
       </Tabs>
     </div>
   );
 }
-

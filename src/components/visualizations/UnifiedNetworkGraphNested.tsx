@@ -31,6 +31,20 @@ const ENTITY_TYPE_COLORS: Record<string, string> = {
   initiative: '#006E51',
   authority: '#6B7280',
   priority: '#EF4444',
+  // CPC entity types
+  focus_area: '#8B5CF6',
+  milestone: '#A855F7',
+  stage: '#C084FC',
+  team: '#E879F9',
+  asset: '#F0ABFC',
+  // Normalized/capitalized versions
+  FocusArea: '#8B5CF6',
+  Milestone: '#A855F7',
+  Stage: '#C084FC',
+  Team: '#E879F9',
+  Asset: '#F0ABFC',
+  'focus area': '#8B5CF6',
+  'Focus Area': '#8B5CF6',
 };
 
 const MODE_COLORS: Record<string, string> = {
@@ -52,14 +66,54 @@ const THEME_COLORS: Record<string, string> = {
   'data-and-digital': '#06B6D4',
 };
 
+const STAKEHOLDER_CATEGORY_COLORS: Record<string, string> = {
+  Government: '#0EA5E9',
+  Intermediary: '#8B5CF6',
+  Academia: '#6366F1',
+  Industry: '#F97316',
+  Project: '#10B981',
+  'Working Group': '#EC4899',
+};
+
+const SECTOR_COLORS: Record<string, string> = {
+  rail: '#3b82f6',           // blue
+  energy: '#22c55e',         // green
+  'local gov': '#a855f7',     // purple
+  transport: '#f59e0b',      // orange
+  'built env': '#ef4444',     // red
+  aviation: '#06b6d4',       // cyan
+  // Normalized keys (with underscores)
+  'local_gov': '#a855f7',
+  'built_env': '#ef4444',
+};
+
+const BUSINESS_UNIT_COLORS: Record<string, string> = {
+  Rail: '#7C3AED',
+  'Integrated Transport': '#A855F7',
+  Aviation: '#C084FC',
+  Energy: '#E879F9',
+  Digital: '#F0ABFC',
+  Strategy: '#6366F1',
+  // Normalized versions
+  rail: '#7C3AED',
+  'integrated transport': '#A855F7',
+  'integrated-transport': '#A855F7',
+  aviation: '#C084FC',
+  energy: '#E879F9',
+  digital: '#F0ABFC',
+  strategy: '#6366F1',
+  Transport: '#A855F7', // Fallback for Transport
+  transport: '#A855F7',
+};
+
 // ─────────────────────────────────────────────────────────────
 // TYPES
 // ─────────────────────────────────────────────────────────────
 
 export type ClusterMode = 'none' | 'single' | 'nested';
-export type PrimaryClusterBy = 'domain' | 'entityType' | 'mode';
-export type SecondaryClusterBy = 'entityType' | 'mode' | 'theme' | 'sector';
-export type ColorBy = 'domain' | 'entityType' | 'mode' | 'theme' | 'primaryCluster' | 'secondaryCluster';
+export type PrimaryClusterBy = 'domain' | 'entityType' | 'mode' | 'stakeholderCategory';
+export type SecondaryClusterBy = 'entityType' | 'mode' | 'theme' | 'sector' | 'stakeholderCategory';
+export type ColorBy = 'domain' | 'entityType' | 'mode' | 'theme' | 'primaryCluster' | 'secondaryCluster' | 'stakeholderCategory' | 'sector' | 'businessUnit';
 
 interface GraphNode {
   id: string;
@@ -111,6 +165,11 @@ interface NestedClusterInfo {
   secondary: ClusterInfo[];
 }
 
+export interface DomainPodConfig {
+  taxonomyKey: 'stakeholderCategory' | 'sector' | 'entityType' | 'businessUnit';
+  showPods: boolean;
+}
+
 export interface UnifiedNetworkGraphProps {
   entities: BaseEntity[];
   relationships: UniversalRelationship[];
@@ -120,7 +179,9 @@ export interface UnifiedNetworkGraphProps {
   clusterMode?: ClusterMode;
   primaryClusterBy?: PrimaryClusterBy;
   secondaryClusterBy?: SecondaryClusterBy;
-  showHulls?: boolean;
+  domainPodConfig?: Partial<Record<'navigate' | 'atlas' | 'cpc-internal', DomainPodConfig>>;
+  showHulls?: boolean; // Deprecated: use showDomainHulls and domainPodConfig instead
+  showDomainHulls?: boolean; // Separate flag for domain hulls (primary clusters) - independent of pod hulls
   clusterTightness?: number; // 0.1 to 1.0
   clusterSpacing?: number; // 0.3 to 1.5, default 0.8
   // Simulation parameters
@@ -149,7 +210,72 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-function getClusterValue(entity: BaseEntity, clusterBy: PrimaryClusterBy | SecondaryClusterBy): string {
+function getClusterValue(
+  entity: BaseEntity,
+  clusterBy: PrimaryClusterBy | SecondaryClusterBy,
+  domainPodConfig?: Partial<Record<'navigate' | 'atlas' | 'cpc-internal', DomainPodConfig>>
+): string {
+  // For secondary clustering with domain pod config, use domain-specific logic
+  if (domainPodConfig && (clusterBy === 'stakeholderCategory' || clusterBy === 'sector' || clusterBy === 'entityType')) {
+    const domain = entity.domain as 'navigate' | 'atlas' | 'cpc-internal';
+    const podConfig = domainPodConfig[domain];
+    
+    // If pods are disabled for this domain, return domain name so all nodes group together
+    if (!podConfig?.showPods) {
+      return domain; // All nodes in this domain will have the same secondary cluster
+    }
+    
+    if (podConfig.showPods) {
+      // Use domain-specific taxonomy
+      switch (podConfig.taxonomyKey) {
+        case 'stakeholderCategory':
+          // For stakeholders, use their category/type
+          if (entity.entityType === 'stakeholder') {
+            const category = (entity.metadata?.category as string) ||
+              (entity.metadata?.custom as { type?: string })?.type ||
+              'Industry';
+            return category === 'Research' ? 'Academia' : category;
+          }
+          if (entity.entityType === 'project') return 'Project';
+          if (entity.name?.toLowerCase().includes('working group') || 
+              entity.name?.toLowerCase().includes('taskforce') ||
+              entity.name?.toLowerCase().includes('task force')) {
+            return 'Working Group';
+          }
+          return entity.entityType; // Fallback
+          
+        case 'sector':
+          const sector = (entity.metadata?.sector as string) || 
+            (Array.isArray(entity.metadata?.sector) ? entity.metadata.sector[0] : undefined);
+          // Normalize sector values
+          if (sector) {
+            const normalized = sector.trim().toLowerCase();
+            const sectorMap: Record<string, string> = {
+              rail: 'Rail',
+              energy: 'Energy',
+              'local_gov': 'Local Gov',
+              'local gov': 'Local Gov',
+              transport: 'Transport',
+              'built_env': 'Built Env',
+              'built env': 'Built Env',
+              aviation: 'Aviation',
+            };
+            return sectorMap[normalized] || sector;
+          }
+          return 'other';
+          
+        case 'entityType':
+          return entity.entityType;
+          
+        case 'businessUnit':
+          return (entity.metadata?.custom as { businessUnit?: string; department?: string })?.businessUnit || 
+            (entity.metadata?.custom as { businessUnit?: string; department?: string })?.department || 
+            entity.entityType;
+      }
+    }
+  }
+  
+  // Default behavior (original logic)
   switch (clusterBy) {
     case 'domain':
       return entity.domain;
@@ -160,7 +286,44 @@ function getClusterValue(entity: BaseEntity, clusterBy: PrimaryClusterBy | Secon
     case 'theme':
       return (entity.metadata?.custom as { strategicThemes?: string[] })?.strategicThemes?.[0] || 'other';
     case 'sector':
-      return (entity.metadata?.sector as string) || (Array.isArray(entity.metadata?.sector) ? entity.metadata.sector[0] : 'other') || 'other';
+      const sector = (entity.metadata?.sector as string) || (Array.isArray(entity.metadata?.sector) ? entity.metadata.sector[0] : 'other') || 'other';
+      // Normalize sector
+      if (sector && sector !== 'other') {
+        const normalized = sector.trim().toLowerCase();
+        const sectorMap: Record<string, string> = {
+          rail: 'Rail',
+          energy: 'Energy',
+          'local_gov': 'Local Gov',
+          'local gov': 'Local Gov',
+          transport: 'Transport',
+          'built_env': 'Built Env',
+          'built env': 'Built Env',
+          aviation: 'Aviation',
+        };
+        return sectorMap[normalized] || sector;
+      }
+      return sector;
+    case 'stakeholderCategory':
+      // For stakeholders, use their category/type
+      if (entity.entityType === 'stakeholder') {
+        const category = (entity.metadata?.category as string) ||
+          (entity.metadata?.custom as { type?: string })?.type ||
+          'Industry';
+        // Map Navigate 'Research' to 'Academia'
+        return category === 'Research' ? 'Academia' : category;
+      }
+      // For projects, use 'Project'
+      if (entity.entityType === 'project') {
+        return 'Project';
+      }
+      // For working groups (check by name since they might be stakeholders)
+      if (entity.name?.toLowerCase().includes('working group') || 
+          entity.name?.toLowerCase().includes('taskforce') ||
+          entity.name?.toLowerCase().includes('task force')) {
+        return 'Working Group';
+      }
+      // For technologies and others, return entityType as fallback (won't match stakeholder colors)
+      return entity.entityType;
     default:
       return 'all';
   }
@@ -176,6 +339,10 @@ function getClusterColor(value: string, clusterBy: PrimaryClusterBy | SecondaryC
       return MODE_COLORS[value] || '#6B7280';
     case 'theme':
       return THEME_COLORS[value] || '#6B7280';
+    case 'sector':
+      return SECTOR_COLORS[value.toLowerCase()] || SECTOR_COLORS[value] || '#6B7280';
+    case 'stakeholderCategory':
+      return STAKEHOLDER_CATEGORY_COLORS[value] || ENTITY_TYPE_COLORS[value] || '#6B7280';
     default:
       return '#6B7280';
   }
@@ -193,11 +360,48 @@ function getNodeColor(
     case 'domain':
       return DOMAIN_COLORS[entity.domain] || '#6B7280';
     case 'entityType':
-      return ENTITY_TYPE_COLORS[entity.entityType] || '#6B7280';
+      // Handle case-insensitive lookup and capitalize first letter for matching
+      const entityTypeKey = entity.entityType?.toLowerCase();
+      const capitalized = entity.entityType ? entity.entityType.charAt(0).toUpperCase() + entity.entityType.slice(1).toLowerCase() : '';
+      return ENTITY_TYPE_COLORS[entity.entityType] || ENTITY_TYPE_COLORS[entityTypeKey] || ENTITY_TYPE_COLORS[capitalized] || '#6B7280';
+    case 'stakeholderCategory':
+      let category: string;
+      // For stakeholders, use their type/category
+      if (entity.entityType === 'stakeholder') {
+        category = (entity.metadata?.category as string) ||
+          (entity.metadata?.custom as { type?: string })?.type ||
+          'Industry'; // Default fallback
+        // Map Navigate types to stakeholder categories
+        if (category === 'Research') category = 'Academia';
+      } else if (entity.entityType === 'project') {
+        // Projects use "Project" category
+        category = 'Project';
+      } else if (entity.name?.toLowerCase().includes('working group') || 
+                 entity.name?.toLowerCase().includes('taskforce') ||
+                 entity.name?.toLowerCase().includes('task force')) {
+        // Working groups use "Working Group" category
+        category = 'Working Group';
+      } else if (entity.entityType === 'technology') {
+        // Technologies should not be colored by stakeholder category
+        // Return a neutral gray color
+        return '#9CA3AF'; // gray-400
+      } else {
+        // Fallback for other entity types - don't color by stakeholder category
+        return ENTITY_TYPE_COLORS[entity.entityType] || '#6B7280';
+      }
+      return STAKEHOLDER_CATEGORY_COLORS[category] || ENTITY_TYPE_COLORS[entity.entityType] || '#6B7280';
     case 'mode':
       return MODE_COLORS[(entity.metadata?.custom as { modes?: string[] })?.modes?.[0] || ''] || '#6B7280';
     case 'theme':
       return THEME_COLORS[(entity.metadata?.custom as { strategicThemes?: string[] })?.strategicThemes?.[0] || ''] || '#6B7280';
+    case 'sector':
+      const sectorValue = (entity.metadata?.sector as string) || 
+        (Array.isArray(entity.metadata?.sector) ? entity.metadata.sector[0] : undefined);
+      if (sectorValue) {
+        const normalizedSector = sectorValue.toLowerCase().replace(/\s+/g, '_');
+        return SECTOR_COLORS[normalizedSector] || SECTOR_COLORS[sectorValue.toLowerCase()] || SECTOR_COLORS[sectorValue] || '#6B7280';
+      }
+      return '#6B7280';
     case 'primaryCluster':
       return primaryCluster && primaryClusterBy ? getClusterColor(primaryCluster, primaryClusterBy) : '#6B7280';
     case 'secondaryCluster':
@@ -208,20 +412,29 @@ function getNodeColor(
 }
 
 function getNodeValue(entity: BaseEntity): number {
+  const fundingMeta = entity.metadata?.funding as
+    | { amount?: number; amountMin?: number; amountMax?: number }
+    | undefined;
   // Check funding from metadata
-  if (entity.metadata?.funding?.amount) {
-    const amount = entity.metadata.funding.amount as number;
+  if (fundingMeta?.amount) {
+    const amount = fundingMeta.amount;
     if (amount > 0) {
       return Math.max(2, Math.min(8, Math.log10(amount / 10000)));
     }
   }
-  if (entity.metadata?.funding?.amountMin) {
-    const amount = entity.metadata.funding.amountMin as number;
+  if (fundingMeta?.amountMin) {
+    const amount = fundingMeta.amountMin;
     if (amount > 0) {
       return Math.max(2, Math.min(8, Math.log10(amount / 10000)));
     }
   }
-  
+  if (fundingMeta?.amountMax) {
+    const amount = fundingMeta.amountMax;
+    if (amount > 0) {
+      return Math.max(2, Math.min(8, Math.log10(amount / 10000)));
+    }
+  }
+
   switch (entity.entityType) {
     case 'stakeholder':
       return 5;
@@ -261,15 +474,16 @@ function buildGraphData(
   colorBy: ColorBy,
   clusterMode: ClusterMode,
   primaryClusterBy: PrimaryClusterBy,
-  secondaryClusterBy: SecondaryClusterBy
+  secondaryClusterBy: SecondaryClusterBy,
+  domainPodConfig?: Partial<Record<'navigate' | 'atlas' | 'cpc-internal', DomainPodConfig>>
 ): GraphData {
   // Build cluster indices
   const primaryValues = new Map<string, number>();
   const secondaryValues = new Map<string, number>();
 
   entities.forEach((entity) => {
-    const primary = getClusterValue(entity, primaryClusterBy);
-    const secondary = getClusterValue(entity, secondaryClusterBy);
+    const primary = getClusterValue(entity, primaryClusterBy, domainPodConfig);
+    const secondary = getClusterValue(entity, secondaryClusterBy, domainPodConfig);
     if (!primaryValues.has(primary)) {
       primaryValues.set(primary, primaryValues.size);
     }
@@ -280,8 +494,8 @@ function buildGraphData(
 
   // Build nodes
   const nodes: GraphNode[] = entities.map((entity) => {
-    const primaryCluster = getClusterValue(entity, primaryClusterBy);
-    const secondaryCluster = getClusterValue(entity, secondaryClusterBy);
+    const primaryCluster = getClusterValue(entity, primaryClusterBy, domainPodConfig);
+    const secondaryCluster = getClusterValue(entity, secondaryClusterBy, domainPodConfig);
     return {
       id: entity.id,
       name: entity.name,
@@ -461,21 +675,38 @@ function paintNestedHulls2D(
   nestedClusters: Map<string, NestedClusterInfo>,
   nodes: GraphNode[],
   clusterMode: ClusterMode,
-  showSecondary: boolean = true
+  showSecondary: boolean = true,
+  showDomainHulls: boolean = false,
+  primaryClusterBy: PrimaryClusterBy = 'domain',
+  domainPodConfig?: Partial<Record<'navigate' | 'atlas' | 'cpc-internal', DomainPodConfig>>
 ) {
-  if (clusterMode === 'none') return;
+  // Allow drawing even if clusterMode is 'none' - domain hulls can be drawn independently
+  if (clusterMode === 'none' && !showDomainHulls) return;
 
   nestedClusters.forEach((nested) => {
-    // Draw primary hull
+    // Draw primary (domain) hull ONLY when domain hulls are explicitly enabled
+    // AND primaryClusterBy is 'domain'
+    // This is INDEPENDENT of pod settings
+    if (showDomainHulls && primaryClusterBy === 'domain') {
     const primaryNodes = nodes.filter((n) => nested.primary.nodeIds.includes(n.id));
     drawHull2D(ctx, primaryNodes, nested.primary.color, true, nested.primary.label);
+    }
 
-    // Draw secondary hulls (only in nested mode)
+    // Draw secondary (pod) hulls - per-domain based on domainPodConfig
+    // This is INDEPENDENT of showDomainHulls
     if (clusterMode === 'nested' && showSecondary) {
+      const primaryKey = nested.primary.id.replace('primary-', '');
+      const domain = primaryKey as 'navigate' | 'atlas' | 'cpc-internal';
+      const podConfig = domainPodConfig?.[domain];
+      
+      // Only draw pod hulls if THIS SPECIFIC DOMAIN has pods enabled
+      // This check is independent of showDomainHulls
+      if (podConfig?.showPods) {
       nested.secondary.forEach((secondary) => {
         const secondaryNodes = nodes.filter((n) => secondary.nodeIds.includes(n.id));
         drawHull2D(ctx, secondaryNodes, secondary.color, false, secondary.label);
       });
+      }
     }
   });
 }
@@ -548,24 +779,40 @@ function drawHull2D(
 function create3DClusterSpheres(
   nestedClusters: Map<string, NestedClusterInfo>,
   nodes: GraphNode[],
-  clusterMode: ClusterMode
+  clusterMode: ClusterMode,
+  showDomainHulls: boolean,
+  primaryClusterBy: PrimaryClusterBy,
+  domainPodConfig?: Partial<Record<'navigate' | 'atlas' | 'cpc-internal', DomainPodConfig>>
 ): THREE.Mesh[] {
   const meshes: THREE.Mesh[] = [];
-  if (clusterMode === 'none') return meshes;
+  // Allow creating meshes even if clusterMode is 'none' - domain hulls can be drawn independently
+  if (clusterMode === 'none' && !showDomainHulls) return meshes;
 
   nestedClusters.forEach((nested) => {
-    // Primary cluster sphere
+    // Primary (domain) cluster sphere - ONLY when domain hulls are explicitly enabled
+    // This is INDEPENDENT of pod settings
+    if (showDomainHulls && primaryClusterBy === 'domain') {
     const primaryNodes = nodes.filter((n) => nested.primary.nodeIds.includes(n.id));
     const primaryMesh = createClusterSphere(primaryNodes, nested.primary.color, true);
     if (primaryMesh) meshes.push(primaryMesh);
+    }
 
-    // Secondary cluster spheres (only in nested mode)
+    // Secondary (pod) cluster spheres - per-domain based on domainPodConfig
+    // This is INDEPENDENT of showDomainHulls
     if (clusterMode === 'nested') {
+      const primaryKey = nested.primary.id.replace('primary-', '');
+      const domain = primaryKey as 'navigate' | 'atlas' | 'cpc-internal';
+      const podConfig = domainPodConfig?.[domain];
+      
+      // Only create pod spheres if THIS SPECIFIC DOMAIN has pods enabled
+      // This check is independent of showDomainHulls
+      if (podConfig?.showPods) {
       nested.secondary.forEach((secondary) => {
         const secondaryNodes = nodes.filter((n) => secondary.nodeIds.includes(n.id));
         const secondaryMesh = createClusterSphere(secondaryNodes, secondary.color, false);
         if (secondaryMesh) meshes.push(secondaryMesh);
       });
+      }
     }
   });
 
@@ -705,19 +952,19 @@ export function UnifiedNetworkGraph({
   clusterMode = 'none',
   primaryClusterBy = 'domain',
   secondaryClusterBy = 'entityType',
-  showHulls = true,
+  domainPodConfig,
+  showDomainHulls = false,
   clusterTightness = 0.5,
   clusterSpacing = 0.8,
-  reheatAlpha = 0.3,
   velocityDecay = 0.7,
   maxVelocity = 18,
   maxDistance = 1000,
   className = '',
   fitToCanvas = true,
   clickToFocus = true,
-  showLabelsOnHover = true,
   onNodeSelect,
 }: UnifiedNetworkGraphProps) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const graphRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hullMeshesRef = useRef<THREE.Mesh[]>([]);
@@ -734,8 +981,8 @@ export function UnifiedNetworkGraph({
 
   // Build graph data
   const graphData = useMemo(
-    () => buildGraphData(entities, relationships, colorBy, clusterMode, primaryClusterBy, secondaryClusterBy),
-    [entities, relationships, colorBy, clusterMode, primaryClusterBy, secondaryClusterBy]
+    () => buildGraphData(entities, relationships, colorBy, clusterMode, primaryClusterBy, secondaryClusterBy, domainPodConfig),
+    [entities, relationships, colorBy, clusterMode, primaryClusterBy, secondaryClusterBy, domainPodConfig]
   );
 
   // Apply initial cluster positions
@@ -927,33 +1174,104 @@ export function UnifiedNetworkGraph({
   // 3D HULL MANAGEMENT
   // ─────────────────────────────────────────────────────────────
 
-  const setup3DHulls = useCallback(
-    (engine: any) => {
-      if (mode !== '3d' || !showHulls || clusterMode === 'none') return;
+  // Setup/update 3D hulls when dependencies change
+  useEffect(() => {
+    // Check if any hulls should be shown (domain hulls OR any pod hulls)
+    const hasAnyPodHulls = domainPodConfig ? Object.values(domainPodConfig).some((config) => config?.showPods ?? false) : false;
+    const shouldShowAnyHulls = showDomainHulls || hasAnyPodHulls;
+    
+    // Clean up if switching away from 3D or no hulls should be shown
+    if (mode !== '3d' || !shouldShowAnyHulls) {
+      // Only try to clean up if we have meshes and we're in 3D mode
+      if (mode === '3d' && graphRef.current && typeof graphRef.current.scene === 'function') {
+        try {
+          const scene = graphRef.current.scene();
+          if (scene) {
+            hullMeshesRef.current.forEach((mesh) => scene.remove(mesh));
+            hullMeshesRef.current = [];
+          }
+        } catch {
+          // If scene() fails, just clear the refs
+          hullMeshesRef.current = [];
+        }
+      } else {
+        // Not in 3D mode, just clear the refs
+        hullMeshesRef.current = [];
+      }
+      return;
+    }
 
-      const scene = engine.scene();
+    // Only proceed if we have a valid 3D graph ref
+    if (!graphRef.current || typeof graphRef.current.scene !== 'function') {
+      return;
+    }
+
+    let meshes: THREE.Mesh[] = [];
+    
+    try {
+      const scene = graphRef.current.scene();
+      if (!scene) {
+        // Return cleanup even if scene is null
+        return () => {
+          hullMeshesRef.current = [];
+        };
+      }
 
       // Remove existing hulls
       hullMeshesRef.current.forEach((mesh) => scene.remove(mesh));
 
-      // Create new hulls
-      const meshes = create3DClusterSpheres(graphData.nestedClusters, graphData.nodes, clusterMode);
+      // Create new hulls - pass independent flags
+      meshes = create3DClusterSpheres(
+        graphData.nestedClusters,
+        graphData.nodes,
+        clusterMode,
+        showDomainHulls,
+        primaryClusterBy,
+        domainPodConfig
+      );
       meshes.forEach((mesh) => scene.add(mesh));
 
       hullMeshesRef.current = meshes;
+      frameCountRef.current = 0;
+    } catch (error) {
+      // If scene access fails, just clear refs
+      console.warn('Failed to setup 3D hulls:', error);
+      hullMeshesRef.current = [];
+    }
 
-      // Update hulls periodically
-      const handleTick = () => {
-        frameCountRef.current++;
-        if (frameCountRef.current % 8 === 0) {
-          update3DClusterSpheres(hullMeshesRef.current, graphData.nestedClusters, graphData.nodes, clusterMode);
+    // Cleanup function - always returned
+    return () => {
+      const currentGraphRef = graphRef.current;
+      if (currentGraphRef && typeof currentGraphRef.scene === 'function') {
+        try {
+          const scene = currentGraphRef.scene();
+          if (scene) {
+            hullMeshesRef.current.forEach((mesh) => scene.remove(mesh));
+          }
+        } catch {
+          // Ignore cleanup errors
         }
-      };
+      }
+      hullMeshesRef.current = [];
+    };
+  }, [mode, showDomainHulls, clusterMode, primaryClusterBy, domainPodConfig, graphData.nestedClusters, graphData.nodes]);
 
-      engine.on('tick', handleTick);
-    },
-    [mode, showHulls, clusterMode, graphData.nestedClusters, graphData.nodes]
-  );
+  // Handle engine ticks to update hull positions
+  const handleEngineTick = useCallback(() => {
+    // Check if any hulls should be shown (domain hulls OR any pod hulls)
+    const hasAnyPodHulls = domainPodConfig ? Object.values(domainPodConfig).some((config) => config?.showPods ?? false) : false;
+    const shouldShowAnyHulls = showDomainHulls || hasAnyPodHulls;
+    
+    if (mode !== '3d' || !shouldShowAnyHulls || hullMeshesRef.current.length === 0) {
+      return;
+    }
+
+    frameCountRef.current++;
+    // Update hulls every 8 frames for performance
+    if (frameCountRef.current % 8 === 0) {
+      update3DClusterSpheres(hullMeshesRef.current, graphData.nestedClusters, graphData.nodes, clusterMode);
+    }
+  }, [mode, showDomainHulls, domainPodConfig, clusterMode, graphData.nestedClusters, graphData.nodes]);
 
   // ─────────────────────────────────────────────────────────────
   // EVENT HANDLERS
@@ -1023,22 +1341,22 @@ export function UnifiedNetworkGraph({
     nodeId: 'id',
     nodeLabel: 'name',
     nodeVal: 'val',
-    nodeColor: (node: any) => {
-      if (!hoverNode) return (node as GraphNode).color;
-      return highlightNodes.has(node as GraphNode)
-        ? (node as GraphNode).color
-        : hexToRgba((node as GraphNode).color, 0.12);
+    nodeColor: (nodeObj: unknown) => {
+      const node = nodeObj as GraphNode;
+      if (!hoverNode) return node.color;
+      return highlightNodes.has(node) ? node.color : hexToRgba(node.color, 0.12);
     },
-    linkColor: (link: any) => {
+    linkColor: (linkObj: unknown) => {
+      const link = linkObj as GraphLink;
       if (!hoverNode) return 'rgba(156, 163, 175, 0.25)';
-      return highlightLinks.has(link as GraphLink) ? '#F59E0B' : 'rgba(156, 163, 175, 0.03)';
+      return highlightLinks.has(link) ? '#F59E0B' : 'rgba(156, 163, 175, 0.03)';
     },
-    linkWidth: (link: any) => (highlightLinks.has(link as GraphLink) ? 2.5 : 0.8),
-    linkDirectionalParticles: (link: any) => (highlightLinks.has(link as GraphLink) ? 4 : 0),
+    linkWidth: (linkObj: unknown) => (highlightLinks.has(linkObj as GraphLink) ? 2.5 : 0.8),
+    linkDirectionalParticles: (linkObj: unknown) => (highlightLinks.has(linkObj as GraphLink) ? 4 : 0),
     linkDirectionalParticleWidth: 3,
     linkDirectionalParticleColor: () => '#F59E0B',
-    onNodeHover: handleNodeHover,
-    onNodeClick: handleNodeClick,
+    onNodeHover: (node: GraphNode | null) => handleNodeHover(node),
+    onNodeClick: (node: GraphNode | null) => handleNodeClick(node),
     onBackgroundClick: handleBackgroundClick,
     cooldownTicks: 300,
     d3AlphaDecay: 0.015,
@@ -1051,10 +1369,11 @@ export function UnifiedNetworkGraph({
 
   const render2D = () => (
     <ForceGraph2D
-      {...sharedProps}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      {...(sharedProps as any)}
       nodeCanvasObjectMode={() => 'after'}
-      nodeCanvasObject={(node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
-        const graphNode = node as GraphNode;
+      nodeCanvasObject={(nodeObj: unknown, ctx: CanvasRenderingContext2D, globalScale: number) => {
+        const graphNode = nodeObj as GraphNode;
         if (graphNode.x === undefined || graphNode.y === undefined) return;
 
         const size = Math.sqrt(graphNode.val) * 4 + 2;
@@ -1090,8 +1409,19 @@ export function UnifiedNetworkGraph({
         }
       }}
       onRenderFramePost={(ctx: CanvasRenderingContext2D) => {
-        if (showHulls && clusterMode !== 'none') {
-          paintNestedHulls2D(ctx, graphData.nestedClusters, graphData.nodes, clusterMode, clusterMode === 'nested');
+        // Draw hulls if either domain hulls or any pod hulls should be shown
+        // This is checked inside paintNestedHulls2D per-domain
+        if (clusterMode !== 'none' || showDomainHulls) {
+          paintNestedHulls2D(
+            ctx,
+            graphData.nestedClusters,
+            graphData.nodes,
+            clusterMode,
+            clusterMode === 'nested',
+            showDomainHulls,
+            primaryClusterBy,
+            domainPodConfig
+          );
         }
       }}
       enableZoomInteraction={true}
@@ -1105,12 +1435,13 @@ export function UnifiedNetworkGraph({
 
   const render3D = () => (
     <ForceGraph3D
-      {...sharedProps}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      {...(sharedProps as any)}
       nodeOpacity={0.9}
       linkOpacity={0.4}
       enableNavigationControls={true}
       backgroundColor="#f8fafc"
-      onEngineReady={setup3DHulls}
+      onEngineTick={handleEngineTick}
     />
   );
 
@@ -1118,7 +1449,7 @@ export function UnifiedNetworkGraph({
   // LEGEND
   // ─────────────────────────────────────────────────────────────
 
-  const legendItems = useMemo(() => {
+  const legendItems = useMemo<Array<{ label: string; color: string; count?: number }>>(() => {
     // Show primary clusters as legend when clustering
     if (clusterMode !== 'none') {
       return graphData.allPrimaryClusters.map((c) => ({
@@ -1140,6 +1471,11 @@ export function UnifiedNetworkGraph({
           label: formatLabel(k),
           color: v,
         }));
+      case 'stakeholderCategory':
+        return Object.entries(STAKEHOLDER_CATEGORY_COLORS).map(([k, v]) => ({
+          label: k,
+          color: v,
+        }));
       case 'mode':
         return Object.entries(MODE_COLORS).map(([k, v]) => ({
           label: formatLabel(k),
@@ -1150,6 +1486,13 @@ export function UnifiedNetworkGraph({
           label: formatLabel(k),
           color: v,
         }));
+      case 'sector':
+        return Object.entries(SECTOR_COLORS)
+          .filter(([k]) => !k.includes('_')) // Only show primary keys, not normalized duplicates
+          .map(([k, v]) => ({
+            label: formatLabel(k),
+            color: v,
+          }));
       default:
         return [];
     }
@@ -1168,39 +1511,26 @@ export function UnifiedNetworkGraph({
         <div className="font-semibold text-gray-700 mb-2">
           {clusterMode !== 'none' ? `Clusters: ${formatLabel(primaryClusterBy)}` : formatLabel(colorBy)}
         </div>
-        <div className="space-y-1.5">
-          {legendItems.map((item) => (
-            <div key={item.label} className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
-              <span className="text-gray-600 truncate">{item.label}</span>
-              {'count' in item && <span className="text-gray-400 text-[10px]">({item.count})</span>}
-            </div>
-          ))}
-        </div>
+      <div className="space-y-1.5">
+        {legendItems.map((item) => (
+          <div key={item.label} className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+            <span className="text-gray-600 truncate">{item.label}</span>
+            {item.count !== undefined ? (
+              <span className="text-gray-400 text-[10px]">({item.count})</span>
+            ) : null}
+          </div>
+        ))}
+      </div>
       </div>
 
-      {/* Info badge */}
-      <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm px-3 py-1.5 text-xs font-medium text-gray-600">
-        {mode.toUpperCase()} • {graphData.nodes.length} nodes • {graphData.links.length} links
+      {/* Info + cluster badges (stacked top-left) */}
+      <div className="absolute top-4 left-4 space-y-2">
+        <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm px-3 py-1.5 text-xs font-medium text-gray-600">
+          {mode.toUpperCase()} • {graphData.nodes.length} nodes • {graphData.links.length} links
+          {clusterMode !== 'none' && (
+            <span className="text-[#006E51]"> • {graphData.allPrimaryClusters.length} clusters</span>
+          )}
+        </div>
         {clusterMode !== 'none' && (
-          <span className="text-[#006E51]"> • {graphData.allPrimaryClusters.length} clusters</span>
-        )}
-      </div>
-
-      {/* Cluster mode indicator */}
-      {clusterMode !== 'none' && (
-        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm px-3 py-1.5 text-xs">
-          <span className="text-gray-500">Clustering:</span>{' '}
-          <span className="font-medium text-[#006E51]">
-            {clusterMode === 'single'
-              ? formatLabel(primaryClusterBy)
-              : `${formatLabel(primaryClusterBy)} → ${formatLabel(secondaryClusterBy)}`}
-          </span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default UnifiedNetworkGraph;
-
+          <div className="bg-white/90

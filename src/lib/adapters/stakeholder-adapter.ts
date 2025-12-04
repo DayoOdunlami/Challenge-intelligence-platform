@@ -23,7 +23,7 @@ export function stakeholderToBaseEntity(stakeholder: Stakeholder): BaseEntity {
     metadata: {
       sector: stakeholder.sector,
       tags: stakeholder.tags,
-      category: stakeholder.type, // Map stakeholder type to category
+      category: stakeholder.type === 'Research' ? 'Academia' : stakeholder.type, // Map 'Research' to 'Academia' for consistency
       status: 'active', // Stakeholders are typically active
       funding: stakeholder.total_funding_provided
         ? {
@@ -83,6 +83,7 @@ function getStakeholderColor(type: string): string {
     Research: '#7b2cbf',
     Industry: '#e76f51',
     Intermediary: '#2d8f6f',
+    'Working Group': '#ec4899',
   };
   return colorMap[type] || '#6b7280';
 }

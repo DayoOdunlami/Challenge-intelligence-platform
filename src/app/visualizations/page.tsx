@@ -4,6 +4,9 @@ import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { BarChart3, Network, Zap, Sun, GitBranch, Download, Settings, MessageCircle, Maximize2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
+import { AIChatPanel } from "@/components/layouts/AIChatPanel"
+import { handleAIFunctionCall, buildAIContext, type FunctionExecutionState } from "@/lib/ai-function-handlers"
 
 
 
@@ -25,8 +28,13 @@ import { NetworkGraphNavigate } from "@/components/visualizations/NetworkGraphNa
 import { NetworkGraphNavigate3D } from "@/components/visualizations/NetworkGraphNavigate3D"
 import { UnifiedNetworkGraph } from "@/components/visualizations/UnifiedNetworkGraph"
 import { StreamGraphNavigate } from "@/components/visualizations/StreamGraphNavigate"
-import { ParallelCoordinatesNavigate } from "@/components/visualizations/ParallelCoordinatesNavigate"
 import { SwarmPlotNavigate } from "@/components/visualizations/SwarmPlotNavigate"
+import FocusAreaMatrix from "@/components/visualizations/FocusAreaMatrix"
+import StagePipeline from "@/components/visualizations/StagePipeline"
+import StakeholderNetwork from "@/components/visualizations/StakeholderNetwork"
+import PortfolioTreemap from "@/components/visualizations/PortfolioTreemap"
+import StakeholderSunburst from "@/components/visualizations/StakeholderSunburst"
+import TreemapSunburstTransition from "@/components/visualizations/TreemapSunburstTransition"
 import challenges from "@/data/challenges"
 import { stakeholders, technologies, projects, relationships, fundingEvents } from "@/data/navigate-dummy-data"
 import { unifiedEntities, unifiedRelationships } from "@/data/unified"
@@ -43,7 +51,7 @@ import { CreativeHero } from "@/components/ui/CreativeHero"
 
 // Note: Using custom panels instead of importing existing ones to avoid prop dependencies
 
-type VisualizationType = 'sankey' | 'heatmap' | 'network' | 'network3d' | 'unifiednetwork' | 'sunburst' | 'chord' | 'radar' | 'bar' | 'circle' | 'bump' | 'treemap' | 'stream' | 'parallel' | 'swarm'
+type VisualizationType = 'sankey' | 'heatmap' | 'network' | 'network3d' | 'unifiednetwork' | 'sunburst' | 'chord' | 'radar' | 'bar' | 'circle' | 'bump' | 'treemap' | 'stream' | 'swarm' | 'focusareamatrix' | 'stagepipeline' | 'stakeholdernetwork' | 'portfoliotreemap' | 'stakeholdersunburst' | 'treemapsunburstransition'
 
 const visualizations = [
   {
@@ -138,18 +146,53 @@ const visualizations = [
     color: '#10B981'
   },
   {
-    id: 'parallel' as VisualizationType,
-    name: 'Parallel Coordinates',
-    description: 'Multi-dimensional technology comparison',
-    icon: Zap,
-    color: '#6366F1'
-  },
-  {
     id: 'swarm' as VisualizationType,
     name: 'Technology Distribution',
     description: 'TRL and category distribution',
     icon: BarChart3,
     color: '#F59E0B'
+  },
+  {
+    id: 'focusareamatrix' as VisualizationType,
+    name: 'Focus Area Matrix (Test)',
+    description: 'CPC focus areas by mode and strategic theme',
+    icon: BarChart3,
+    color: '#006E51'
+  },
+  {
+    id: 'stagepipeline' as VisualizationType,
+    name: 'Stage Pipeline (Test)',
+    description: 'Kanban view of focus areas through maturity stages',
+    icon: GitBranch,
+    color: '#4CAF50'
+  },
+  {
+    id: 'stakeholdernetwork' as VisualizationType,
+    name: 'Stakeholder Network (Test)',
+    description: 'Network graph of stakeholders and focus areas',
+    icon: Network,
+    color: '#9C27B0'
+  },
+  {
+    id: 'portfoliotreemap' as VisualizationType,
+    name: 'Portfolio Treemap (Test)',
+    description: 'Hierarchical portfolio view by mode, stage, or theme',
+    icon: BarChart3,
+    color: '#009688'
+  },
+  {
+    id: 'stakeholdersunburst' as VisualizationType,
+    name: 'Stakeholder Sunburst (Test)',
+    description: 'Radial taxonomy view of stakeholder ecosystem',
+    icon: Sun,
+    color: '#3F51B5'
+  },
+  {
+    id: 'treemapsunburstransition' as VisualizationType,
+    name: 'Treemap/Sunburst Transition (Test)',
+    description: 'Animated transition between treemap and sunburst views',
+    icon: GitBranch,
+    color: '#E91E63'
   }
 ]
 
@@ -170,6 +213,7 @@ function VisualizationsContent() {
   const [showInsights, setShowInsights] = useState(true) // Show by default
   const [showControls, setShowControls] = useState(true) // Show by default
   const [focusMode, setFocusMode] = useState(false) // Focus mode off by default
+  const [showAIChat, setShowAIChat] = useState(false) // AI Chat panel (hidden by default)
   const [circlePackingView, setCirclePackingView] = useState<'by_stakeholder_type' | 'by_technology_category' | 'by_funding'>('by_stakeholder_type')
   
   // NAVIGATE visualization control states
@@ -190,15 +234,8 @@ function VisualizationsContent() {
   const [chordView, setChordView] = useState<'by_stakeholder_type' | 'by_tech_category' | 'by_funding_flow'>('by_stakeholder_type')
   const [heatmapView, setHeatmapView] = useState<'trl_vs_category' | 'tech_vs_stakeholder' | 'funding_vs_status'>('trl_vs_category')
   
-  // Stream Graph, Parallel Coordinates, and Swarm Plot control states
+  // Stream Graph and Swarm Plot control states
   const [streamView, setStreamView] = useState<'by_stakeholder_type' | 'by_tech_category' | 'by_funding_type'>('by_stakeholder_type')
-  const [parallelDimensions, setParallelDimensions] = useState<string[]>([
-    'TRL Level',
-    'Funding (£M)',
-    'Market Readiness',
-    'Regulatory Status',
-    '2030 Maturity'
-  ])
   const [swarmView, setSwarmView] = useState<'by_trl' | 'by_category'>('by_trl')
   
   // TRL Filter state
@@ -222,6 +259,123 @@ function VisualizationsContent() {
     id: string;
     data: any;
   } | null>(null)
+  
+  // Entity highlighting state for AI
+  const [highlightedEntityIds, setHighlightedEntityIds] = useState<string[]>([])
+  
+  // Router for navigation
+  const router = useRouter()
+  
+  // Timeline tracks state
+  const [timelineTracks, setTimelineTracks] = useState<Record<string, boolean>>({
+    technology: true,
+    infrastructure: true,
+    policy: true,
+    skills: true,
+  })
+
+  // AI Function Execution Handler
+  const handleAIFunctionCallWrapper = (functionName: string, args: Record<string, unknown>) => {
+    const executionState = {
+      activeViz,
+      setActiveViz: (viz: string) => setActiveViz(viz as VisualizationType),
+      trlRange,
+      setTrlRange,
+      useNavigateData,
+      setUseNavigateData,
+      selectedTechIds,
+      setSelectedTechIds,
+      selectedDimensions,
+      setSelectedDimensions,
+      barChartView,
+      setBarChartView: (view: string) => {
+        if (['funding_by_stakeholder', 'funding_by_tech', 'projects_by_status', 'tech_by_trl'].includes(view)) {
+          setBarChartView(view as typeof barChartView);
+        }
+      },
+      circlePackingView,
+      setCirclePackingView: (view: string) => {
+        if (['by_stakeholder_type', 'by_technology_category', 'by_funding'].includes(view)) {
+          setCirclePackingView(view as typeof circlePackingView);
+        }
+      },
+      bumpView,
+      setBumpView: (view: string) => {
+        if (['all_technologies', 'by_category', 'top_advancing'].includes(view)) {
+          setBumpView(view as typeof bumpView);
+        }
+      },
+      selectedCategories,
+      setSelectedCategories,
+      timelineTracks,
+      setTimelineTracks,
+      treemapView,
+      setTreemapView: (view: string) => setTreemapView(view as TreemapViewMode),
+      heatmapView,
+      setHeatmapView: (view: string) => {
+        if (['trl_vs_category', 'tech_vs_stakeholder', 'funding_vs_status'].includes(view)) {
+          setHeatmapView(view as typeof heatmapView);
+        }
+      },
+      chordView,
+      setChordView: (view: string) => {
+        if (['by_stakeholder_type', 'by_tech_category', 'by_funding_flow'].includes(view)) {
+          setChordView(view as typeof chordView);
+        }
+      },
+      streamView,
+      setStreamView: (view: string) => {
+        if (['by_stakeholder_type', 'by_tech_category', 'by_funding_type'].includes(view)) {
+          setStreamView(view as typeof streamView);
+        }
+      },
+      swarmView,
+      setSwarmView: (view: string) => {
+        if (['by_trl', 'by_category'].includes(view)) {
+          setSwarmView(view as typeof swarmView);
+        }
+      },
+      similarityThreshold,
+      setSimilarityThreshold,
+      showClusters,
+      setShowClusters,
+      isOrbiting,
+      setIsOrbiting,
+      highlightedEntityIds,
+      setHighlightedEntityIds,
+      selectedEntity,
+      setSelectedEntity,
+      router,
+    } as FunctionExecutionState;
+    
+    const result = handleAIFunctionCall(functionName, args, executionState);
+    if (!result.success) {
+      console.error(`AI function call failed: ${result.error}`);
+    }
+  };
+  
+  // Build bidirectional context for AI
+  const aiContext = buildAIContext({
+    activeViz,
+    useNavigateData,
+    trlRange,
+    selectedTechIds,
+    selectedDimensions,
+    barChartView,
+    circlePackingView,
+    bumpView,
+    selectedCategories,
+    treemapView,
+    heatmapView,
+    chordView,
+    streamView,
+    swarmView,
+    similarityThreshold,
+    showClusters,
+    isOrbiting,
+    highlightedEntityIds,
+    selectedEntity,
+  });
   
   // Handle element selection for insights (like individual pages do)
   const handleNodeClick = (nodeId: string) => {
@@ -248,7 +402,7 @@ function VisualizationsContent() {
 
   // Auto-enable NAVIGATE data for NAVIGATE-only visualizations
   useEffect(() => {
-    const navigateOnlyVisualizations: VisualizationType[] = ['stream', 'parallel', 'swarm', 'radar', 'bar', 'circle', 'bump', 'treemap', 'heatmap', 'chord', 'network3d'];
+    const navigateOnlyVisualizations: VisualizationType[] = ['stream', 'swarm', 'radar', 'bar', 'circle', 'bump', 'treemap', 'heatmap', 'chord', 'network3d'];
     if (navigateOnlyVisualizations.includes(activeViz) && !useNavigateData) {
       setUseNavigateData(true);
     }
@@ -320,6 +474,18 @@ function VisualizationsContent() {
           return 'min-h-[75vh] max-h-[800px]' // Network graph
         case 'network3d':
           return 'min-h-[75vh] max-h-[800px]' // Network graph 3D
+        case 'focusareamatrix':
+          return 'min-h-[70vh] max-h-[900px]' // 70% viewport, max 900px
+        case 'stagepipeline':
+          return 'min-h-[75vh] max-h-[1000px]' // 75% viewport, max 1000px (needs space for kanban)
+        case 'stakeholdernetwork':
+          return 'min-h-[75vh] max-h-[900px]' // 75% viewport, max 900px
+        case 'portfoliotreemap':
+          return 'min-h-[70vh] max-h-[800px]' // 70% viewport, max 800px
+        case 'stakeholdersunburst':
+          return 'min-h-[70vh] max-h-[800px]' // 70% viewport, max 800px
+        case 'treemapsunburstransition':
+          return 'min-h-[70vh] max-h-[800px]' // 70% viewport, max 800px
         default:
           return 'min-h-[65vh] max-h-[700px]' // Default: 65% viewport, max 700px
       }
@@ -670,31 +836,6 @@ function VisualizationsContent() {
             )}
           </div>
         )
-      case 'parallel':
-        return (
-          <div className={containerClass}>
-            {useNavigateData ? (
-              <ParallelCoordinatesNavigate
-                technologies={filteredTechnologies}
-                selectedTechIds={selectedTechIds}
-                dimensions={parallelDimensions}
-                onTechnologySelect={(techId) => {
-                  const tech = filteredTechnologies.find(t => t.id === techId);
-                  if (tech) {
-                    setSelectedEntity({ type: 'technology', id: tech.id, data: tech });
-                  }
-                }}
-                className="w-full min-h-full"
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full bg-gradient-to-br from-[#CCE2DC]/10 to-[#006E51]/5 rounded-xl">
-                <div className="text-center p-8">
-                  <p className="text-gray-600">Parallel Coordinates is only available with NAVIGATE data</p>
-                </div>
-              </div>
-            )}
-          </div>
-        )
       case 'swarm':
         return (
           <div className={containerClass}>
@@ -718,6 +859,54 @@ function VisualizationsContent() {
                 </div>
               </div>
             )}
+          </div>
+        )
+      case 'focusareamatrix':
+        return (
+          <div className={containerClass}>
+            <div className="w-full p-6">
+              <FocusAreaMatrix />
+            </div>
+          </div>
+        )
+      case 'stagepipeline':
+        return (
+          <div className={containerClass}>
+            <div className="w-full p-6">
+              <StagePipeline />
+            </div>
+          </div>
+        )
+      case 'stakeholdernetwork':
+        return (
+          <div className={containerClass}>
+            <div className="w-full p-6">
+              <StakeholderNetwork />
+            </div>
+          </div>
+        )
+      case 'portfoliotreemap':
+        return (
+          <div className={containerClass}>
+            <div className="w-full p-6">
+              <PortfolioTreemap />
+            </div>
+          </div>
+        )
+      case 'stakeholdersunburst':
+        return (
+          <div className={containerClass}>
+            <div className="w-full p-6">
+              <StakeholderSunburst />
+            </div>
+          </div>
+        )
+      case 'treemapsunburstransition':
+        return (
+          <div className={containerClass}>
+            <div className="w-full p-6">
+              <TreemapSunburstTransition />
+            </div>
           </div>
         )
       default:
@@ -2667,95 +2856,6 @@ function VisualizationsContent() {
             </div>
           </div>
         )
-      case 'parallel':
-        return (
-          <div className="p-6 bg-white/80 backdrop-blur-sm rounded-xl border border-[#CCE2DC]/50">
-            <h3 className="text-lg font-semibold text-[#006E51] mb-4">Parallel Coordinates Controls</h3>
-            <div className="space-y-6">
-              {trlFilterSection}
-              
-              {/* Dimension Selector */}
-              <div>
-                <h4 className="font-medium text-[#006E51] mb-3">Dimensions</h4>
-                <div className="space-y-2">
-                  {['TRL Level', 'Funding (£M)', 'Market Readiness', 'Regulatory Status', '2030 Maturity'].map(dim => {
-                    const isSelected = parallelDimensions.includes(dim);
-                    return (
-                      <label key={dim} className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setParallelDimensions([...parallelDimensions, dim]);
-                            } else if (parallelDimensions.length > 1) {
-                              setParallelDimensions(parallelDimensions.filter(d => d !== dim));
-                            }
-                          }}
-                          disabled={!isSelected && parallelDimensions.length === 1}
-                          className="w-4 h-4 text-[#006E51] rounded focus:ring-[#006E51]"
-                        />
-                        <span className="text-sm text-gray-700">{dim}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  At least one dimension must be selected
-                </p>
-              </div>
-              
-              {/* Technology Selector */}
-              <div>
-                <h4 className="font-medium text-[#006E51] mb-3">
-                  Filter Technologies (Optional)
-                </h4>
-                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
-                  {filteredTechnologies.slice(0, 10).map((tech) => {
-                    const isSelected = selectedTechIds.includes(tech.id);
-                    return (
-                      <button
-                        key={tech.id}
-                        onClick={() => {
-                          if (isSelected) {
-                            setSelectedTechIds(selectedTechIds.filter(id => id !== tech.id));
-                          } else {
-                            setSelectedTechIds([...selectedTechIds, tech.id]);
-                          }
-                        }}
-                        className={`text-xs px-3 py-1.5 rounded transition-all ${
-                          isSelected
-                            ? 'bg-[#006E51] text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        {tech.name.length > 20 ? tech.name.substring(0, 20) + '...' : tech.name}
-                      </button>
-                    );
-                  })}
-                </div>
-                {selectedTechIds.length > 0 && (
-                  <button
-                    onClick={() => setSelectedTechIds([])}
-                    className="mt-2 text-xs text-gray-500 hover:text-gray-700 underline"
-                  >
-                    Clear Selection
-                  </button>
-                )}
-              </div>
-              
-              <div className="p-4 bg-[#CCE2DC]/20 rounded-lg">
-                <h4 className="font-medium text-[#006E51] mb-2">How to Use</h4>
-                <ul className="text-sm text-gray-600 space-y-1">
-                  <li>• Each line represents a technology</li>
-                  <li>• Compare across multiple dimensions</li>
-                  <li>• Click lines to select technologies</li>
-                  <li>• Filter to focus on specific techs</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        )
       case 'swarm':
         return (
           <div className="p-6 bg-white/80 backdrop-blur-sm rounded-xl border border-[#CCE2DC]/50">
@@ -3157,6 +3257,46 @@ function VisualizationsContent() {
               </Button>
             )}
           </div>
+        )}
+        
+        {/* AI Chat Panel (Floating) */}
+        {showAIChat && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 right-6 w-96 h-[600px] bg-white rounded-xl shadow-2xl border border-[#CCE2DC] z-50 flex flex-col"
+          >
+            <div className="flex items-center justify-between p-4 border-b border-[#CCE2DC]">
+              <h3 className="font-semibold text-[#006E51]">AI Assistant</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAIChat(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ×
+              </Button>
+            </div>
+            <div className="flex-1 overflow-hidden p-4">
+              <AIChatPanel
+                context={aiContext}
+                onFunctionCall={handleAIFunctionCallWrapper}
+              />
+            </div>
+          </motion.div>
+        )}
+        
+        {/* AI Chat Toggle Button (when panel is hidden) */}
+        {!showAIChat && (
+          <Button
+            onClick={() => setShowAIChat(true)}
+            className="fixed bottom-6 right-6 bg-[#006E51] hover:bg-[#005A42] text-white shadow-lg z-50"
+            size="sm"
+          >
+            <MessageCircle className="h-4 w-4 mr-2" />
+            AI Chat
+          </Button>
         )}
       </main>
     </div>

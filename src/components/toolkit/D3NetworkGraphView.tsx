@@ -921,9 +921,12 @@ export function D3NetworkGraphView({
     };
   }, [onControlsRender, renderControls]);
 
+  // Hide toggle buttons when external controls are provided (via onControlsRender)
+  const usingExternalControls = Boolean(onControlsRender);
+  
   return (
-    <div className="flex flex-col gap-4">
-      {showEmbeddedControls ? (
+    <div className={usingExternalControls ? "w-full h-full" : "flex flex-col gap-4"}>
+      {!usingExternalControls && (showEmbeddedControls ? (
         <div className="relative flex flex-col gap-4 bg-white/70 rounded-xl border border-slate-200 py-2">
           <button
             className="self-end mr-4 inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 transition-colors"
@@ -942,17 +945,17 @@ export function D3NetworkGraphView({
             Show inline controls
           </button>
         </div>
-      )}
+      ))}
 
-      <div className={`flex flex-col ${showEmbeddedInsights ? 'lg:flex-row' : ''} gap-4`}>
+      <div className={usingExternalControls ? "w-full h-full flex-1" : `flex flex-col ${showEmbeddedInsights ? 'lg:flex-row' : ''} gap-4`}>
         <div
           ref={containerRef}
-          className="flex-1 bg-white rounded-xl shadow border border-slate-200"
-          style={{ height: '700px' }}
+          className={usingExternalControls ? "w-full h-full min-h-[500px] flex-1" : "flex-1 bg-white rounded-xl shadow border border-slate-200"}
+          style={usingExternalControls ? { minHeight: '500px' } : { height: '700px' }}
         >
           <svg ref={svgRef} width={dimensions.width} height={dimensions.height} />
         </div>
-        {showEmbeddedInsights ? (
+        {!usingExternalControls && (showEmbeddedInsights ? (
           <div className="w-full lg:w-80 bg-slate-50 border border-slate-200 rounded-xl p-4 relative">
             {insightsToggleEnabled && (
               <button
@@ -979,7 +982,7 @@ export function D3NetworkGraphView({
               Show inline insights
             </button>
           </div>
-        ))}
+        )))}
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, Suspense, ReactNode } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { BarChart3, Network, Zap, Sun, GitBranch, MessageCircle, Maximize2, TrendingUp, DollarSign, Cpu, Clock } from "lucide-react"
+import { BarChart3, Network, Zap, Sun, GitBranch, MessageCircle, Maximize2, TrendingUp, DollarSign, Cpu, Clock, Library } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { LayoutSwitcher, LayoutOption } from "@/components/layouts/LayoutSwitcher"
 import { LayoutRenderer } from "@/components/layouts/LayoutRenderer"
@@ -178,14 +178,6 @@ const visualizations = [
     category: 'funding' as ViewCategory
   },
   {
-    id: 'parallel' as VisualizationType,
-    name: 'Parallel Coordinates',
-    description: 'Multi-dimensional technology comparison',
-    icon: Zap,
-    color: '#6366F1',
-    category: 'technology' as ViewCategory
-  },
-  {
     id: 'swarm' as VisualizationType,
     name: 'Technology Distribution',
     description: 'TRL and category distribution',
@@ -252,6 +244,9 @@ function NavigateContent() {
   // Get view category from URL, default to 'all'
   const viewCategory = (searchParams.get('view') as ViewCategory) || 'all'
   
+  // Get visualization from URL query param (from Visual Library click)
+  const vizFromUrl = searchParams.get('visualization') as VisualizationType | null
+  
   // Filter visualizations based on category
   const filteredVisualizations = viewCategory === 'all'
     ? visualizations
@@ -261,9 +256,12 @@ function NavigateContent() {
       })
   
   // Auto-select first visualization if category has only one
-  const defaultViz = filteredVisualizations.length > 0 
-    ? filteredVisualizations[0].id 
-    : 'network'
+  // But prefer URL param if provided
+  const defaultViz = vizFromUrl && visualizations.some(v => v.id === vizFromUrl)
+    ? vizFromUrl
+    : filteredVisualizations.length > 0 
+      ? filteredVisualizations[0].id 
+      : 'network'
   
   const [activeViz, setActiveViz] = useState<VisualizationType>(defaultViz)
   const [useNavigateData, setUseNavigateData] = useState(false)
@@ -831,6 +829,14 @@ function NavigateContent() {
               <p className="text-gray-600">Interactive intelligence for zero-emission aviation ecosystem</p>
             </div>
             <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => router.push('/visualisations')}
+                className="border-[#006E51]/50 text-[#006E51] hover:bg-[#006E51]/10"
+              >
+                <Library className="h-4 w-4 mr-2" />
+                Visual Library
+              </Button>
               <LayoutSwitcher 
                 currentLayout={currentLayout}
                 onLayoutChange={setCurrentLayout}

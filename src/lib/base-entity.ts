@@ -14,6 +14,9 @@ export type EntityType =
   | 'funding_event'
   | 'capability' // CPC internal
   | 'initiative' // CPC internal
+  | 'focus_area' // CPC internal - transport focus areas
+  | 'milestone' // CPC internal - IUK milestones
+  | 'stage' // CPC internal - maturity framework stages
   | 'innovation' // Future
   | 'rail_challenge' // Future
   | 'rail_stakeholder'; // Future

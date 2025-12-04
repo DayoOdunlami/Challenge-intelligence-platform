@@ -26,6 +26,9 @@ const ENTITY_TYPE_COLORS: Record<string, string> = {
   project: '#10B981',      // green
   capability: '#EC4899',   // pink
   initiative: '#006E51',   // CPC green
+  focus_area: '#006E51',   // CPC green (same as initiative)
+  milestone: '#F5A623',    // CPC amber/gold
+  stage: '#9B59B6',        // purple
   authority: '#6B7280',    // gray
   priority: '#EF4444',     // red
 };

@@ -1,18 +1,19 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Mic, Send, Bot, User, Loader2 } from 'lucide-react';
+import { MessageCircle, Mic, Send, Bot, User, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReactMarkdown from 'react-markdown';
 
-interface Message {
+export interface Message {
   id: string;
-  role: 'user' | 'assistant';
-  content: string;
+  role: 'user' | 'assistant' | 'insight';
+  content: string | React.ReactNode;
   timestamp: Date;
+  isComponent?: boolean; // Flag to indicate if content is a React component
 }
 
-interface AIChatPanelProps {
+export interface AIChatPanelProps {
   mode?: 'text' | 'voice';
   context?: {
     activeViz?: string;
@@ -20,29 +21,83 @@ interface AIChatPanelProps {
     selectedEntities?: any[];
   };
   onFunctionCall?: (functionName: string, args: any) => void;
+  initialMessages?: Message[];
+  onMessagesChange?: (messages: Message[]) => void;
 }
 
-export function AIChatPanel({ mode = 'text', context, onFunctionCall }: AIChatPanelProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: 'Hello! I\'m your AI assistant. I can help you explore the NAVIGATE platform, answer questions about the data, and provide insights. What would you like to know?',
-      timestamp: new Date()
-    }
-  ]);
+export function AIChatPanel({ mode = 'text', context, onFunctionCall, initialMessages, onMessagesChange }: AIChatPanelProps) {
+  const [messages, setMessages] = useState<Message[]>(() =>
+    initialMessages && initialMessages.length > 0
+      ? initialMessages
+      : [
+          {
+            id: '1',
+            role: 'assistant',
+            content:
+              "Hello! I'm your AI assistant. I can help you explore the NAVIGATE platform, answer questions about the data, and provide insights. What would you like to know?",
+            timestamp: new Date(),
+          },
+        ],
+  );
   const [input, setInput] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const lastSyncedMessageCountRef = useRef<number>(0);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Initialize the ref with the current message count
+  useEffect(() => {
+    if (initialMessages) {
+      lastSyncedMessageCountRef.current = initialMessages.length;
+    }
+  }, []); // Only run on mount
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    onMessagesChange?.(messages);
+  }, [messages, onMessagesChange]);
+
+  // Sync external message updates (e.g., insight injections) into internal state
+  // This ensures that when parent adds new messages (like insights), they appear immediately
+  useEffect(() => {
+    if (initialMessages && initialMessages.length > lastSyncedMessageCountRef.current) {
+      setMessages(prev => {
+        // Create a map of existing messages by ID for quick lookup
+        const existingMap = new Map(prev.map(m => [m.id, m]));
+        
+        // Find any new messages in initialMessages that we don't have
+        const newMessages = initialMessages.filter(m => !existingMap.has(m.id));
+        
+        if (newMessages.length > 0) {
+          // Merge: keep existing messages, add any new ones from initialMessages
+          const merged = [...prev, ...newMessages];
+          
+          // Sort by timestamp to maintain chronological order
+          const sorted = merged.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+          
+          // Update the ref to track what we've synced
+          lastSyncedMessageCountRef.current = initialMessages.length;
+          
+          return sorted;
+        }
+        
+        // Update ref even if no new messages (in case of reordering)
+        lastSyncedMessageCountRef.current = initialMessages.length;
+        
+        return prev;
+      });
+    } else if (initialMessages) {
+      // Update ref even if length hasn't increased (handles edge cases)
+      lastSyncedMessageCountRef.current = initialMessages.length;
+    }
+  }, [initialMessages]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -71,12 +126,15 @@ export function AIChatPanel({ mode = 'text', context, onFunctionCall }: AIChatPa
     setMessages(prev => [...prev, assistantMessage]);
 
     try {
-      // Prepare messages for API (excluding the empty assistant message)
+      // Prepare messages for API (excluding insight messages and the empty assistant message)
+      // Only include text messages (not React components)
       const apiMessages = [
-        ...messages.map(msg => ({
-          role: msg.role,
-          content: msg.content,
-        })),
+        ...messages
+          .filter(msg => msg.role !== 'insight' && typeof msg.content === 'string')
+          .map(msg => ({
+            role: msg.role,
+            content: msg.content as string,
+          })),
         {
           role: 'user' as const,
           content: userInput,
@@ -226,19 +284,34 @@ export function AIChatPanel({ mode = 'text', context, onFunctionCall }: AIChatPa
               message.role === 'user' ? 'justify-end' : 'justify-start'
             }`}
           >
-            {message.role === 'assistant' && (
-              <div className="w-8 h-8 rounded-full bg-[#006E51] flex items-center justify-center flex-shrink-0">
-                <Bot className="h-4 w-4 text-white" />
+            {(message.role === 'assistant' || message.role === 'insight') && (
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                message.role === 'insight' 
+                  ? 'bg-[#0f8b8d]' 
+                  : 'bg-[#006E51]'
+              }`}>
+                {message.role === 'insight' ? (
+                  <Sparkles className="h-4 w-4 text-white" />
+                ) : (
+                  <Bot className="h-4 w-4 text-white" />
+                )}
               </div>
             )}
             <div
               className={`max-w-[80%] rounded-lg p-3 ${
                 message.role === 'user'
                   ? 'bg-[#006E51] text-white'
+                  : message.role === 'insight'
+                  ? 'bg-gradient-to-br from-[#0f8b8d]/10 to-[#0f8b8d]/5 border border-[#0f8b8d]/20'
                   : 'bg-gray-100 text-gray-800'
               }`}
             >
-              {message.content ? (
+              {message.isComponent && typeof message.content !== 'string' ? (
+                // Render React component directly
+                <div className="text-sm">
+                  {message.content}
+                </div>
+              ) : message.content ? (
                 <div className="text-sm prose prose-sm max-w-none prose-headings:text-gray-800 prose-p:text-gray-700 prose-strong:text-gray-900 prose-ul:text-gray-700 prose-ol:text-gray-700 prose-li:text-gray-700 prose-code:text-[#006E51] prose-code:bg-gray-100 prose-code:px-1 prose-code:rounded">
                   <ReactMarkdown
                     components={{
@@ -262,7 +335,7 @@ export function AIChatPanel({ mode = 'text', context, onFunctionCall }: AIChatPa
                       h3: ({ node, ...props }) => <h3 className="text-sm font-semibold mt-2 mb-1" {...props} />,
                     }}
                   >
-                    {message.content}
+                    {message.content as string}
                   </ReactMarkdown>
                 </div>
               ) : (

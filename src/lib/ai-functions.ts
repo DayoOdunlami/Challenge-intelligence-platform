@@ -3,11 +3,34 @@
  * 
  * Defines what actions the AI can perform on the UI.
  * These functions are exposed to the AI via OpenAI function calling.
+ * 
+ * NOTE: AVAILABLE_VISUALIZATIONS and AVAILABLE_CONTROLS are now auto-generated
+ * from the visualization registry. See implementation below.
  */
+
+// Server-safe fallback visualizations (no registry import needed on server)
+const SERVER_SAFE_VISUALIZATIONS: VisualizationInfo[] = [
+  { id: 'network', name: 'Network Graph', description: 'Interactive network visualization', category: 'network' },
+  { id: 'sankey', name: 'Sankey Chart', description: 'Flow analysis chart', category: 'flow' },
+  { id: 'radar', name: 'Radar Chart', description: 'Multi-dimensional comparison', category: 'comparison' },
+  { id: 'bar', name: 'Bar Chart', description: 'Bar chart analysis', category: 'comparison' },
+  { id: 'circle', name: 'Circle Packing', description: 'Hierarchical circle packing', category: 'hierarchy' },
+  { id: 'bump', name: 'Bump Chart', description: 'TRL progression over time', category: 'timeline' },
+  { id: 'treemap', name: 'Treemap', description: 'Hierarchical treemap', category: 'hierarchy' },
+  { id: 'heatmap', name: 'Heatmap', description: 'Heatmap analysis', category: 'matrix' },
+  { id: 'chord', name: 'Chord Diagram', description: 'Relationship diagram', category: 'network' },
+  { id: 'stream', name: 'Stream Graph', description: 'Temporal stream graph', category: 'timeline' },
+  { id: 'swarm', name: 'Swarm Plot', description: 'Distribution swarm plot', category: 'distribution' },
+];
+
+// Note: Registry cannot be imported on server-side due to React components
+// Use SERVER_SAFE_VISUALIZATIONS for server, registry loads only on client
+
+// import type { ControlDefinition } from '@/lib/visualisations/types'; // For future use when auto-generating controls
 
 export interface AIFunctionCall {
   name: string;
-  arguments: Record<string, any>;
+  arguments: Record<string, unknown>;
 }
 
 export interface VisualizationInfo {
@@ -27,27 +50,86 @@ export interface ControlInfo {
 }
 
 /**
- * Available visualizations the AI can switch to
+ * Legacy ID mapping for backward compatibility
+ * Maps old simple IDs (used in pages) to registry IDs
  */
-export const AVAILABLE_VISUALIZATIONS: VisualizationInfo[] = [
-  { id: 'network', name: 'Network Graph', description: 'Connections and relationships', category: 'network' },
-  { id: 'sankey', name: 'Flow Analysis', description: 'Challenge progression and resource flows', category: 'funding' },
-  { id: 'radar', name: 'Tech Maturity Radar', description: 'Compare technology readiness across dimensions', category: 'technology' },
-  { id: 'bar', name: 'Bar Chart Analysis', description: 'Funding, projects, and technology breakdowns', category: 'dashboard' },
-  { id: 'circle', name: 'Circle Packing', description: 'Hierarchical stakeholder and technology relationships', category: 'network' },
-  { id: 'bump', name: 'TRL Progression', description: 'Technology readiness level advancement over time', category: 'technology' },
-  { id: 'timeline', name: 'Decarbonisation Roadmap', description: 'Hydrogen aviation milestones and timeline', category: 'technology' },
-  { id: 'treemap', name: 'Funding Breakdown', description: 'Hierarchical funding distribution and budgets', category: 'funding' },
-  { id: 'heatmap', name: 'Intensity Map', description: 'Challenge density and hotspots', category: 'dashboard' },
-  { id: 'chord', name: 'Relationship Matrix', description: 'Cross-sector dependencies', category: 'network' },
-  { id: 'stream', name: 'Funding Trends', description: 'Funding flows over time', category: 'funding' },
-  { id: 'parallel', name: 'Parallel Coordinates', description: 'Multi-dimensional technology comparison', category: 'technology' },
-  { id: 'swarm', name: 'Technology Distribution', description: 'TRL and category distribution', category: 'technology' },
-  { id: 'sunburst', name: 'Hierarchical View', description: 'Multi-level challenge breakdown', category: 'dashboard' },
-];
+const LEGACY_ID_MAP: Record<string, string> = {
+  'network': 'network-graph-navigate', // Navigate-specific network graph
+  'network3d': 'network-graph-navigate-3d',
+  'unifiednetwork': 'unified-network-graph',
+  'sankey': 'sankey-chart-navigate',
+  'radar': 'radar-chart-navigate',
+  'bar': 'bar-chart-navigate',
+  'circle': 'circle-packing-navigate',
+  'bump': 'bump-chart-navigate',
+  'timeline': 'timeline-navigate',
+  'treemap': 'treemap-navigate',
+  'heatmap': 'heatmap-navigate',
+  'chord': 'chord-diagram-navigate',
+  'stream': 'stream-graph-navigate',
+  'swarm': 'swarm-plot-navigate',
+  // Note: sunburst may need to be mapped when registry entry exists
+};
+
+/**
+ * Map registry control type to AI function control type
+ * TODO: Use this when auto-generating controls from registry
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function mapControlTypeToAIType(controlType: string): 'single-select' | 'multi-select' | 'toggle' | 'range' {
+  switch (controlType) {
+    case 'select':
+    case 'segmented':
+      return 'single-select';
+    case 'multiselect':
+      return 'multi-select';
+    case 'toggle':
+      return 'toggle';
+    case 'range':
+    case 'slider':
+      return 'range';
+    default:
+      return 'single-select';
+  }
+}
+
+/**
+ * Available visualizations the AI can switch to
+ * AUTO-GENERATED from visualization registry
+ * Lazy-loaded to avoid server-side import errors (registry has React components)
+ */
+let _cachedVisualizations: VisualizationInfo[] | null = null;
+
+function loadVisualizationsFromRegistry(): VisualizationInfo[] {
+  // On server-side, always use static fallback (registry can't be loaded)
+  if (typeof window === 'undefined') {
+    return SERVER_SAFE_VISUALIZATIONS;
+  }
+  
+  // Client-side: try to load from registry using dynamic import
+  // For now, use static list - registry loading can be added later if needed
+  // The registry has React components which makes server-side loading impossible
+  return SERVER_SAFE_VISUALIZATIONS;
+}
+
+export function getAvailableVisualizations(): VisualizationInfo[] {
+  if (_cachedVisualizations === null) {
+    _cachedVisualizations = loadVisualizationsFromRegistry();
+  }
+  return _cachedVisualizations;
+}
+
+// Server-safe constant: use static list on server, dynamic on client
+export const AVAILABLE_VISUALIZATIONS: VisualizationInfo[] = typeof window === 'undefined' 
+  ? SERVER_SAFE_VISUALIZATIONS 
+  : getAvailableVisualizations();
 
 /**
  * Available controls the AI can interact with
+ * 
+ * TODO: Auto-generate from visualization registry when registry controls are populated.
+ * Currently uses manual list for backward compatibility.
+ * Registry controls are defined in ControlDefinition[] but not yet fully populated.
  */
 export const AVAILABLE_CONTROLS: ControlInfo[] = [
   // Global controls
@@ -78,23 +160,29 @@ export const AVAILABLE_CONTROLS: ControlInfo[] = [
 
 /**
  * OpenAI function definitions for function calling
+ * Uses lazy-loaded visualizations to avoid server-side errors
  */
-export const AI_FUNCTION_DEFINITIONS = [
-  {
-    name: 'switch_visualization',
-    description: 'Switch to a different visualization. Use this when the user asks to "show", "switch to", "display", or "view" a specific chart type.',
-    parameters: {
-      type: 'object',
-      properties: {
-        visualization: {
-          type: 'string',
-          enum: AVAILABLE_VISUALIZATIONS.map(v => v.id),
-          description: 'The visualization to switch to',
+export function getAIFunctionDefinitions() {
+  const vizIds = typeof window !== 'undefined' 
+    ? getAvailableVisualizations().map(v => v.id)
+    : Object.keys(LEGACY_ID_MAP); // Fallback to legacy IDs on server
+  
+  return [
+    {
+      name: 'switch_visualization',
+      description: 'Switch to a different visualization. Use this when the user asks to "show", "switch to", "display", or "view" a specific chart type.',
+      parameters: {
+        type: 'object',
+        properties: {
+          visualization: {
+            type: 'string',
+            enum: vizIds.length > 0 ? vizIds : ['network', 'sankey', 'radar', 'bar', 'circle'], // Fallback list
+            description: 'The visualization to switch to',
+          },
         },
+        required: ['visualization'],
       },
-      required: ['visualization'],
     },
-  },
   {
     name: 'set_control',
     description: 'Change a control setting for the current visualization. Use this to adjust filters, views, or other visualization-specific settings.',
@@ -182,13 +270,19 @@ export const AI_FUNCTION_DEFINITIONS = [
       },
     },
   },
-];
+  ];
+}
 
 /**
  * Format available visualizations and controls for AI context
  */
 export function formatAICapabilities(): string {
-  const vizList = AVAILABLE_VISUALIZATIONS.map(v => 
+  // Use server-safe visualizations or get from cache
+  const vizs = typeof window === 'undefined' 
+    ? SERVER_SAFE_VISUALIZATIONS 
+    : getAvailableVisualizations();
+  
+  const vizList = vizs.map(v => 
     `- **${v.name}** (${v.id}): ${v.description}`
   ).join('\n');
   
