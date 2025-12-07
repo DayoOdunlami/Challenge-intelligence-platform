@@ -12,7 +12,7 @@ import type { BaseEntity, UniversalRelationship } from '@/lib/base-entity';
  */
 
 export const cpcSeedEntities: BaseEntity[] = [
-  // Supply-side capabilities
+  // Supply-side capabilities - distributed across business units
   {
     _version: '1.0',
     id: 'cpc-capability-consortium-building',
@@ -25,7 +25,7 @@ export const cpcSeedEntities: BaseEntity[] = [
       custom: {
         capabilityType: 'supply',
         isCoreCapability: true,
-        businessUnit: 'Transport',
+        businessUnit: 'Integrated Transport',
         priority: 'high',
       },
     },
@@ -42,7 +42,7 @@ export const cpcSeedEntities: BaseEntity[] = [
       custom: {
         capabilityType: 'supply',
         isCoreCapability: true,
-        businessUnit: 'Transport',
+        businessUnit: 'Rail',
         priority: 'high',
       },
     },
@@ -59,7 +59,7 @@ export const cpcSeedEntities: BaseEntity[] = [
       custom: {
         capabilityType: 'supply',
         isCoreCapability: true,
-        businessUnit: 'Transport',
+        businessUnit: 'Strategy',
         priority: 'medium',
       },
     },
@@ -77,7 +77,7 @@ export const cpcSeedEntities: BaseEntity[] = [
       custom: {
         capabilityType: 'demand',
         isCoreCapability: true,
-        businessUnit: 'Transport',
+        businessUnit: 'Integrated Transport',
         priority: 'high',
       },
     },
@@ -94,7 +94,7 @@ export const cpcSeedEntities: BaseEntity[] = [
       custom: {
         capabilityType: 'demand',
         isCoreCapability: true,
-        businessUnit: 'Transport',
+        businessUnit: 'Digital',
         priority: 'medium',
       },
     },
@@ -112,12 +112,12 @@ export const cpcSeedEntities: BaseEntity[] = [
       custom: {
         capabilityType: 'both',
         isCoreCapability: true,
-        businessUnit: 'Transport',
+        businessUnit: 'Energy',
         priority: 'high',
       },
     },
   },
-  // Initiatives
+  // Initiatives - based on their sector/mode
   {
     _version: '1.0',
     id: 'cpc-initiative-connected-airport-living-lab',
@@ -132,7 +132,7 @@ export const cpcSeedEntities: BaseEntity[] = [
         modes: ['aviation'],
         strategicThemes: ['people-experience', 'decarbonisation', 'data-and-digital'],
         stage: 'development',
-        businessUnit: 'Transport',
+        businessUnit: 'Aviation',
       },
     },
   },
@@ -150,7 +150,7 @@ export const cpcSeedEntities: BaseEntity[] = [
         modes: ['rail'],
         strategicThemes: ['decarbonisation', 'planning-and-operation'],
         stage: 'validation',
-        businessUnit: 'Transport',
+        businessUnit: 'Rail',
       },
     },
   },

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
-import { Menu, X, BarChart3, Users, FileText, Home, ChevronDown, Archive, Network, Wrench } from "lucide-react"
+import { Menu, X, BarChart3, Users, FileText, Home, ChevronDown, Archive, Wrench } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 const navigationItems = [
@@ -15,22 +15,10 @@ const navigationItems = [
     description: "Innovation Atlas homepage"
   },
   {
-    name: "NAVIGATE",
-    href: "/navigate",
-    icon: Network,
-    description: "NAVIGATE Platform - Zero-emission aviation intelligence"
-  },
-  {
     name: "Toolkit",
     href: "/toolkit",
     icon: Wrench,
     description: "Stakeholder dynamics and innovation tracker tools"
-  },
-  {
-    name: "Explore Data",
-    href: "/visualizations",
-    icon: BarChart3,
-    description: "Interactive data visualizations"
   },
   {
     name: "Visual Library",
@@ -62,7 +50,20 @@ const navigationItems = [
     name: "Profiles",
     href: "/profile",
     icon: Users,
-    description: "User profiles and examples"
+    description: "User profiles and examples",
+    hasDropdown: true,
+    dropdownItems: [
+      {
+        name: "Atlas Profiles",
+        href: "/profile",
+        description: "Innovation Atlas user profiles"
+      },
+      {
+        name: "Navigate Profiles",
+        href: "/profile/navigate",
+        description: "NAVIGATE platform user profiles"
+      }
+    ]
   }
 ]
 

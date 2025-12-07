@@ -41,9 +41,10 @@ export function UnifiedFloatingNav({
   visualizations = [] 
 }: UnifiedFloatingNavProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [showArchive, setShowArchive] = useState(false);
+  const [showMainPlatform, setShowMainPlatform] = useState(false); // Collapsed by default
+  const [showArchive, setShowArchive] = useState(true); // Open by default
 
-  // Main platform pages
+  // Main platform pages (NAVIGATE and Data Visualizations moved to archive)
   const mainPages: NavItem[] = [
     { 
       name: "Home", 
@@ -53,25 +54,11 @@ export function UnifiedFloatingNav({
       current: currentPage === 'home'
     },
     { 
-      name: "NAVIGATE", 
-      href: "/navigate", 
-      icon: Network, 
-      description: "Zero-emission aviation intelligence platform",
-      current: currentPage === 'navigate'
-    },
-    { 
       name: "Toolkit", 
       href: "/toolkit", 
       icon: Wrench, 
       description: "Stakeholder dynamics and innovation tracker",
       current: currentPage === 'toolkit'
-    },
-    { 
-      name: "Data Visualizations", 
-      href: "/visualizations", 
-      icon: BarChart3, 
-      description: "Interactive challenge explorer",
-      current: currentPage === 'visualizations'
     },
     { 
       name: "Visual Library", 
@@ -103,8 +90,22 @@ export function UnifiedFloatingNav({
     },
   ];
 
-  // Archive pages
+  // Archive pages (includes NAVIGATE and Data Visualizations)
   const archivePages: NavItem[] = [
+    { 
+      name: "NAVIGATE", 
+      href: "/navigate", 
+      icon: Network, 
+      description: "Zero-emission aviation intelligence platform",
+      current: currentPage === 'navigate'
+    },
+    { 
+      name: "Data Visualizations", 
+      href: "/visualizations", 
+      icon: BarChart3, 
+      description: "Interactive challenge explorer",
+      current: currentPage === 'visualizations'
+    },
     { name: "Pitch Deck", href: "/pitch", icon: Target, description: "Original presentation" },
     { name: "Reviewer V1", href: "/for-reviewers", icon: FileText, description: "First reviewer response" },
     { name: "Network Test", href: "/test-network", icon: Network, description: "Network graph test" },
@@ -165,35 +166,55 @@ export function UnifiedFloatingNav({
                   </div>
                 </div>
 
-                {/* Main Platform Pages */}
+                {/* Main Platform Pages - Collapsible */}
                 <div className="space-y-2 mb-4">
-                  <div className="text-xs font-semibold text-[#006E51] uppercase tracking-wide px-3 py-1">
-                    Main Platform
-                  </div>
-                  {mainPages.map((page) => {
-                    const Icon = page.icon;
-                    return (
-                      <Link
-                        key={page.name}
-                        href={page.href}
-                        className={`flex items-center px-3 py-2 text-sm rounded-lg transition-colors group ${
-                          page.current 
-                            ? 'bg-[#006E51]/10 text-[#006E51] border border-[#006E51]/20' 
-                            : 'text-gray-700 hover:text-[#006E51] hover:bg-[#CCE2DC]/20'
-                        }`}
-                        onClick={() => setIsExpanded(false)}
+                  <button
+                    onClick={() => setShowMainPlatform(!showMainPlatform)}
+                    className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <div className="flex items-center">
+                      <div className="text-xs font-semibold text-[#006E51] uppercase tracking-wide">
+                        Main Platform
+                      </div>
+                    </div>
+                    <ChevronDown className={`h-3 w-3 transition-transform ${showMainPlatform ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  <AnimatePresence>
+                    {showMainPlatform && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="space-y-1"
                       >
-                        <Icon className={`h-4 w-4 mr-3 ${page.current ? 'text-[#006E51]' : 'text-[#006E51] group-hover:scale-110'} transition-transform`} />
-                        <div className="flex-1">
-                          <div className="font-medium">{page.name}</div>
-                          <div className="text-xs text-gray-500">{page.description}</div>
-                        </div>
-                        {page.current && (
-                          <div className="w-2 h-2 bg-[#006E51] rounded-full"></div>
-                        )}
-                      </Link>
-                    );
-                  })}
+                        {mainPages.map((page) => {
+                          const Icon = page.icon;
+                          return (
+                            <Link
+                              key={page.name}
+                              href={page.href}
+                              className={`flex items-center px-3 py-2 text-sm rounded-lg transition-colors group ml-2 ${
+                                page.current 
+                                  ? 'bg-[#006E51]/10 text-[#006E51] border border-[#006E51]/20' 
+                                  : 'text-gray-700 hover:text-[#006E51] hover:bg-[#CCE2DC]/20'
+                              }`}
+                              onClick={() => setIsExpanded(false)}
+                            >
+                              <Icon className={`h-4 w-4 mr-3 ${page.current ? 'text-[#006E51]' : 'text-[#006E51] group-hover:scale-110'} transition-transform`} />
+                              <div className="flex-1">
+                                <div className="font-medium">{page.name}</div>
+                                <div className="text-xs text-gray-500">{page.description}</div>
+                              </div>
+                              {page.current && (
+                                <div className="w-2 h-2 bg-[#006E51] rounded-full"></div>
+                              )}
+                            </Link>
+                          );
+                        })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 {/* Page-Specific Content */}

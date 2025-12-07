@@ -29,13 +29,21 @@ export default function ProfileSelectionPage() {
           <div className="text-center space-y-4 mb-16">
             <div className="inline-block">
               <div className="relative px-4 py-2 text-sm font-medium rounded-full bg-[#CCE2DC]/50 backdrop-blur-sm border border-[#006E51]/20 mb-4">
-                <span className="relative z-10 text-[#006E51]">Profile Examples</span>
+                <span className="relative z-10 text-[#006E51]">Innovation Atlas Profiles</span>
               </div>
             </div>
             <h1 className="text-4xl md:text-5xl font-bold text-[#2E2D2B]">Choose Your Profile Type</h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Explore how Innovation Atlas works for different user types. See real examples of how innovators and challenge owners use the platform.
             </p>
+            <div className="mt-4">
+              <Link 
+                href="/profile/navigate"
+                className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 hover:underline"
+              >
+                Looking for NAVIGATE profiles? View zero emission aviation ecosystem profiles →
+              </Link>
+            </div>
             <div className="w-24 h-1.5 bg-gradient-to-r from-[#006E51] to-[#CCE2DC] rounded-full mx-auto mt-6"></div>
           </div>
 
@@ -181,7 +189,12 @@ export default function ProfileSelectionPage() {
           </div>
 
           {/* Navigation Links */}
-          <div className="mt-12 flex justify-center gap-6">
+          <div className="mt-12 flex justify-center gap-6 flex-wrap">
+            <Link href="/profile/navigate">
+              <Button variant="outline" className="border-blue-500 text-blue-600 hover:bg-blue-50">
+                View NAVIGATE Profiles
+              </Button>
+            </Link>
             <Link href="/visualizations">
               <Button variant="outline" className="border-[#006E51] text-[#006E51] hover:bg-[#006E51] hover:text-white">
                 Explore Data Visualizations

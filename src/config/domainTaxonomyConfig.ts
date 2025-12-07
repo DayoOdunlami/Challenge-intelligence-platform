@@ -194,9 +194,17 @@ export const DOMAIN_CONFIGS: Record<SupportedDomain, DomainConfig> = {
           Digital: '#F0ABFC',
           Strategy: '#6366F1',
         },
-        getNodeValue: (node) =>
-          fallback((node.metadata?.custom as { businessUnit?: string; department?: string })?.businessUnit || 
-            (node.metadata?.custom as { businessUnit?: string; department?: string })?.department),
+        getNodeValue: (node) => {
+          const bu = (node.metadata?.custom as { businessUnit?: string; department?: string })?.businessUnit || 
+            (node.metadata?.custom as { businessUnit?: string; department?: string })?.department;
+          if (!bu) return undefined;
+          // Normalize "Transport" to "Integrated Transport" for consistency
+          const normalized = bu.trim();
+          if (normalized === 'Transport' || normalized === 'transport') {
+            return 'Integrated Transport';
+          }
+          return fallback(normalized);
+        },
       },
       {
         key: 'focusArea',

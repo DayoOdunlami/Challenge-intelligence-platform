@@ -98,11 +98,13 @@ const BUSINESS_UNIT_COLORS: Record<string, string> = {
   rail: '#7C3AED',
   'integrated transport': '#A855F7',
   'integrated-transport': '#A855F7',
+  'Integrated-Transport': '#A855F7',
   aviation: '#C084FC',
   energy: '#E879F9',
   digital: '#F0ABFC',
   strategy: '#6366F1',
-  Transport: '#A855F7', // Fallback for Transport
+  // Transport as alias for Integrated Transport (data may use either)
+  Transport: '#A855F7',
   transport: '#A855F7',
 };
 
@@ -329,7 +331,7 @@ function getClusterValue(
   }
 }
 
-function getClusterColor(value: string, clusterBy: PrimaryClusterBy | SecondaryClusterBy): string {
+function getClusterColor(value: string, clusterBy: PrimaryClusterBy | SecondaryClusterBy | 'businessUnit'): string {
   switch (clusterBy) {
     case 'domain':
       return DOMAIN_COLORS[value as Domain] || '#6B7280';
@@ -343,6 +345,8 @@ function getClusterColor(value: string, clusterBy: PrimaryClusterBy | SecondaryC
       return SECTOR_COLORS[value.toLowerCase()] || SECTOR_COLORS[value] || '#6B7280';
     case 'stakeholderCategory':
       return STAKEHOLDER_CATEGORY_COLORS[value] || ENTITY_TYPE_COLORS[value] || '#6B7280';
+    case 'businessUnit':
+      return BUSINESS_UNIT_COLORS[value] || BUSINESS_UNIT_COLORS[value.toLowerCase()] || BUSINESS_UNIT_COLORS[value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()] || '#6B7280';
     default:
       return '#6B7280';
   }
@@ -400,6 +404,17 @@ function getNodeColor(
       if (sectorValue) {
         const normalizedSector = sectorValue.toLowerCase().replace(/\s+/g, '_');
         return SECTOR_COLORS[normalizedSector] || SECTOR_COLORS[sectorValue.toLowerCase()] || SECTOR_COLORS[sectorValue] || '#6B7280';
+      }
+      return '#6B7280';
+    case 'businessUnit':
+      const businessUnit = (entity.metadata?.custom as { businessUnit?: string; department?: string })?.businessUnit || 
+        (entity.metadata?.custom as { businessUnit?: string; department?: string })?.department;
+      if (businessUnit) {
+        const normalized = businessUnit.trim();
+        return BUSINESS_UNIT_COLORS[normalized] || 
+               BUSINESS_UNIT_COLORS[normalized.toLowerCase()] || 
+               BUSINESS_UNIT_COLORS[normalized.charAt(0).toUpperCase() + normalized.slice(1).toLowerCase()] || 
+               '#6B7280';
       }
       return '#6B7280';
     case 'primaryCluster':
@@ -1533,4 +1548,19 @@ export function UnifiedNetworkGraph({
           )}
         </div>
         {clusterMode !== 'none' && (
-          <div className="bg-white/90
+          <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm px-3 py-1.5 text-xs">
+            <span className="text-gray-500">Clustering:</span>{' '}
+            <span className="font-medium text-[#006E51]">
+              {clusterMode === 'single'
+                ? formatLabel(primaryClusterBy)
+                : `${formatLabel(primaryClusterBy)} → ${formatLabel(secondaryClusterBy)}`}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default UnifiedNetworkGraph;
+

@@ -18,7 +18,26 @@ const milestonesData = require('../../data/cpc_domain/milestones.json') as { mil
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const stagesData = require('../../data/cpc_domain/stage_framework.json') as { stages: any[] };
 
+// Helper function to map mode to business unit
+function getBusinessUnitFromMode(mode?: string): string {
+  if (!mode) return 'Integrated Transport';
+  const modeLower = mode.toLowerCase().trim();
+  
+  // Map modes to business units
+  if (modeLower.includes('rail')) return 'Rail';
+  if (modeLower.includes('aviation') || modeLower.includes('airport')) return 'Aviation';
+  if (modeLower.includes('energy') || modeLower.includes('fuel')) return 'Energy';
+  if (modeLower.includes('digital') || modeLower.includes('data') || modeLower.includes('ai')) return 'Digital';
+  if (modeLower.includes('integrated') || modeLower.includes('transport')) return 'Integrated Transport';
+  if (modeLower.includes('strategy') || modeLower.includes('planning')) return 'Strategy';
+  
+  // Default fallback
+  return 'Integrated Transport';
+}
+
 function transformFocusArea(fa: any): BaseEntity {
+  const businessUnit = getBusinessUnitFromMode(fa.mode);
+  
   return {
     _version: '1.0',
     id: fa.id,
@@ -39,6 +58,7 @@ function transformFocusArea(fa: any): BaseEntity {
         cpc_services: fa.cpc_services,
         related_projects: fa.related_projects,
         embedding_text: fa.embedding_text,
+        businessUnit: businessUnit,
       },
     },
     provenance: createDefaultProvenance({
@@ -51,6 +71,8 @@ function transformFocusArea(fa: any): BaseEntity {
 }
 
 function transformMilestone(ms: any): BaseEntity {
+  const businessUnit = getBusinessUnitFromMode(ms.mode);
+  
   return {
     _version: '1.0',
     id: ms.id,
@@ -73,6 +95,7 @@ function transformMilestone(ms: any): BaseEntity {
         year: ms.year,
         focus_area_ids: ms.focus_area_ids,
         embedding_text: ms.embedding_text,
+        businessUnit: businessUnit,
       },
     },
     provenance: createDefaultProvenance({
@@ -85,6 +108,7 @@ function transformMilestone(ms: any): BaseEntity {
 }
 
 function transformStage(stage: any): BaseEntity {
+  // Stages are framework-level, so assign to Strategy business unit
   return {
     _version: '1.0',
     id: stage.id,
@@ -105,6 +129,7 @@ function transformStage(stage: any): BaseEntity {
         cpc_strategy_link: stage.cpc_strategy_link,
         decision_gate: stage.decision_gate,
         embedding_text: stage.embedding_text,
+        businessUnit: 'Strategy', // Framework-level entities go to Strategy
       },
     },
     provenance: createDefaultProvenance({

@@ -268,11 +268,19 @@ export function NetworkGraphV8({
       return 'entityType';
     }
 
+    if (activeTaxonomy?.key === 'businessUnit') {
+      return 'businessUnit';
+    }
+
     if (
       filterState.taxonomyKey === 'stakeholderCategory' &&
       (filterState.applyCluster || filterState.showHulls)
     ) {
       return 'stakeholderCategory';
+    }
+
+    if (filterState.taxonomyKey === 'sector' && (filterState.applyCluster || filterState.showHulls)) {
+      return 'sector';
     }
 
     if ((filterState.applyCluster || filterState.showHulls) && secondaryClusterBy) {

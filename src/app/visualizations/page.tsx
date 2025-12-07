@@ -274,8 +274,8 @@ function VisualizationsContent() {
     skills: true,
   })
 
-  // AI Function Execution Handler
-  const handleAIFunctionCallWrapper = (functionName: string, args: Record<string, unknown>) => {
+  // AI Function Execution Handler - Now returns execution result
+  const handleAIFunctionCallWrapper = async (functionName: string, args: Record<string, unknown>): Promise<{ success: boolean; message?: string; error?: string }> => {
     const executionState = {
       activeViz,
       setActiveViz: (viz: string) => setActiveViz(viz as VisualizationType),
@@ -349,9 +349,46 @@ function VisualizationsContent() {
     } as FunctionExecutionState;
     
     const result = handleAIFunctionCall(functionName, args, executionState);
+    
     if (!result.success) {
       console.error(`AI function call failed: ${result.error}`);
+      return { success: false, error: result.error };
     }
+    
+    // Build detailed success message
+    let message = `Successfully executed ${functionName}`;
+    
+    switch (functionName) {
+      case 'switch_visualization': {
+        const vizId = args.visualization as string;
+        const viz = visualizations.find(v => v.id === vizId);
+        message = `Switched visualization to "${viz?.name || vizId}". The UI should now display the ${vizId} chart.`;
+        break;
+      }
+      case 'set_control': {
+        const controlId = args.controlId as string;
+        const value = args.value;
+        message = `Updated control "${controlId}" to ${JSON.stringify(value)}. The visualization settings have been changed.`;
+        break;
+      }
+      case 'filter_data': {
+        message = `Applied filters. The data view has been updated.`;
+        if (args.trlRange && Array.isArray(args.trlRange)) {
+          message += ` TRL range: ${args.trlRange[0]}-${args.trlRange[1]}.`;
+        }
+        if (args.categories && Array.isArray(args.categories)) {
+          message += ` Categories: ${args.categories.join(', ')}.`;
+        }
+        break;
+      }
+      case 'highlight_entities': {
+        const count = ((args.entityIds as string[]) || []).length + ((args.entityNames as string[]) || []).length;
+        message = `Highlighted ${count} entity/entities in the visualization.`;
+        break;
+      }
+    }
+    
+    return { success: true, message };
   };
   
   // Build bidirectional context for AI

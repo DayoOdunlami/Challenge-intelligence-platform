@@ -30,6 +30,9 @@ import {
   Pin,
   PinOff,
   Move,
+  Tag,
+  ChevronRight,
+  Archive,
 } from 'lucide-react';
 import { TopNavigation } from '@/components/ui/TopNavigation';
 import { UnifiedFloatingNav } from '@/components/ui/UnifiedFloatingNav';
@@ -54,6 +57,8 @@ type StatusFilter = 'all' | 'ready' | 'development' | 'placeholder';
 type CategoryFilter = string | 'all';
 type VisualizationType = 'sankey' | 'heatmap' | 'network' | 'sunburst' | 'chord' | 'radar' | 'bar' | 'circle' | 'bump' | 'treemap' | 'stream' | 'parallel' | 'swarm' | 'timeline';
 
+type ManagementTag = 'to-be-integrated' | 'trash' | 'unknown' | 'tbd' | 'keep' | null;
+
 interface VisualizationEntry {
   id: string;
   vizType?: VisualizationType;
@@ -70,6 +75,8 @@ interface VisualizationEntry {
   toolkitType?: 'stakeholder-d3' | 'stakeholder-circle' | 'innovation-tracker' | 'innovation-sankey';
   previewType?: string;
   domains?: ('navigate' | 'cpc' | 'atlas')[];
+  // Management tags for unregistered visuals
+  managementTag?: ManagementTag;
 }
 
 // =============================================================================
@@ -340,6 +347,158 @@ function GalleryCard({ viz, onClick }: GalleryCardProps) {
 }
 
 // =============================================================================
+// UNREGISTERED CARD COMPONENT (with tagging)
+// =============================================================================
+
+interface UnregisteredCardProps {
+  viz: VisualizationEntry;
+  managementTag: ManagementTag;
+  onTagChange: (tag: ManagementTag) => void;
+  onClick: () => void;
+}
+
+const TAG_CONFIG: Record<NonNullable<ManagementTag>, { label: string; color: string; bgColor: string }> = {
+  'to-be-integrated': { label: 'To Integrate', color: 'text-blue-700', bgColor: 'bg-blue-100' },
+  'trash': { label: 'Trash', color: 'text-red-700', bgColor: 'bg-red-100' },
+  'unknown': { label: 'Unknown', color: 'text-gray-700', bgColor: 'bg-gray-100' },
+  'tbd': { label: 'TBD', color: 'text-yellow-700', bgColor: 'bg-yellow-100' },
+  'keep': { label: 'Keep', color: 'text-green-700', bgColor: 'bg-green-100' },
+};
+
+function UnregisteredCard({ viz, managementTag, onTagChange, onClick }: UnregisteredCardProps) {
+  const PreviewComponent = viz.previewType ? PREVIEW_COMPONENTS[viz.previewType] : null;
+  const statusConfig = STATUS_CONFIG[viz.status];
+  const categoryConfig = CATEGORY_CONFIG[viz.category] || { icon: Network, color: '#006E51' };
+  const Icon = categoryConfig.icon;
+  const [showTagMenu, setShowTagMenu] = useState(false);
+
+  const tagConfig = managementTag ? TAG_CONFIG[managementTag] : null;
+
+  // Determine badge type
+  const getBadgeInfo = () => {
+    if (viz.domains?.includes('cpc')) {
+      return { label: 'CPC', color: 'bg-[#006E51] text-white' };
+    }
+    if (viz.domains?.includes('navigate')) {
+      return { label: 'Navigate', color: 'bg-[#4A90E2] text-white' };
+    }
+    return null;
+  };
+
+  const badgeInfo = getBadgeInfo();
+
+  return (
+    <div className="group relative">
+      <button 
+        onClick={onClick} 
+        className="w-full text-left"
+        aria-label={`View ${viz.name}`}
+      >
+        <div className="relative bg-white rounded-xl border-2 border-dashed border-gray-300 overflow-hidden transition-all duration-200 hover:border-gray-400 hover:shadow-md">
+          {/* Preview Area - 4:3 aspect ratio */}
+          <div className="aspect-[4/3] relative overflow-hidden bg-gradient-to-br from-slate-50 to-white">
+            {PreviewComponent ? (
+              <PreviewComponent />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-16 h-16 rounded-xl bg-[#CCE2DC]/50 flex items-center justify-center">
+                  {Icon && <Icon className="h-8 w-8 text-[#006E51]/40" />}
+                </div>
+              </div>
+            )}
+
+            {/* Status indicator */}
+            <div className="absolute top-2 left-2">
+              <div className={clsx('w-2 h-2 rounded-full', statusConfig.color === '#10b981' ? 'bg-emerald-500' : statusConfig.color === '#f59e0b' ? 'bg-amber-500' : 'bg-gray-400')} />
+            </div>
+
+            {/* Badges - Top right */}
+            <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+              {badgeInfo && (
+                <div className={clsx('px-2 py-0.5 rounded-md text-xs font-semibold', badgeInfo.color)}>
+                  {badgeInfo.label}
+                </div>
+              )}
+              {tagConfig && (
+                <div className={clsx('px-2 py-0.5 rounded-md text-xs font-semibold', tagConfig.bgColor, tagConfig.color)}>
+                  {tagConfig.label}
+                </div>
+              )}
+            </div>
+
+            {/* Hover overlay */}
+            <div className="absolute inset-0 bg-[#006E51]/0 group-hover:bg-[#006E51]/5 transition-colors duration-200" />
+          </div>
+
+          {/* Card Footer */}
+          <div className="px-3 py-2">
+            <h3 className="text-sm font-medium text-gray-900 truncate group-hover:text-[#006E51] transition-colors">
+              {viz.name}
+            </h3>
+            <div 
+              className="mt-1 h-0.5 w-8 rounded-full opacity-60"
+              style={{ backgroundColor: categoryConfig.color }}
+            />
+          </div>
+        </div>
+      </button>
+      
+      {/* Tag Menu Button */}
+      <div className="relative mt-1">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowTagMenu(!showTagMenu);
+          }}
+          className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+        >
+          <Tag className="h-3.5 w-3.5" />
+          <span>{managementTag ? TAG_CONFIG[managementTag].label : 'Tag'}</span>
+        </button>
+        
+        {showTagMenu && (
+          <>
+            <div 
+              className="fixed inset-0 z-10" 
+              onClick={() => setShowTagMenu(false)}
+            />
+            <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTagChange(null);
+                  setShowTagMenu(false);
+                }}
+                className="w-full text-left px-3 py-2 text-xs hover:bg-gray-50 transition-colors"
+              >
+                <span className="text-gray-500">No Tag</span>
+              </button>
+              {Object.entries(TAG_CONFIG).map(([tag, config]) => (
+                <button
+                  key={tag}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTagChange(tag as ManagementTag);
+                    setShowTagMenu(false);
+                  }}
+                  className={clsx(
+                    'w-full text-left px-3 py-2 text-xs transition-colors flex items-center gap-2',
+                    managementTag === tag ? config.bgColor : 'hover:bg-gray-50'
+                  )}
+                >
+                  <span className={clsx('w-2 h-2 rounded-full', config.bgColor)} />
+                  <span className={config.color}>{config.label}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
 // DYNAMIC IMPORTS
 // =============================================================================
 
@@ -516,6 +675,215 @@ const VISUALIZATIONS: VisualizationEntry[] = [
 ];
 
 // =============================================================================
+// UNREGISTERED VISUALIZATIONS (Not in main registry)
+// =============================================================================
+
+// Import components for unregistered visuals
+const FocusAreaMatrix = dynamic(() => import('@/components/visualizations/FocusAreaMatrix').then(mod => ({ default: mod.default })), { ssr: false, loading: () => <VizLoadingPlaceholder /> });
+const StagePipeline = dynamic(() => import('@/components/visualizations/StagePipeline').then(mod => ({ default: mod.default })), { ssr: false, loading: () => <VizLoadingPlaceholder /> });
+const StakeholderNetwork = dynamic(() => import('@/components/visualizations/StakeholderNetwork').then(mod => ({ default: mod.default })), { ssr: false, loading: () => <VizLoadingPlaceholder /> });
+const TreemapSunburstTransition = dynamic(() => import('@/components/visualizations/TreemapSunburstTransition').then(mod => ({ default: mod.default })), { ssr: false, loading: () => <VizLoadingPlaceholder /> });
+const BubbleScatterNavigate = dynamic(() => import('@/components/visualizations/BubbleScatterNavigate').then(mod => ({ default: mod.BubbleScatterNavigate })), { ssr: false, loading: () => <VizLoadingPlaceholder /> });
+const TimelineNavigate = dynamic(() => import('@/components/visualizations/TimelineNavigate').then(mod => ({ default: mod.TimelineNavigate })), { ssr: false, loading: () => <VizLoadingPlaceholder /> });
+const NetworkGraph = dynamic(() => import('@/components/visualizations/NetworkGraph').then(mod => ({ default: mod.NetworkGraph })), { ssr: false, loading: () => <VizLoadingPlaceholder /> });
+const NetworkGraphNavigate = dynamic(() => import('@/components/visualizations/NetworkGraphNavigate').then(mod => ({ default: mod.NetworkGraphNavigate })), { ssr: false, loading: () => <VizLoadingPlaceholder /> });
+const NetworkGraphNavigate3D = dynamic(() => import('@/components/visualizations/NetworkGraphNavigate3D').then(mod => ({ default: mod.NetworkGraphNavigate3D })), { ssr: false, loading: () => <VizLoadingPlaceholder /> });
+const TreemapNavigate = dynamic(() => import('@/components/visualizations/TreemapNavigate').then(mod => ({ default: mod.TreemapNavigate })), { ssr: false, loading: () => <VizLoadingPlaceholder /> });
+const UnifiedNetworkGraph = dynamic(() => import('@/components/visualizations/UnifiedNetworkGraph').then(mod => ({ default: mod.UnifiedNetworkGraph })), { ssr: false, loading: () => <VizLoadingPlaceholder /> });
+const SankeyChart = dynamic(() => import('@/components/visualizations/SankeyChart').then(mod => ({ default: mod.SankeyChart })), { ssr: false, loading: () => <VizLoadingPlaceholder /> });
+const HeatmapChart = dynamic(() => import('@/components/visualizations/HeatmapChart').then(mod => ({ default: mod.HeatmapChart })), { ssr: false, loading: () => <VizLoadingPlaceholder /> });
+const SunburstChart = dynamic(() => import('@/components/visualizations/SunburstChart').then(mod => ({ default: mod.SunburstChart })), { ssr: false, loading: () => <VizLoadingPlaceholder /> });
+const ChordDiagram = dynamic(() => import('@/components/visualizations/ChordDiagram').then(mod => ({ default: mod.ChordDiagram })), { ssr: false, loading: () => <VizLoadingPlaceholder /> });
+
+// Unregistered visualizations list
+const UNREGISTERED_VISUALIZATIONS: VisualizationEntry[] = [
+  // Base/Atlas Visualizations (Challenge data) - from explore data page
+  {
+    id: 'network-graph-base',
+    name: 'Network Graph (Base)',
+    description: 'Challenge network graph - base version for Challenge/Atlas data',
+    category: 'Network',
+    status: 'ready',
+    icon: Network,
+    tags: ['atlas', 'challenge', 'network', 'base'],
+    component: NetworkGraph,
+    previewType: 'network',
+    domains: ['atlas'],
+  },
+  {
+    id: 'sankey-chart-base',
+    name: 'Sankey Chart (Base)',
+    description: 'Challenge flow analysis - base version for Challenge/Atlas data',
+    category: 'Flow',
+    status: 'ready',
+    icon: GitBranch,
+    tags: ['atlas', 'challenge', 'sankey', 'base'],
+    component: SankeyChart,
+    previewType: 'sankey',
+    domains: ['atlas'],
+  },
+  {
+    id: 'heatmap-chart-base',
+    name: 'Heatmap Chart (Base)',
+    description: 'Challenge heatmap - base version for Challenge/Atlas data',
+    category: 'Matrix',
+    status: 'ready',
+    icon: BarChart3,
+    tags: ['atlas', 'challenge', 'heatmap', 'base'],
+    component: HeatmapChart,
+    previewType: 'heatmap',
+    domains: ['atlas'],
+  },
+  {
+    id: 'sunburst-chart-base',
+    name: 'Sunburst Chart (Base)',
+    description: 'Challenge sunburst - base version for Challenge/Atlas data',
+    category: 'Hierarchy',
+    status: 'ready',
+    icon: Sun,
+    tags: ['atlas', 'challenge', 'sunburst', 'base'],
+    component: SunburstChart,
+    previewType: 'circle',
+    domains: ['atlas'],
+  },
+  {
+    id: 'chord-diagram-base',
+    name: 'Chord Diagram (Base)',
+    description: 'Challenge relationships - base version for Challenge/Atlas data',
+    category: 'Relationship',
+    status: 'ready',
+    icon: Zap,
+    tags: ['atlas', 'challenge', 'chord', 'base'],
+    component: ChordDiagram,
+    previewType: 'chord',
+    domains: ['atlas'],
+  },
+  // Navigate Network Graph Variants - from explore data page
+  {
+    id: 'network-graph-navigate-2d',
+    name: 'Network Graph (Navigate 2D)',
+    description: '2D network graph for Navigate data',
+    category: 'Network',
+    status: 'ready',
+    icon: Network,
+    tags: ['navigate', 'network', '2d'],
+    component: NetworkGraphNavigate,
+    previewType: 'network',
+    domains: ['navigate'],
+  },
+  {
+    id: 'network-graph-navigate-3d',
+    name: 'Network Graph (Navigate 3D)',
+    description: '3D network graph for Navigate data',
+    category: 'Network',
+    status: 'ready',
+    icon: Network,
+    tags: ['navigate', 'network', '3d'],
+    component: NetworkGraphNavigate3D,
+    previewType: 'network',
+    domains: ['navigate'],
+  },
+  {
+    id: 'treemap-navigate',
+    name: 'Treemap (Navigate)',
+    description: 'Treemap visualization for Navigate data',
+    category: 'Hierarchy',
+    status: 'ready',
+    icon: Layers,
+    tags: ['navigate', 'treemap'],
+    component: TreemapNavigate,
+    previewType: 'treemap',
+    domains: ['navigate'],
+  },
+  {
+    id: 'unified-network-graph',
+    name: 'Unified Network Graph',
+    description: 'Unified network graph supporting multiple domains',
+    category: 'Unified',
+    status: 'ready',
+    icon: Network,
+    tags: ['unified', 'network', 'multi-domain'],
+    component: UnifiedNetworkGraph,
+    previewType: 'network',
+    domains: ['navigate', 'cpc', 'atlas'],
+  },
+  // CPC Visualizations - from explore data page
+  {
+    id: 'focus-area-matrix',
+    name: 'Focus Area Matrix',
+    description: 'CPC focus areas by mode and strategic theme',
+    category: 'CPC',
+    status: 'ready',
+    icon: Grid3X3,
+    tags: ['cpc', 'matrix', 'focus-area'],
+    component: FocusAreaMatrix,
+    previewType: 'heatmap',
+    domains: ['cpc'],
+  },
+  {
+    id: 'stage-pipeline',
+    name: 'Stage Pipeline',
+    description: 'Kanban view of focus areas through maturity stages',
+    category: 'CPC',
+    status: 'ready',
+    icon: GitBranch,
+    tags: ['cpc', 'pipeline', 'kanban'],
+    component: StagePipeline,
+    previewType: 'bar',
+    domains: ['cpc'],
+  },
+  {
+    id: 'stakeholder-network-cpc',
+    name: 'Stakeholder Network (CPC)',
+    description: 'Network graph of stakeholders and focus areas',
+    category: 'CPC',
+    status: 'ready',
+    icon: Network,
+    tags: ['cpc', 'network', 'stakeholder'],
+    component: StakeholderNetwork,
+    previewType: 'network',
+    domains: ['cpc'],
+  },
+  {
+    id: 'treemap-sunburst-transition',
+    name: 'Treemap/Sunburst Transition',
+    description: 'Animated transition between treemap and sunburst views',
+    category: 'CPC',
+    status: 'ready',
+    icon: Sun,
+    tags: ['cpc', 'treemap', 'sunburst', 'transition'],
+    component: TreemapSunburstTransition,
+    previewType: 'treemap',
+    domains: ['cpc'],
+  },
+  // Other Navigate Visualizations
+  {
+    id: 'bubble-scatter-navigate',
+    name: 'Bubble Scatter',
+    description: 'Bubble scatter plot for multi-dimensional analysis',
+    category: 'Comparison',
+    status: 'development',
+    icon: Activity,
+    tags: ['navigate', 'scatter', 'bubble'],
+    component: BubbleScatterNavigate,
+    previewType: 'circle',
+    domains: ['navigate'],
+  },
+  {
+    id: 'timeline-navigate',
+    name: 'Timeline',
+    description: 'Timeline visualization for temporal data',
+    category: 'Timeline',
+    status: 'development',
+    icon: Clock,
+    tags: ['navigate', 'timeline'],
+    component: TimelineNavigate,
+    previewType: 'bar',
+    domains: ['navigate'],
+  },
+];
+
+// =============================================================================
 // SIDEBAR COMPONENT
 // =============================================================================
 
@@ -612,6 +980,27 @@ export default function VisualLibraryPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Unregistered visuals management
+  const [showUnregistered, setShowUnregistered] = useState(false);
+  const [managementTags, setManagementTags] = useState<Record<string, ManagementTag>>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('viz-management-tags');
+      return stored ? JSON.parse(stored) : {};
+    }
+    return {};
+  });
+
+  // Save tags to localStorage when they change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('viz-management-tags', JSON.stringify(managementTags));
+    }
+  }, [managementTags]);
+
+  const updateManagementTag = useCallback((vizId: string, tag: ManagementTag) => {
+    setManagementTags(prev => ({ ...prev, [vizId]: tag }));
+  }, []);
+
   // Panel state
   const [controlsPanelOpen, setControlsPanelOpen] = useState(true);
   const [controlsPanelPinned, setControlsPanelPinned] = useState(true); // Start pinned so controls are visible
@@ -639,7 +1028,12 @@ export default function VisualLibraryPage() {
   const [networkGraphV8SelectedEntity, setNetworkGraphV8SelectedEntity] = useState<any>(null);
   
   // Determine active visualization early (needed for intelligenceSelectedEntity computation)
-  const activeVizForIntelligence = useMemo(() => activeVizId ? VISUALIZATIONS.find(v => v.id === activeVizId) || null : null, [activeVizId]);
+  const activeVizForIntelligence = useMemo(() => {
+    if (!activeVizId) return null;
+    const registered = VISUALIZATIONS.find(v => v.id === activeVizId);
+    if (registered) return registered;
+    return UNREGISTERED_VISUALIZATIONS.find(v => v.id === activeVizId) || null;
+  }, [activeVizId]);
   const isUnifiedVisualForIntelligence = activeVizForIntelligence?.id === 'network-graph-v8';
 
   // Map toolkit stakeholder selection into a unified intelligence "selected entity"
@@ -745,13 +1139,38 @@ export default function VisualLibraryPage() {
     });
   }, [categoryFilter, statusFilter, searchQuery]);
 
+  // Filter unregistered visuals based on tags
+  const filteredUnregistered = useMemo(() => {
+    return UNREGISTERED_VISUALIZATIONS.map(viz => ({
+      ...viz,
+      managementTag: managementTags[viz.id] || null,
+    })).filter((viz) => {
+      // Filter out "trash" tagged items unless explicitly searching
+      if (viz.managementTag === 'trash' && !searchQuery) return false;
+      if (categoryFilter !== 'all' && viz.category !== categoryFilter) return false;
+      if (statusFilter !== 'all' && viz.status !== statusFilter) return false;
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        if (!viz.name.toLowerCase().includes(query) && !viz.description.toLowerCase().includes(query) && !viz.tags?.some(tag => tag.toLowerCase().includes(query))) return false;
+      }
+      return true;
+    });
+  }, [categoryFilter, statusFilter, searchQuery, managementTags]);
+
   const categories = useMemo(() => {
     const counts: Record<string, number> = {};
     VISUALIZATIONS.forEach((viz) => { counts[viz.category] = (counts[viz.category] || 0) + 1; });
     return Object.entries(counts).map(([name, count]) => ({ name, count }));
   }, []);
 
-  const activeViz = useMemo(() => activeVizId ? VISUALIZATIONS.find(v => v.id === activeVizId) || null : null, [activeVizId]);
+  const activeViz = useMemo(() => {
+    if (!activeVizId) return null;
+    // Check registered first
+    const registered = VISUALIZATIONS.find(v => v.id === activeVizId);
+    if (registered) return registered;
+    // Check unregistered
+    return UNREGISTERED_VISUALIZATIONS.find(v => v.id === activeVizId) || null;
+  }, [activeVizId]);
   
   // Determine visual type
   const isToolkitStakeholder = activeViz?.toolkitType === 'stakeholder-d3' || activeViz?.toolkitType === 'stakeholder-circle';
@@ -936,10 +1355,61 @@ export default function VisualLibraryPage() {
           <Sidebar categories={categories} selectedCategory={categoryFilter} onCategorySelect={setCategoryFilter} statusFilter={statusFilter} onStatusFilter={setStatusFilter} searchQuery={searchQuery} onSearchChange={setSearchQuery} totalCount={VISUALIZATIONS.length} filteredCount={filteredVisualizations.length} />
           <main className="flex-1 p-6 overflow-y-auto">
             <div className="max-w-6xl mx-auto">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                {filteredVisualizations.map((viz) => <GalleryCard key={viz.id} viz={viz} onClick={() => handleCardClick(viz.id)} />)}
+              {/* Registered Visualizations */}
+              <div className="mb-8">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Registered Visualizations</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                  {filteredVisualizations.map((viz) => <GalleryCard key={viz.id} viz={viz} onClick={() => handleCardClick(viz.id)} />)}
+                </div>
+                {filteredVisualizations.length === 0 && <div className="text-center py-12 text-gray-500">No visualizations match your filters.</div>}
               </div>
-              {filteredVisualizations.length === 0 && <div className="text-center py-12 text-gray-500">No visualizations match your filters.</div>}
+
+              {/* Unregistered Visualizations Section */}
+              <div className="border-t border-gray-200 pt-8">
+                <button
+                  onClick={() => setShowUnregistered(!showUnregistered)}
+                  className="flex items-center justify-between w-full mb-4 p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Archive className="h-5 w-5 text-gray-600" />
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      Unregistered Visualizations
+                    </h2>
+                    <span className="text-sm text-gray-500 bg-white px-2 py-0.5 rounded-full">
+                      {filteredUnregistered.length}
+                    </span>
+                  </div>
+                  {showUnregistered ? (
+                    <ChevronUp className="h-5 w-5 text-gray-600" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-gray-600" />
+                  )}
+                </button>
+
+                {showUnregistered && (
+                  <div className="space-y-4">
+                    <p className="text-sm text-gray-600 mb-4">
+                      Visualizations not yet added to the main library. Tag them to organize your workflow.
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                      {filteredUnregistered.map((viz) => (
+                        <UnregisteredCard
+                          key={viz.id}
+                          viz={viz}
+                          managementTag={viz.managementTag || null}
+                          onTagChange={(tag) => updateManagementTag(viz.id, tag)}
+                          onClick={() => handleCardClick(viz.id)}
+                        />
+                      ))}
+                    </div>
+                    {filteredUnregistered.length === 0 && (
+                      <div className="text-center py-12 text-gray-500">
+                        No unregistered visualizations match your filters.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </main>
         </div>

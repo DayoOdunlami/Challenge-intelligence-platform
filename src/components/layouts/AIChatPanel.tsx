@@ -11,6 +11,7 @@ export interface Message {
   content: string | React.ReactNode;
   timestamp: Date;
   isComponent?: boolean; // Flag to indicate if content is a React component
+  toolCalls?: Array<{ id: string; name: string; arguments: string }>; // Store tool calls for continuation
 }
 
 export interface AIChatPanelProps {
@@ -20,7 +21,7 @@ export interface AIChatPanelProps {
     useNavigateData?: boolean;
     selectedEntities?: any[];
   };
-  onFunctionCall?: (functionName: string, args: any) => void;
+  onFunctionCall?: (functionName: string, args: any) => Promise<{ success: boolean; message?: string; error?: string }>;
   initialMessages?: Message[];
   onMessagesChange?: (messages: Message[]) => void;
 }
@@ -99,6 +100,201 @@ export function AIChatPanel({ mode = 'text', context, onFunctionCall, initialMes
     }
   }, [initialMessages]);
 
+  // Helper function to prepare messages for API
+  const prepareApiMessages = (additionalMessages: any[] = [], excludeMessageIds: string[] = []) => {
+    return [
+      ...messages
+        .filter(msg => {
+          if (msg.role === 'insight') return false;
+          if (typeof msg.content !== 'string') return false;
+          if (excludeMessageIds.includes(msg.id)) return false;
+          return true;
+        })
+        .map(msg => ({
+          role: msg.role,
+          content: msg.content as string,
+          ...(msg.toolCalls && { tool_calls: msg.toolCalls.map(tc => ({
+            id: tc.id,
+            type: 'function' as const,
+            function: {
+              name: tc.name,
+              arguments: tc.arguments,
+            },
+          })) }),
+        })),
+      ...additionalMessages,
+    ];
+  };
+
+  // Helper function to get guardrails
+  const getGuardrails = () => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const stored = localStorage.getItem('navigate_ai_guardrails');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return { model: parsed.model, temperature: parsed.temperature };
+      }
+    } catch (e) {
+      console.error('Failed to load guardrails:', e);
+    }
+    return null;
+  };
+
+  // Helper function to execute tool calls
+  const executeToolCalls = async (toolCalls: Array<{ id: string; name: string; arguments: string }>) => {
+    const results: Array<{ tool_call_id: string; content: string }> = [];
+    
+    for (const toolCall of toolCalls) {
+      try {
+        const args = JSON.parse(toolCall.arguments);
+        
+        // Execute the function call via callback and get actual result
+        let executionResult;
+        if (onFunctionCall) {
+          executionResult = await onFunctionCall(toolCall.name, args);
+        } else {
+          executionResult = { success: false, error: 'No function handler available' };
+        }
+        
+        // Use the actual execution result
+        if (executionResult?.success) {
+          // Return detailed success message with what changed
+          const message = executionResult.message || `Successfully executed ${toolCall.name}`;
+          results.push({
+            tool_call_id: toolCall.id,
+            content: JSON.stringify({ 
+              success: true, 
+              message: message,
+              function: toolCall.name,
+              arguments: args,
+            }),
+          });
+        } else {
+          // Return error from execution
+          results.push({
+            tool_call_id: toolCall.id,
+            content: JSON.stringify({ 
+              success: false, 
+              error: executionResult?.error || `Failed to execute ${toolCall.name}`,
+              function: toolCall.name,
+            }),
+          });
+        }
+      } catch (error: any) {
+        console.error(`Error executing tool ${toolCall.name}:`, error);
+        results.push({
+          tool_call_id: toolCall.id,
+          content: JSON.stringify({ 
+            success: false, 
+            error: error.message || 'Unknown error',
+            function: toolCall.name,
+          }),
+        });
+      }
+    }
+    
+    return results;
+  };
+
+  // Helper function to send message and handle streaming
+  const sendMessageToAPI = async (
+    apiMessages: any[],
+    assistantMessageId: string,
+    isContinuation: boolean = false
+  ): Promise<{ hasToolCalls: boolean; toolCalls?: any[]; accumulatedContent: string }> => {
+    const currentGuardrails = getGuardrails();
+    
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messages: apiMessages,
+        context,
+        ...(currentGuardrails?.model && { model: currentGuardrails.model }),
+        ...(currentGuardrails?.temperature !== undefined && { temperature: currentGuardrails.temperature }),
+      }),
+    });
+
+    if (!response.ok) {
+      // Try to get error details from response
+      let errorDetails = response.statusText;
+      try {
+        // Clone response to read it without consuming the stream
+        const errorText = await response.text();
+        console.error('API Error Response Text:', errorText);
+        try {
+          const errorData = JSON.parse(errorText);
+          errorDetails = errorData.error || errorData.details || response.statusText;
+          console.error('API Error Response:', errorData);
+        } catch (e) {
+          errorDetails = errorText || response.statusText;
+        }
+      } catch (e) {
+        console.error('API Error Status:', response.status, response.statusText);
+      }
+      throw new Error(`API error: ${errorDetails}`);
+    }
+
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+
+    if (!reader) {
+      throw new Error('No response body');
+    }
+
+    let accumulatedContent = '';
+    let toolCalls: any[] | undefined = undefined;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n');
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          if (data === '[DONE]') {
+            break;
+          }
+
+          try {
+            const parsed = JSON.parse(data);
+            
+            // Handle tool calls requirement
+            if (parsed.type === 'requires_action' && parsed.tool_calls) {
+              toolCalls = parsed.tool_calls;
+            }
+            
+            // Handle text content
+            if (parsed.content) {
+              accumulatedContent += parsed.content;
+              setMessages(prev =>
+                prev.map(msg =>
+                  msg.id === assistantMessageId
+                    ? { ...msg, content: accumulatedContent }
+                    : msg
+                )
+              );
+            }
+          } catch (e) {
+            // Skip invalid JSON
+          }
+        }
+      }
+    }
+
+    return {
+      hasToolCalls: !!toolCalls && toolCalls.length > 0,
+      toolCalls,
+      accumulatedContent,
+    };
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -126,120 +322,94 @@ export function AIChatPanel({ mode = 'text', context, onFunctionCall, initialMes
     setMessages(prev => [...prev, assistantMessage]);
 
     try {
-      // Prepare messages for API (excluding insight messages and the empty assistant message)
-      // Only include text messages (not React components)
-      const apiMessages = [
-        ...messages
-          .filter(msg => msg.role !== 'insight' && typeof msg.content === 'string')
-          .map(msg => ({
-            role: msg.role,
-            content: msg.content as string,
-          })),
+      // Prepare initial API messages
+      const apiMessages = prepareApiMessages([
         {
           role: 'user' as const,
           content: userInput,
         },
-      ];
+      ]);
 
-      // Get current guardrails to send model/temperature with request
-      // This allows admin panel changes to take effect immediately
-      const currentGuardrails = typeof window !== 'undefined' 
-        ? (() => {
-            try {
-              const stored = localStorage.getItem('navigate_ai_guardrails');
-              if (stored) {
-                const parsed = JSON.parse(stored);
-                return { model: parsed.model, temperature: parsed.temperature };
-              }
-            } catch (e) {
-              console.error('Failed to load guardrails:', e);
-            }
-            return null;
-          })()
-        : null;
+      // Step 1: Send initial request
+      const result = await sendMessageToAPI(apiMessages, assistantMessageId);
 
-      // Call API with streaming
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: apiMessages,
-          context,
-          // Include model and temperature from admin panel if set
-          ...(currentGuardrails?.model && { model: currentGuardrails.model }),
-          ...(currentGuardrails?.temperature !== undefined && { temperature: currentGuardrails.temperature }),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      }
-
-      // Handle streaming response
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-
-      if (!reader) {
-        throw new Error('No response body');
-      }
-
-      let accumulatedContent = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') {
-              setIsLoading(false);
-              break;
-            }
-
-            try {
-              const parsed = JSON.parse(data);
-              
-              // Handle function calls
-              if (parsed.type === 'function_call' && parsed.function && onFunctionCall) {
-                const { name, arguments: args } = parsed.function;
-                try {
-                  const parsedArgs = typeof args === 'string' ? JSON.parse(args) : args;
-                  onFunctionCall(name, parsedArgs);
-                  // Add note to message that function was called
-                  accumulatedContent += `\n\n[Executing: ${name}...]`;
-                  setMessages(prev =>
-                    prev.map(msg =>
-                      msg.id === assistantMessageId
-                        ? { ...msg, content: accumulatedContent }
-                        : msg
-                    )
-                  );
-                } catch (e) {
-                  console.error('Failed to parse function arguments:', e);
+      // Step 2: If we have tool calls, execute them and continue
+      if (result.hasToolCalls && result.toolCalls) {
+        // Update message to show tool execution
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === assistantMessageId
+              ? {
+                  ...msg,
+                  content: `${result.accumulatedContent}\n\n[Executing functions...]`,
                 }
-              }
-              
-              // Handle text content
-              if (parsed.content) {
-                accumulatedContent += parsed.content;
-                setMessages(prev =>
-                  prev.map(msg =>
-                    msg.id === assistantMessageId
-                      ? { ...msg, content: accumulatedContent }
-                      : msg
-                  )
-                );
-              }
-            } catch (e) {
-              // Skip invalid JSON
-            }
-          }
+              : msg
+          )
+        );
+
+        // Execute tool calls
+        const toolResults = await executeToolCalls(result.toolCalls);
+
+        // Step 3: Update messages with assistant's tool call message and tool results
+        const assistantToolCallMessage = {
+          role: 'assistant' as const,
+          content: result.accumulatedContent || null,
+          tool_calls: result.toolCalls.map(tc => ({
+            id: tc.id,
+            type: 'function' as const,
+            function: {
+              name: tc.name,
+              arguments: tc.arguments,
+            },
+          })),
+        };
+
+        const toolResultMessages = toolResults.map(tr => ({
+          role: 'tool' as const,
+          content: tr.content,
+          tool_call_id: tr.tool_call_id,
+        }));
+
+        // Step 4: Store assistant message with tool calls in our message history
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === assistantMessageId
+              ? {
+                  ...msg,
+                  content: result.accumulatedContent || 'Executing functions...',
+                  toolCalls: result.toolCalls, // Store for reference
+                }
+              : msg
+          )
+        );
+
+        // Step 5: Make continuation request with tool results
+        // Include: conversation history (excluding placeholder assistant message) + assistant tool call message + tool results
+        const continuationMessages = prepareApiMessages([
+          assistantToolCallMessage,
+          ...toolResultMessages,
+        ], [assistantMessageId]); // Exclude the placeholder assistant message
+
+        // Create new assistant message for continuation response
+        const continuationMessageId = (Date.now() + 2).toString();
+        const continuationMessage: Message = {
+          id: continuationMessageId,
+          role: 'assistant',
+          content: '',
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, continuationMessage]);
+
+        // Send continuation request
+        const continuationResult = await sendMessageToAPI(
+          continuationMessages,
+          continuationMessageId,
+          true
+        );
+
+        // If continuation also has tool calls, we could handle recursively, but for now, just show the result
+        if (continuationResult.hasToolCalls) {
+          console.warn('Continuation also requested tool calls - this should be rare');
         }
       }
 

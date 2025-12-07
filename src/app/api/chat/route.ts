@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { messages, context, model: requestModel, temperature: requestTemperature } = body;
+    const { messages, context, model: requestModel, temperature: requestTemperature, toolCalls, toolResults } = body;
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json(
@@ -143,10 +143,37 @@ export async function POST(request: NextRequest) {
         role: 'system',
         content: systemPrompt,
       },
-      ...messages.map((msg: any) => ({
-        role: msg.role,
-        content: msg.content,
-      })),
+      ...messages.map((msg: any) => {
+        try {
+          // Handle messages with tool calls
+          if (msg.role === 'assistant' && msg.tool_calls) {
+            return {
+              role: 'assistant',
+              content: msg.content || null,
+              tool_calls: Array.isArray(msg.tool_calls) ? msg.tool_calls : [],
+            };
+          }
+          // Handle tool result messages
+          if (msg.role === 'tool') {
+            return {
+              role: 'tool',
+              content: msg.content || '',
+              tool_call_id: msg.tool_call_id || '',
+            };
+          }
+          return {
+            role: msg.role || 'user',
+            content: msg.content || '',
+          };
+        } catch (error) {
+          console.error('Error processing message:', error, msg);
+          // Return a safe fallback message
+          return {
+            role: 'user',
+            content: '',
+          };
+        }
+      }).filter(msg => msg.content !== '' || msg.role === 'assistant' || msg.role === 'tool'), // Filter out empty messages except assistant/tool
     ];
 
     // Call OpenAI API with function calling enabled
@@ -167,24 +194,38 @@ export async function POST(request: NextRequest) {
     const readable = new ReadableStream({
       async start(controller) {
         try {
-          const toolCallAccumulator: Record<number, { name?: string; arguments: string }> = {};
+          let accumulatedText = '';
+          const toolCallAccumulator: Record<number, { 
+            id?: string; 
+            name?: string; 
+            arguments: string;
+          }> = {};
+          let finishReason: string | null = null;
+          let hasToolCalls = false;
           
           for await (const chunk of stream) {
             const delta = chunk.choices[0]?.delta;
+            finishReason = chunk.choices[0]?.finish_reason || null;
             
             // Handle text content
             const content = delta?.content || '';
             if (content) {
+              accumulatedText += content;
               controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
             }
             
             // Handle function calls (they come in chunks, need to accumulate)
             const toolCalls = delta?.tool_calls;
             if (toolCalls && toolCalls.length > 0) {
+              hasToolCalls = true;
               for (const toolCall of toolCalls) {
                 const index = toolCall.index;
                 if (!toolCallAccumulator[index]) {
                   toolCallAccumulator[index] = { arguments: '' };
+                }
+                
+                if (toolCall.id) {
+                  toolCallAccumulator[index].id = toolCall.id;
                 }
                 
                 if (toolCall.function) {
@@ -199,21 +240,29 @@ export async function POST(request: NextRequest) {
             }
           }
           
-          // Send completed function calls after stream ends
-          for (const [index, toolCall] of Object.entries(toolCallAccumulator)) {
-            if (toolCall.name && toolCall.arguments) {
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
-                type: 'function_call',
-                function: {
-                  name: toolCall.name,
-                  arguments: toolCall.arguments,
-                }
-              })}\n\n`));
-            }
+          // After stream completes, check if we have tool calls
+          const completedToolCalls = Object.entries(toolCallAccumulator)
+            .sort(([a], [b]) => Number(a) - Number(b)) // Sort by index
+            .map(([index, toolCall]) => ({
+              id: toolCall.id || `call_${index}`,
+              name: toolCall.name || '',
+              arguments: toolCall.arguments || '{}',
+            }))
+            .filter(tc => tc.name && tc.arguments);
+          
+          // If finish reason is tool_calls or we detected tool calls, return them
+          if (finishReason === 'tool_calls' || (hasToolCalls && completedToolCalls.length > 0)) {
+            // We have tool calls - return them and stop (client will handle continuation)
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+              type: 'requires_action',
+              tool_calls: completedToolCalls,
+            })}\n\n`));
           }
+          
           controller.enqueue(encoder.encode('data: [DONE]\n\n'));
           controller.close();
         } catch (error) {
+          console.error('Stream error:', error);
           controller.error(error);
         }
       },
@@ -228,6 +277,12 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Chat API error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      type: error.constructor?.name,
+    });
     
     // Provide more helpful error messages
     let errorMessage = 'Failed to process chat request';
@@ -252,6 +307,7 @@ export async function POST(request: NextRequest) {
         error: errorMessage,
         details: errorDetails,
         type: error.constructor?.name || 'Error',
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       },
       { status: 500 }
     );
